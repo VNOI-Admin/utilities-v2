@@ -26,14 +26,6 @@
     "roots": [
       "<rootDir>/apps/core/"
     ],
-    "moduleNameMapper": {
-      "^@libs/core-db(|/.*)$": "<rootDir>/libs/core-db/src/$1",
-      "^@libs/contracts(|/.*)$": "<rootDir>/libs/contracts/src/$1",
-      "^@libs/address(|/.*)$": "<rootDir>/libs/address/src/$1",
-      "^@libs/network(|/.*)$": "<rootDir>/libs/network/src/$1",
-      "^@libs/market-data(|/.*)$": "<rootDir>/libs/market-data/src/$1",
-      "^@libs/pendle-math(|/.*)$": "<rootDir>/libs/pendle-math/src/$1"
-    },
     "setupFiles": [
       "<rootDir>/apps/core/test/setEnvVars.ts"
     ]
