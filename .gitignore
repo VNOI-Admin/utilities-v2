@@ -32,4 +32,19 @@ lerna-debug.log*
 
 # Turborepo
 .turbo
-/build
+
+# Production
+build/
+.svelte-kit/
+
+# Envs
+.env
+.env.*
+!.env.example
+
+# Rollup
+.rollup.cache
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*

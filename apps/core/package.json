@@ -1,33 +1,41 @@
 {
-  "name": "core",
-  "version": "0.0.1",
-  "private": true,
-  "scripts": {
-    "build": "cd ../.. && nest build $npm_package_name",
-    "dev": "cd ../.. && nest start $npm_package_name --watch",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "js",
-      "json",
-      "ts"
-    ],
-    "rootDir": "../..",
-    "testRegex": ".*\\.spec\\.ts$",
-    "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
-    },
-    "testEnvironment": "node",
-    "roots": [
-      "<rootDir>/apps/core/"
-    ],
-    "setupFiles": [
-      "<rootDir>/apps/core/test/setEnvVars.ts"
-    ]
-  }
+	"name": "core",
+	"version": "0.0.1",
+	"private": true,
+	"scripts": {
+		"build": "cd ../.. && nest build $npm_package_name",
+		"dev": "cd ../.. && nest start $npm_package_name --watch",
+		"test": "jest",
+		"test:watch": "jest --watch",
+		"test:cov": "jest --coverage",
+		"test:e2e": "jest --config ./test/jest-e2e.json",
+		"lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
+	},
+	"jest": {
+		"moduleFileExtensions": [
+			"js",
+			"json",
+			"ts"
+		],
+		"rootDir": "../..",
+		"testRegex": ".*\\.spec\\.ts$",
+		"transform": {
+			"^.+\\.(t|j)s$": "ts-jest"
+		},
+		"testEnvironment": "node",
+		"roots": [
+			"<rootDir>/apps/core/"
+		],
+		"moduleNameMapper": {
+			"^@libs/core-db(|/.*)$": "<rootDir>/libs/core-db/src/$1",
+			"^@libs/contracts(|/.*)$": "<rootDir>/libs/contracts/src/$1",
+			"^@libs/address(|/.*)$": "<rootDir>/libs/address/src/$1",
+			"^@libs/network(|/.*)$": "<rootDir>/libs/network/src/$1",
+			"^@libs/market-data(|/.*)$": "<rootDir>/libs/market-data/src/$1",
+			"^@libs/pendle-math(|/.*)$": "<rootDir>/libs/pendle-math/src/$1"
+		},
+		"setupFiles": [
+			"<rootDir>/apps/core/test/setEnvVars.ts"
+		]
+	}
 }
