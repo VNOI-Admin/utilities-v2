@@ -12,14 +12,15 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const user = await this.userModel.findOne({ username: 'admin' }).lean();
+    let user = await this.userModel.findOne({ username: 'admin' }).lean();
     if (!user) {
       console.log('Initializing admin user...');
-      await this.userModel.create({
+      user = await this.userModel.create({
         username: 'admin',
         password: await argon2.hash('admin'),
         userType: 'admin',
         isActive: true,
+        refreshToken: null,
       });
     }
     const defaultPasswordCheck = await argon2.verify(user.password, 'admin');
