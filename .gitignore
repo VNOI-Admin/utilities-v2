@@ -33,3 +33,6 @@ lerna-debug.log*
 # Turborepo
 .turbo
 /build
+
+# Environment
+.env
