@@ -5,20 +5,20 @@ import { CoreController } from "./core.controller";
 import { CoreService } from "./core.service";
 
 describe("CoreController", () => {
-	let coreController: CoreController;
+  let coreController: CoreController;
 
-	beforeEach(async () => {
-		const app: TestingModule = await Test.createTestingModule({
-			controllers: [CoreController],
-			providers: [CoreService],
-		}).compile();
+  beforeEach(async () => {
+    const app: TestingModule = await Test.createTestingModule({
+      controllers: [CoreController],
+      providers: [CoreService],
+    }).compile();
 
-		coreController = app.get<CoreController>(CoreController);
-	});
+    coreController = app.get<CoreController>(CoreController);
+  });
 
-	describe("root", () => {
-		it('should return "Hello World!"', () => {
-			expect(coreController.getHello()).toBe("Hello World!");
-		});
-	});
+  describe("root", () => {
+    it('should return "Hello World!"', () => {
+      expect(coreController.getHello()).toBe("Hello World!");
+    });
+  });
 });

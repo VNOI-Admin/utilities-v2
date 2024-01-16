@@ -15,4 +15,4 @@ import type { ColorScheme } from "./types";
  * @returns
  */
 export const isColorScheme = (value?: string): value is ColorScheme =>
-	typeof value === "string" && COLOR_SCHEMES.includes(value as ColorScheme);
+  typeof value === "string" && COLOR_SCHEMES.includes(value as ColorScheme);
