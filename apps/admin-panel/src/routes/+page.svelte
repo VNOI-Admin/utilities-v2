@@ -43,14 +43,7 @@
 	};
 
 	// This should be in the same order as the one used in DeviceInfo.
-	const deviceKeys = [
-		"userId",
-		"ip",
-		"isOnline",
-		"ping",
-		"cpu",
-		"ram",
-	] satisfies DeviceInfoKeys[];
+	const deviceKeys = ["userId", "ip", "isOnline", "ping", "cpu", "ram"] satisfies DeviceInfoKeys[];
 </script>
 
 <h2>Monitor</h2>
