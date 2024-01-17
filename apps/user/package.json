@@ -1,0 +1,33 @@
+{
+  "name": "user",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "cd ../.. && nest build $npm_package_name",
+    "dev": "cd ../.. && nest start $npm_package_name --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "../..",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/apps/core/"
+    ],
+    "setupFiles": [
+      "<rootDir>/apps/core/test/setEnvVars.ts"
+    ]
+  }
+}
