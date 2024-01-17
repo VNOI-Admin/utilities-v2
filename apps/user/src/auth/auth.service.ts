@@ -3,24 +3,27 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common';
-import { UserService } from '../user/user.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 import { AuthDto } from './dtos/auth.dto';
 import { plainToInstance } from 'class-transformer';
 import { TokensEntity } from './entities/tokens.entity';
+import { InjectModel } from '@nestjs/mongoose';
+import { User, UserDocument } from '../database/schema/user.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UserService,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
 
   async login(data: AuthDto): Promise<TokensEntity> {
-    const user = await this.userService.findByUsername(data.username);
+    const user = await this.userModel.findOne({ username: data.username });
     if (!user) {
       throw new BadRequestException('Invalid credentials');
     }
@@ -28,20 +31,30 @@ export class AuthService {
     if (!passwordValid) {
       throw new BadRequestException('Invalid credentials');
     }
-    const tokens = await this.generateTokens(user._id, user.username);
-    await this.updateRefreshToken(user._id, tokens.refreshToken);
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.username,
+    );
+    user.refreshToken = await argon2.hash(tokens.refreshToken);
+    await user.save();
     return plainToInstance(TokensEntity, tokens);
   }
 
   async logout(userId: string) {
-    this.userService.update(userId, { refreshToken: null });
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new ForbiddenException('Access denied');
+    }
+    user.refreshToken = null;
+    await user.save();
   }
 
   async refreshTokens(
     userId: string,
     refreshToken: string,
   ): Promise<TokensEntity> {
-    const user = await this.userService.findById(userId);
+    const user = await this.userModel.findById(userId);
+
     if (!user) {
       throw new ForbiddenException('Access denied');
     }
@@ -55,14 +68,12 @@ export class AuthService {
       throw new BadRequestException('Access denied');
     }
 
-    const tokens = await this.generateTokens(user._id, user.username);
-    await this.updateRefreshToken(user._id, tokens.refreshToken);
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.username,
+    );
+    user.refreshToken = await argon2.hash(tokens.refreshToken);
     return plainToInstance(TokensEntity, tokens);
-  }
-
-  async updateRefreshToken(userId: string, refreshToken: string) {
-    const hashedRefreshToken = await argon2.hash(refreshToken);
-    await this.userService.update(userId, { refreshToken: hashedRefreshToken });
   }
 
   async generateTokens(

@@ -12,13 +12,13 @@ export class UserService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    let user = await this.userModel.findOne({ username: 'admin' }).lean();
+    let user = await this.userModel.findOne({ username: 'admin' });
     if (!user) {
       console.log('Initializing admin user...');
       user = await this.userModel.create({
         username: 'admin',
-        password: await argon2.hash('admin'),
-        userType: 'admin',
+        password: 'admin',
+        role: 'admin',
         isActive: true,
         refreshToken: null,
       });
@@ -29,27 +29,5 @@ export class UserService implements OnModuleInit {
         'Password for admin user is currently set to default. Please change it as soon as possible.',
       );
     }
-  }
-
-  async findAll(): Promise<UserDocument[]> {
-    const users = await this.userModel.find().lean();
-    return users;
-  }
-
-  async findById(id: string): Promise<UserDocument> {
-    const user = this.userModel.findById(id).lean();
-    return user;
-  }
-
-  async findByUsername(username: string): Promise<UserDocument> {
-    const user = this.userModel.findOne({ username: username }).lean();
-    return user;
-  }
-
-  async update(userId: string, data: Partial<User>): Promise<void> {
-    if (data.password) {
-      data.password = await argon2.hash(data.password);
-    }
-    await this.userModel.findByIdAndUpdate(userId, data);
   }
 }

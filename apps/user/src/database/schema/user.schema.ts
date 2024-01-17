@@ -3,7 +3,7 @@ import { Document } from 'mongoose';
 
 export type UserDocument = User & Document;
 
-type KeyPairType = {
+export type KeyPairType = {
   publicKey: string;
   privateKey: string;
 };
@@ -19,20 +19,20 @@ export class User {
   @Prop()
   refreshToken: string;
 
+  @Prop({ required: true, default: 'user' })
+  role: 'admin' | 'coach' | 'user';
+
   // Allow null for several documents. For non-null, unique is enforced.
   @Prop({ unique: true, sparse: true })
-  ipAddress: string;
-
-  @Prop({ required: true, default: 'user' })
-  userType: 'admin' | 'coach' | 'user';
+  vpnIpAddress: string;
 
   @Prop({ required: true, default: true })
   isActive: boolean;
 
   @Prop(
     raw({
-      publicKey: { type: String },
-      privateKey: { type: String },
+      publicKey: { type: String, default: null },
+      privateKey: { type: String, default: null },
     }),
   )
   keyPair: KeyPairType;

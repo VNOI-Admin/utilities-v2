@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { UserModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
+import { VpnModule } from './vpn/vpn.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,7 +16,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    include: [UserModule, AuthModule],
+    include: [UserModule, AuthModule, VpnModule],
   });
   SwaggerModule.setup('docs', app, document);
 
