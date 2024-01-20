@@ -36,6 +36,10 @@ lerna-debug.log*
 # Production
 build/
 .svelte-kit/
+.next/
+out/
+build
+dist
 
 # Envs
 .env
