@@ -11,7 +11,7 @@ export default function Page(): JSX.Element {
     autoplay: true,
     controls: true,
     sources: [{
-      src: 'http://192.168.2.16:9090/video.ogg',
+      src: 'http://localhost:9090/video.ogg',
       type: 'video/ogg'
     }]
   };
@@ -32,11 +32,11 @@ export default function Page(): JSX.Element {
     <>
       <Navbar />
       <main>
-        <VideoJS options={videoJsOptions} onReady={handlePlayerReady} />
-      
-       {/* <video width="1600" height="900" autoPlay loop id="video-background" muted>
-          <source src="http://192.168.2.16:9090/video.ogg" type="video/ogg" />
-        </video> */}
+        {/* <VideoJS options={videoJsOptions} onReady={handlePlayerReady} /> */}
+
+      <video width="1600" height="900" autoPlay loop id="video-background" muted>
+        <source src="http://localhost:9090/video.ogg" type="video/ogg" />
+      </video>
       </main>
     </>
   );
