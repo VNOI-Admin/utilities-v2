@@ -9,7 +9,6 @@
     "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
-    "@repo/ui": "workspace:*",
     "autoprefixer": "^10.4.17",
     "next": "^14.0.4",
     "postcss": "^8.4.33",
@@ -20,8 +19,6 @@
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^14.0.4",
-    "@repo/eslint-config": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
     "@types/eslint": "^8.56.1",
     "@types/node": "^20.10.6",
     "@types/react": "^18.2.46",
