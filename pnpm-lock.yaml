@@ -229,11 +229,11 @@ importers:
         specifier: 5.0.11
         version: 5.0.11(@types/node@20.11.0)
 
+  apps/coach-view: {}
+
   apps/core: {}
 
   apps/user: {}
-
-  apps/web: {}
 
 packages:
 

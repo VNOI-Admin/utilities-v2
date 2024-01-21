@@ -2,41 +2,44 @@
 
 import React from "react";
 import Navbar from "./components/Navbar";
-import VideoJS from "./components/VideoJS";
-import videojs from "video.js";
+import OtherTeam from "./components/OtherTeam";
+import Link from 'next/link';
+import { Team } from "./types";
+import { useDebounce } from "./hooks/useDebounce";
+import HomePageTeam from "./components/HomePageTeam";
+
+const data: Team[] = [
+  {
+    id: 1,
+    name: 'NUS',
+  },
+  {
+    id: 2,
+    name: 'NUS 2',
+  },
+]
 
 export default function Page(): JSX.Element {
-  const playerRef = React.useRef(null);
-  const videoJsOptions = {
-    autoplay: true,
-    controls: true,
-    sources: [{
-      src: 'http://localhost:9090/video.ogg',
-      type: 'video/ogg'
-    }]
-  };
-
-  const handlePlayerReady = (player) => {
-    playerRef.current = player;
-
-    // You can handle player events here, for example:
-    player.on('waiting', () => {
-      videojs.log('player is waiting');
-    });
-
-    player.on('dispose', () => {
-      videojs.log('player will dispose');
-    });
-  };
+  const [teamName, setTeamName] = React.useState<string>('');
+  const debouncedTeamName = useDebounce(teamName, 300);
   return (
     <>
-      <Navbar />
-      <main>
-        {/* <VideoJS options={videoJsOptions} onReady={handlePlayerReady} /> */}
-
-      <video width="1600" height="900" autoPlay loop id="video-background" muted>
-        <source src="http://localhost:9090/video.ogg" type="video/ogg" />
-      </video>
+      <main className="min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)] px-4 py-4">
+        <div className="mb-4">
+          <input className="border border-blue-300" onChange={(e) => {
+            setTeamName(e.target.value);
+          }} placeholder="Filter by team name" />
+        </div>
+        <div className="flex gap-4">
+          {
+            data.map((team) => {
+              if (debouncedTeamName.length > 0 && !team.name.toLowerCase().includes(debouncedTeamName.toLowerCase())) {
+                return null;
+              }
+              return <HomePageTeam key={team.id} team={team} />
+            })
+          }
+        </div>
       </main>
     </>
   );
