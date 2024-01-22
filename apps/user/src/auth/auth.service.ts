@@ -5,13 +5,15 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import * as argon2 from 'argon2';
-import { AuthDto } from './dtos/auth.dto';
-import { plainToInstance } from 'class-transformer';
-import { TokensEntity } from './entities/tokens.entity';
 import { InjectModel } from '@nestjs/mongoose';
-import { User, UserDocument } from '../database/schema/user.schema';
+import * as argon2 from 'argon2';
+import { plainToInstance } from 'class-transformer';
 import { Model } from 'mongoose';
+
+import type { UserDocument } from '../database/schema/user.schema';
+import { User } from '../database/schema/user.schema';
+import type { AuthDto } from './dtos/auth.dto';
+import { TokensEntity } from './entities/tokens.entity';
 
 @Injectable()
 export class AuthService {

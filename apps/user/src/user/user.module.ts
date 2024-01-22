@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
-import { UserController } from './user.controller';
-import { UserService } from './user.service';
-import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '../database/schema/user.schema';
 import { ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
+
+import { User, UserSchema } from '../database/schema/user.schema';
 import { generateKeyPair } from '../utils/keygen';
+import { UserController } from './user.controller';
+import { UserService } from './user.service';
 
 @Module({
   imports: [

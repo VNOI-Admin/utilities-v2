@@ -8,7 +8,6 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
 import {
   ApiBearerAuth,
   ApiExcludeEndpoint,
@@ -16,8 +15,10 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+
 import { AccessTokenGuard } from '../common/guards/accessToken.guard';
 import { RefreshTokenGuard } from '../common/guards/refreshToken.guard';
+import { AuthService } from './auth.service';
 import { AuthDto } from './dtos/auth.dto';
 import { TokensEntity } from './entities/tokens.entity';
 

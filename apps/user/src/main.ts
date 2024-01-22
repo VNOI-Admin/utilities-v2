@@ -1,8 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { UserModule } from './user/user.module';
+
+import { AppModule } from './app.module';
 import { AuthModule } from './auth/auth.module';
+import { UserModule } from './user/user.module';
 import { VpnModule } from './vpn/vpn.module';
 
 async function bootstrap() {
