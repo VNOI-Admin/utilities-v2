@@ -1,6 +1,6 @@
 "use server";
 import { cookies } from "next/headers";
-import { BASE_URL, makeHeaders } from "../api/api";
+import { BASE_URL } from "../api/api";
 import type { LoginFormState } from "./types";
 
 export const login = async (
@@ -39,6 +39,12 @@ export const login = async (
       secure: true,
       path: "/",
     });
+    return {
+      ...oldState,
+      usernameMessages: [],
+      passwordMessages: [],
+      messages: [],
+    };
   } catch (e) {
     console.error(e);
     return {
