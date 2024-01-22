@@ -1,6 +1,6 @@
 import Cookies from "js-cookie";
 
-const BASE_URL = "http://localhost:8001";
+export const BASE_URL = "http://localhost:8001";
 
 export interface GetOptions {
   path: string;
@@ -15,7 +15,7 @@ const getCurrentUser = () => {
   return Cookies.get("user");
 };
 
-const makeHeaders = () => {
+export const makeHeaders = () => {
   const user = getCurrentUser();
   return new Headers({
     Authorization: `${user ? "Bearer " + user.accessToken : ""}`,
