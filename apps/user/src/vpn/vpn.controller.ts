@@ -1,5 +1,10 @@
 import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 
 import { AccessTokenGuard } from '../common/guards/accessToken.guard';
 import { VpnService } from './vpn.service';

@@ -1,5 +1,10 @@
-import type { OnModuleInit } from '@nestjs/common';
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import type {
+  OnModuleInit} from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { plainToInstance } from 'class-transformer';
