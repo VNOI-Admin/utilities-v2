@@ -40,7 +40,7 @@ export class AuthService {
     if (!user) {
       throw new ForbiddenException('Access denied');
     }
-    user.refreshToken = null;
+    user.refreshToken = null!;
     await user.save();
   }
 

@@ -16,8 +16,8 @@ const data: Team[] = [
   },
 ];
 
-export default function HomePage(): JSX.Element {
-  const [teamName, setTeamName] = useState<string>('');
+export default function HomePage() {
+  const [teamName, setTeamName] = useState('');
   const debouncedTeamName = useDebounce(teamName, 300);
   return (
     <>

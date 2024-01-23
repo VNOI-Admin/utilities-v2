@@ -1,7 +1,7 @@
 'use server';
 import { cookies } from 'next/headers';
 
-import { BASE_URL } from '../api/api';
+import { BASE_URL, makeHeaders } from '../api/api';
 import type { LoginFormState } from './types';
 
 export const login = async (
@@ -26,10 +26,7 @@ export const login = async (
     }
     const res = await fetch(new URL('/auth/login', BASE_URL), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': 'http://localhost:8001',
-      },
+      headers: makeHeaders(),
       body: JSON.stringify({ username, password }),
     });
     cookiesStore.set({

@@ -32,12 +32,17 @@ import { UserService } from './user.service';
               });
 
               let vpnBaseSubnet: number;
-              if (this.role === 'user') {
-                vpnBaseSubnet = ip.toLong(configService.get('WG_USER_BASE_SUBNET'));
-              } else if (this.role === 'coach') {
-                vpnBaseSubnet = ip.toLong(configService.get('WG_COACH_BASE_SUBNET'));
-              } else if (this.role === 'admin') {
-                vpnBaseSubnet = ip.toLong(configService.get('WG_ADMIN_BASE_SUBNET'));
+
+              switch (this.role) {
+                case 'user':
+                  vpnBaseSubnet = ip.toLong(configService.get('WG_USER_BASE_SUBNET')!);
+                  break;
+                case 'coach':
+                  vpnBaseSubnet = ip.toLong(configService.get('WG_COACH_BASE_SUBNET')!);
+                  break;
+                case 'admin':
+                  vpnBaseSubnet = ip.toLong(configService.get('WG_ADMIN_BASE_SUBNET')!);
+                  break;
               }
 
               this.vpnIpAddress = ip.fromLong(vpnBaseSubnet + sameTypeUserCount + 1);
