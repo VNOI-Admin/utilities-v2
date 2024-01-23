@@ -1,8 +1,9 @@
 'use client';
 
-import React from "react";
-import OtherTeam from "../components/OtherTeam";
-import { Team } from "../types";
+import React from 'react';
+
+import OtherTeam from '../components/OtherTeam';
+import type { Team } from '../types';
 
 const data: Team[] = [
   {
@@ -13,26 +14,25 @@ const data: Team[] = [
     id: 2,
     name: 'NUS 2',
   },
-]
+];
 
-export default function Page(): JSX.Element {
-    const [isLoaded, setIsLoaded] = React.useState<boolean>(false);
+export default function Page() {
   return (
     <>
-      <main className="flex justify-between min-h-[calc(100vh-80px)] max-h-[calc(100vh-80px)]">
-        <div className="min-w-[300px] flex flex-col gap-4 p-3">
-          <h4 className="text-xl text-center">Other NUS teams</h4>
-          {
-            data.map((team) => <OtherTeam key={team.id} team={team} />)
-          }
+      <main className="flex max-h-[calc(100vh-80px)] min-h-[calc(100vh-80px)] justify-between">
+        <div className="flex min-w-[300px] flex-col gap-4 p-3">
+          <h4 className="text-center text-xl">Other NUS teams</h4>
+          {data.map((team) => (
+            <OtherTeam key={team.id} team={team} />
+          ))}
         </div>
         <div className="w-full">
-          <div className="w-full aspect-video">
-            <video className="w-full aspect-video mb-4" autoPlay id="video-background" muted>
-                <source src="http://localhost:9090/video.ogg" type="video/ogg" />
+          <div className="aspect-video w-full">
+            <video className="mb-4 aspect-video w-full" autoPlay id="video-background" muted>
+              <source src="http://localhost:9090/video.ogg" type="video/ogg" />
             </video>
           </div>
-          <h1 className="text-4xl text-center">Watching team NUS</h1>
+          <h1 className="text-center text-4xl">Watching team NUS</h1>
         </div>
       </main>
     </>

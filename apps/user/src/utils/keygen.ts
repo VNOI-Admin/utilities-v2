@@ -164,12 +164,8 @@ function encodeBase64(dest, src) {
 function keyToBase64(key) {
   let i;
   const base64 = new Uint8Array(44);
-  for (i = 0; i < 32 / 3; ++i)
-    encodeBase64(base64.subarray(i * 4), key.subarray(i * 3));
-  encodeBase64(
-    base64.subarray(i * 4),
-    Uint8Array.from([key[i * 3 + 0], key[i * 3 + 1], 0]),
-  );
+  for (i = 0; i < 32 / 3; ++i) encodeBase64(base64.subarray(i * 4), key.subarray(i * 3));
+  encodeBase64(base64.subarray(i * 4), Uint8Array.from([key[i * 3 + 0], key[i * 3 + 1], 0]));
   base64[43] = 61;
   return String.fromCharCode.apply(null, base64);
 }

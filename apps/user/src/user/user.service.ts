@@ -1,8 +1,11 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import type { OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
-import { User, UserDocument } from '../database/schema/user.schema';
 import { Model } from 'mongoose';
+
+import type { UserDocument } from '../database/schema/user.schema';
+import { User } from '../database/schema/user.schema';
 
 @Injectable()
 export class UserService implements OnModuleInit {

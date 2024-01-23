@@ -1,7 +1,8 @@
-"use server";
-import { cookies } from "next/headers";
-import { BASE_URL } from "../api/api";
-import type { LoginFormState } from "./types";
+'use server';
+import { cookies } from 'next/headers';
+
+import { BASE_URL } from '../api/api';
+import type { LoginFormState } from './types';
 
 export const login = async (
   oldState: LoginFormState,
@@ -9,35 +10,35 @@ export const login = async (
 ): Promise<LoginFormState> => {
   try {
     const cookiesStore = cookies();
-    const username = formData.get("username");
-    const password = formData.get("password");
-    if (typeof username !== "string") {
+    const username = formData.get('username');
+    const password = formData.get('password');
+    if (typeof username !== 'string') {
       return {
         ...oldState,
-        usernameMessages: [...oldState.usernameMessages, "Username is not valid!"],
+        usernameMessages: [...oldState.usernameMessages, 'Username is not valid!'],
       };
     }
-    if (typeof password !== "string") {
+    if (typeof password !== 'string') {
       return {
         ...oldState,
-        passwordMessages: [...oldState.passwordMessages, "Password is not valid!"],
+        passwordMessages: [...oldState.passwordMessages, 'Password is not valid!'],
       };
     }
-    const res = await fetch(new URL("/auth/login", BASE_URL), {
-      method: "POST",
+    const res = await fetch(new URL('/auth/login', BASE_URL), {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "http://localhost:8001",
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': 'http://localhost:8001',
       },
       body: JSON.stringify({ username, password }),
     });
     cookiesStore.set({
-      name: "user",
+      name: 'user',
       value: JSON.stringify(await res.json()),
       httpOnly: true,
-      sameSite: "strict",
+      sameSite: 'strict',
       secure: true,
-      path: "/",
+      path: '/',
     });
     return {
       ...oldState,
@@ -49,7 +50,7 @@ export const login = async (
     console.error(e);
     return {
       ...oldState,
-      messages: ["An internal server error occurred"],
+      messages: ['An internal server error occurred'],
     };
   }
 };

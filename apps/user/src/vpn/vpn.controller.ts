@@ -1,10 +1,6 @@
 import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+
 import { AccessTokenGuard } from '../common/guards/accessToken.guard';
 import { VpnService } from './vpn.service';
 
@@ -21,10 +17,7 @@ export class VpnController {
     description: 'WireGuard configuration',
   })
   @Get('user/config/:username')
-  async getWireGuardConfig(
-    @Request() req: any,
-    @Param('username') username: string,
-  ) {
+  async getWireGuardConfig(@Request() req: any, @Param('username') username: string) {
     const callerId = req.user['sub'];
     return await this.vpnService.getWireGuardUserConfig(callerId, username);
   }

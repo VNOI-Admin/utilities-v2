@@ -1,15 +1,13 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  OnModuleInit,
-} from '@nestjs/common';
+import type { OnModuleInit } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { User, UserDocument } from '../database/schema/user.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { VpnConfig } from './entities/vpnConfig.entity';
 import { plainToInstance } from 'class-transformer';
+import { Model } from 'mongoose';
+
+import type { UserDocument } from '../database/schema/user.schema';
+import { User } from '../database/schema/user.schema';
+import { VpnConfig } from './entities/vpnConfig.entity';
 
 @Injectable()
 export class VpnService implements OnModuleInit {
@@ -21,10 +19,7 @@ export class VpnService implements OnModuleInit {
 
   onModuleInit() {}
 
-  async getWireGuardUserConfig(
-    caller: string,
-    username: string,
-  ): Promise<VpnConfig> {
+  async getWireGuardUserConfig(caller: string, username: string): Promise<VpnConfig> {
     const reqCaller = await this.userModel.findById(caller);
     const user = await this.userModel.findOne({ username: username });
 
@@ -40,9 +35,7 @@ export class VpnService implements OnModuleInit {
 
     if (!user.keyPair || !user.vpnIpAddress) {
       // Throw runtime error
-      throw new Error(
-        `User ${username} does not have a key pair or VPN IP address`,
-      );
+      throw new Error(`User ${username} does not have a key pair or VPN IP address`);
     }
 
     const plain = {

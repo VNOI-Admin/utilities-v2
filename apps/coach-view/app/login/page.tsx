@@ -1,9 +1,9 @@
-import { Metadata } from "next";
+import type { Metadata } from 'next';
 
-import { Form } from "./Form";
+import { Form } from './Form';
 
 export const metadata: Metadata = {
-  title: "Login",
+  title: 'Login',
 };
 
 export default function Page() {

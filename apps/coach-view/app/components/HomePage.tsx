@@ -1,22 +1,23 @@
-"use client";
-import { useState } from "react";
-import { useDebounce } from "../hooks/useDebounce";
-import HomePageTeam from "./HomePageTeam";
-import { Team } from "../types";
+'use client';
+import { useState } from 'react';
+
+import { useDebounce } from '../hooks/useDebounce';
+import type { Team } from '../types';
+import HomePageTeam from './HomePageTeam';
 
 const data: Team[] = [
   {
     id: 1,
-    name: "NUS",
+    name: 'NUS',
   },
   {
     id: 2,
-    name: "NUS 2",
+    name: 'NUS 2',
   },
 ];
 
 export default function HomePage(): JSX.Element {
-  const [teamName, setTeamName] = useState<string>("");
+  const [teamName, setTeamName] = useState<string>('');
   const debouncedTeamName = useDebounce(teamName, 300);
   return (
     <>

@@ -1,13 +1,16 @@
-import Link from "next/link";
-import { Team } from "../types";
+import Link from 'next/link';
+
+import type { Team } from '../types';
 
 interface HomePageTeamProps {
-    team: Team;
+  team: Team;
 }
 
 export default function HomePageTeam({ team }: HomePageTeamProps): JSX.Element {
-    return <Link href='view'>
-        <img src="https://placeholder.co/300" />
-        <p>{team.name}</p>
-    </Link>;
+  return (
+    <Link href="view">
+      <img src="https://placeholder.co/300" />
+      <p>{team.name}</p>
+    </Link>
+  );
 }

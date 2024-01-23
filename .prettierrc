@@ -3,9 +3,17 @@
   "useTabs": false,
   "tabWidth": 2,
   "printWidth": 100,
-  "singleQuote": false,
+  "singleQuote": true,
   "trailingComma": "all",
   "bracketSameLine": false,
   "plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
-  "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
+  "overrides": [
+    { "files": "*.svelte", "options": { "parser": "svelte" } },
+    {
+      "files": "apps/admin-panel/**/*",
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ]
 }

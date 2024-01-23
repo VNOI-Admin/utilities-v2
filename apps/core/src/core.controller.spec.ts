@@ -1,10 +1,10 @@
-import type { TestingModule } from "@nestjs/testing";
-import { Test } from "@nestjs/testing";
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 
-import { CoreController } from "./core.controller";
-import { CoreService } from "./core.service";
+import { CoreController } from './core.controller';
+import { CoreService } from './core.service';
 
-describe("CoreController", () => {
+describe('CoreController', () => {
   let coreController: CoreController;
 
   beforeEach(async () => {
@@ -16,9 +16,9 @@ describe("CoreController", () => {
     coreController = app.get<CoreController>(CoreController);
   });
 
-  describe("root", () => {
+  describe('root', () => {
     it('should return "Hello World!"', () => {
-      expect(coreController.getHello()).toBe("Hello World!");
+      expect(coreController.getHello()).toBe('Hello World!');
     });
   });
 });

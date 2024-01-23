@@ -1,5 +1,5 @@
-"use client";
-import Link from "next/link";
+'use client';
+import Link from 'next/link';
 
 export default function Navbar(): JSX.Element {
   return (
@@ -13,10 +13,7 @@ export default function Navbar(): JSX.Element {
       <h1 className="mx-auto text-center text-3xl">Coach view</h1>
       <div className="justify-self-end">
         Logged in as admin
-        <Link href="/">
-          {" "}
-          Logout
-        </Link>
+        <Link href="/"> Logout</Link>
       </div>
     </header>
   );

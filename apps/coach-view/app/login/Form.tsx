@@ -1,8 +1,8 @@
-"use client";
-import { useFormState, useFormStatus } from "react-dom";
+'use client';
+import { useFormState, useFormStatus } from 'react-dom';
 
-import { Input } from "../components/Input";
-import { login } from "./action";
+import { Input } from '../components/Input';
+import { login } from './action';
 
 export function Form() {
   const { pending } = useFormStatus();
@@ -20,7 +20,7 @@ export function Form() {
           id="login-username-input"
           label="Username"
           errorText={
-            state.usernameMessages.length > 0 ? state.usernameMessages.join("\n") : undefined
+            state.usernameMessages.length > 0 ? state.usernameMessages.join('\n') : undefined
           }
           errorTextId="login-username-error-text"
         />
@@ -32,7 +32,7 @@ export function Form() {
           id="login-password-input"
           label="Password"
           errorText={
-            state.passwordMessages.length > 0 ? state.passwordMessages.join("\n") : undefined
+            state.passwordMessages.length > 0 ? state.passwordMessages.join('\n') : undefined
           }
           errorTextId="login-password-error-text"
         />
@@ -45,7 +45,7 @@ export function Form() {
         Login
       </button>
       {state.messages.length > 0 && (
-        <p className="text-red-500 dark:text-red-400">{state.messages.join("\n")}</p>
+        <p className="text-red-500 dark:text-red-400">{state.messages.join('\n')}</p>
       )}
     </form>
   );
