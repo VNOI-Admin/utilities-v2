@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -8,6 +9,9 @@ import { VpnModule } from './vpn/vpn.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Get configService from app
+  const configService = app.get(ConfigService);
 
   const config = new DocumentBuilder()
     .setTitle('User')
@@ -21,6 +25,6 @@ async function bootstrap() {
   });
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(8001);
+  await app.listen(8001, configService.get('LISTEN_HOST'));
 }
 bootstrap();
