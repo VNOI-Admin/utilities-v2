@@ -24,12 +24,18 @@ export class VpnService implements OnModuleInit {
 
   onModuleInit() {}
 
-  async getWireGuardUserConfig(
+  async getWireGuardConfig(
     caller: string,
-    username: string,
+    username?: string | undefined,
   ): Promise<VpnConfig> {
     const reqCaller = await this.userModel.findById(caller);
-    const user = await this.userModel.findOne({ username: username });
+    let user: UserDocument;
+
+    if (username) {
+      user = await this.userModel.findOne({ username: username });
+    } else {
+      user = reqCaller;
+    }
 
     if (!reqCaller || !user) {
       throw new BadRequestException('User not found');
@@ -64,7 +70,7 @@ export class VpnService implements OnModuleInit {
 
     if (reqCaller.role !== 'admin') {
       throw new ForbiddenException(
-        'You are not authorized to generate the WireGuard configuration',
+        'You are not authorized to generate this WireGuard configuration',
       );
     }
 
