@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 
 import Navbar from './components/Navbar';
+import { cookies } from 'next/headers';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -13,10 +14,11 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
+  const user = cookies().get('user');
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Navbar />
+        <Navbar user={user} />
         <main className="h-[calc(100vh-80px)] min-h-[calc(100vh-80px)] p-4">{children}</main>
       </body>
     </html>

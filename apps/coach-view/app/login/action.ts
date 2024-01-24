@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 import { BASE_URL, makeHeaders } from '../api/api';
 import type { LoginFormState } from './types';
-import { useRouter } from 'next/navigation';
+import { redirect } from 'next/navigation';
 
 export const login = async (
   oldState: LoginFormState,
@@ -43,7 +43,6 @@ export const login = async (
       secure: true,
       path: '/',
     });
-    useRouter().refresh();
   } catch (e) {
     console.error(e);
     return {
@@ -52,4 +51,6 @@ export const login = async (
       messages: [e.message],
     };
   }
+
+  redirect('/');
 };
