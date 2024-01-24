@@ -1,7 +1,13 @@
 'use client';
 import Link from 'next/link';
+import { useFormState } from 'react-dom';
+import { logout } from '../logout/action';
+import { useUser } from '../hooks/useUser';
 
 export default function Navbar(): JSX.Element {
+  const user = null;
+  const [state, formAction] = useFormState(logout, null);
+
   return (
     <header className="grid grid-cols-3 items-center bg-white px-8 py-4 shadow">
       <div className="flex items-center gap-2">
@@ -11,10 +17,13 @@ export default function Navbar(): JSX.Element {
         </h3>
       </div>
       <h1 className="mx-auto text-center text-3xl">Coach view</h1>
-      <div className="justify-self-end">
-        Logged in as admin
-        <Link href="/"> Logout</Link>
-      </div>
+      {
+        !!user ??
+        <form action={formAction} className="justify-self-end">
+          Logged in as admin
+          <button type='submit' className='p-2 bg-red-300 rounded-md'>Logout</button>
+        </form>
+      }
     </header>
   );
 }

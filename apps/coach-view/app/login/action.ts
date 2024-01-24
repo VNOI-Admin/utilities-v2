@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 
 import { BASE_URL, makeHeaders } from '../api/api';
 import type { LoginFormState } from './types';
+import { useRouter } from 'next/navigation';
 
 export const login = async (
   oldState: LoginFormState,
@@ -42,12 +43,7 @@ export const login = async (
       secure: true,
       path: '/',
     });
-    return {
-      ...oldState,
-      usernameMessages: [],
-      passwordMessages: [],
-      messages: [],
-    };
+    useRouter().refresh();
   } catch (e) {
     console.error(e);
     return {
