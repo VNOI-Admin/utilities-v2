@@ -1,4 +1,4 @@
-import type { VALID_ORDER_BY_VALUES, VALID_ORDER_VALUES } from "./-page.constants";
+import type { VALID_ORDER_BY_VALUES, VALID_ORDER_VALUES } from "./$page.constants";
 
 export interface Device {
   userId: string;

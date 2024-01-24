@@ -8,6 +8,7 @@
   }
   body {
     @apply flex min-h-dvh bg-gray-50 font-sans text-black transition-colors duration-100 dark:bg-neutral-950 dark:text-white;
+    font-family: "Geist";
   }
   h1,
   h2,
