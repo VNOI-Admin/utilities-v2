@@ -1,5 +1,10 @@
+import type { ConfigService } from '@nestjs/config';
 import { Prop, raw,Schema, SchemaFactory } from '@nestjs/mongoose';
-import type { Document } from 'mongoose';
+import * as argon2 from 'argon2';
+import * as ip from 'ip';
+import { type Document, SchemaTypes, Types } from 'mongoose';
+
+import { generateKeyPair } from '../../utils/keygen';
 
 export type UserDocument = User & Document;
 
@@ -8,10 +13,15 @@ export type KeyPairType = {
   privateKey: string;
 };
 
+export type Role = 'admin' | 'coach' | 'user';
+
 @Schema()
 export class User {
   @Prop({ required: true, unique: true })
   username: string;
+
+  @Prop({ required: false })
+  fullName: string;
 
   @Prop({ required: true })
   password: string;
@@ -20,7 +30,7 @@ export class User {
   refreshToken: string;
 
   @Prop({ required: true, default: 'user' })
-  role: 'admin' | 'coach' | 'user';
+  role: Role;
 
   // Allow null for several documents. For non-null, unique is enforced.
   @Prop({ unique: true, sparse: true })
@@ -36,6 +46,60 @@ export class User {
     }),
   )
   keyPair: KeyPairType;
+
+  // Belong to one group
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Group' })
+  group: Types.ObjectId;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+export function buildUserSchema(configService: ConfigService) {
+  const schema = UserSchema;
+  schema.pre('validate', async function (next) {
+    if (this.isModified('password')) {
+      this.password = await argon2.hash(this.password);
+    }
+
+    // Generate VPN IP address and key pair. Only generate for new users.
+    if (this.isNew && !this.vpnIpAddress) {
+      console.log('Generating VPN IP address and key pair...');
+      const sameTypeUserCount = await this.model(
+        User.name,
+      ).countDocuments({
+        role: this.role,
+        vpnIpAddress: { $ne: null },
+      });
+
+      let vpnBaseSubnet: number;
+
+      switch (this.role) {
+        case 'user':
+          vpnBaseSubnet = ip.toLong(
+            configService.get('WG_USER_BASE_SUBNET'),
+          );
+          break;
+        case 'coach':
+          vpnBaseSubnet = ip.toLong(
+            configService.get('WG_COACH_BASE_SUBNET'),
+          );
+          break;
+        case 'admin':
+          vpnBaseSubnet = ip.toLong(
+            configService.get('WG_ADMIN_BASE_SUBNET'),
+          );
+          break;
+        default:
+          throw new Error('Invalid role');
+      }
+
+      this.vpnIpAddress = ip.fromLong(
+        vpnBaseSubnet + sameTypeUserCount + 1,
+      );
+
+      this.keyPair = generateKeyPair();
+    }
+
+    next();
+  });
+}
