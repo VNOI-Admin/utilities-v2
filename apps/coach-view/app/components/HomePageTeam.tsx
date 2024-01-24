@@ -8,9 +8,10 @@ interface HomePageTeamProps {
 
 export default function HomePageTeam({ team }: HomePageTeamProps): JSX.Element {
   return (
-    <Link href="view">
-      <img src="https://placeholder.co/300" />
-      <p>{team.name}</p>
-    </Link>
+    <table>
+      <Link href="view">
+        <p>{team.username}</p>
+      </Link>
+    </table>
   );
 }

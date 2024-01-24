@@ -1,4 +1,4 @@
 export interface Team {
-  id: number;
-  name: string;
+  username: string;
+  vpnIpAddress: string;
 }

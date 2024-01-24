@@ -1,7 +1,7 @@
 'use server';
 import { cookies } from 'next/headers';
 
-import { BASE_URL, makeHeaders } from '../api/api';
+import { post } from '../api/api';
 import type { LoginFormState } from './types';
 import { redirect } from 'next/navigation';
 
@@ -25,15 +25,7 @@ export const login = async (
         passwordMessages: [...oldState.passwordMessages, 'Password is not valid!'],
       };
     }
-    const res = await fetch(new URL('/auth/login', BASE_URL), {
-      method: 'POST',
-      headers: makeHeaders(),
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (res.status !== 201) {
-      throw new Error('Invalid credentials');
-    }
+    const res = await post('/auth/login', { username, password });
 
     cookiesStore.set({
       name: 'user',

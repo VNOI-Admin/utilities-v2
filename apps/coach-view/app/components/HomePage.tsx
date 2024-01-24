@@ -1,24 +1,30 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useDebounce } from '../hooks/useDebounce';
-import type { Team } from '../types';
 import HomePageTeam from './HomePageTeam';
-
-const data: Team[] = [
-  {
-    id: 1,
-    name: 'NUS',
-  },
-  {
-    id: 2,
-    name: 'NUS 2',
-  },
-];
+import { get } from '../api/api';
 
 export default function HomePage() {
   const [teamName, setTeamName] = useState('');
+  const [error, setError] = useState('');
+  const [users, setUsers] = useState([]);
   const debouncedTeamName = useDebounce(teamName, 300);
+  
+  useEffect(() => {
+    const getUsers = async () => {
+      try {
+        const res = await get('/user');
+        console.log(res);
+        setUsers(res);
+      } catch (e) {
+        console.log(e); 
+        setError(e.message);
+      }
+    }
+    getUsers();
+  }, []);
+
   return (
     <>
       <div className="mb-4">
@@ -30,15 +36,18 @@ export default function HomePage() {
           placeholder="Filter by team name"
         />
       </div>
+      {
+        !!error && <p>{ error }</p>
+      }
       <div className="flex gap-4">
-        {data.map((team) => {
+        {users.map((team, i) => {
           if (
             debouncedTeamName.length > 0 &&
-            !team.name.toLowerCase().includes(debouncedTeamName.toLowerCase())
+            !team.username.toLowerCase().includes(debouncedTeamName.toLowerCase())
           ) {
             return null;
           }
-          return <HomePageTeam key={team.id} team={team} />;
+          return <HomePageTeam key={i} team={team} />;
         })}
       </div>
     </>
