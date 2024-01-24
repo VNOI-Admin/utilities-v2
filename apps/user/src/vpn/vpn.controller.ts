@@ -2,8 +2,6 @@ import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
-  ApiParam,
-  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
@@ -25,7 +23,7 @@ export class VpnController {
     description: 'WireGuard configuration',
     type: VpnConfig,
   })
-  @Get('user/config/')
+  @Get('config')
   async getWireGuardConfig(
     @Request() req: any
   ) {
@@ -41,12 +39,15 @@ export class VpnController {
     description: 'WireGuard configuration',
     type: VpnConfig,
   })
-  @Get('user/config/:username')
+  @Get('config/:username')
   async getWireGuardConfigByUsername(
     @Request() req: any,
     @Param('username') username: string,
   ) {
     const callerId = req.user['sub'];
+    if (username === 'core') {
+      return await this.vpnService.getWireGuardCoreConfig(callerId);
+    }
     return await this.vpnService.getWireGuardConfig(callerId, username);
   }
 }
