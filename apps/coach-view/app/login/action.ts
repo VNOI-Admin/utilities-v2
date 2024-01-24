@@ -29,6 +29,11 @@ export const login = async (
       headers: makeHeaders(),
       body: JSON.stringify({ username, password }),
     });
+
+    if (res.status !== 201) {
+      throw new Error('Invalid credentials');
+    }
+
     cookiesStore.set({
       name: 'user',
       value: JSON.stringify(await res.json()),
@@ -47,7 +52,8 @@ export const login = async (
     console.error(e);
     return {
       ...oldState,
-      messages: ['An internal server error occurred'],
+      // messages: ['An internal server error occurred'],
+      messages: [e.message],
     };
   }
 };
