@@ -2,11 +2,14 @@ import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
+  ApiParam,
+  ApiQuery,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 
 import { AccessTokenGuard } from '../common/guards/accessToken.guard';
+import { VpnConfig } from './entities/vpnConfig.entity';
 import { VpnService } from './vpn.service';
 
 @ApiTags('VPN')
@@ -20,26 +23,30 @@ export class VpnController {
   @ApiResponse({
     status: 200,
     description: 'WireGuard configuration',
+    type: VpnConfig,
   })
-  @Get('user/config/:username')
+  @Get('user/config/')
   async getWireGuardConfig(
-    @Request() req: any,
-    @Param('username') username: string,
+    @Request() req: any
   ) {
     const callerId = req.user['sub'];
-    return await this.vpnService.getWireGuardUserConfig(callerId, username);
+    return await this.vpnService.getWireGuardConfig(callerId);
   }
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @ApiOperation({ summary: 'Get WireGuard core configuration' })
+  @ApiOperation({ summary: 'Get WireGuard configuration' })
   @ApiResponse({
     status: 200,
-    description: 'WireGuard core configuration',
+    description: 'WireGuard configuration',
+    type: VpnConfig,
   })
-  @Get('core/config')
-  async getCoreConfig(@Request() req: any) {
+  @Get('user/config/:username')
+  async getWireGuardConfigByUsername(
+    @Request() req: any,
+    @Param('username') username: string,
+  ) {
     const callerId = req.user['sub'];
-    return await this.vpnService.getWireGuardCoreConfig(callerId);
+    return await this.vpnService.getWireGuardConfig(callerId, username);
   }
 }
