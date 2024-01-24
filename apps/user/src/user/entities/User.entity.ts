@@ -8,5 +8,13 @@ export class UserEntity {
 
   @Expose()
   @ApiProperty()
+  fullName: string;
+
+  @Expose()
+  @ApiProperty()
+  isActive: boolean;
+
+  @Expose()
+  @ApiProperty()
   vpnIpAddress: string;
 }
