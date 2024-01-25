@@ -32,7 +32,7 @@ export interface GetUserOptions {
 }
 
 /**
- * Retrieve the tokens from cookies.
+ * Retrieves the tokens from cookies.
  * @param options
  * @returns
  */
@@ -57,7 +57,7 @@ export interface SetUserOptions {
 }
 
 /**
- * Set the tokens in cookies.
+ * Sets the tokens in cookies.
  * @param options
  * @returns
  */
@@ -86,7 +86,7 @@ export interface RefreshUserOptions {
 }
 
 /**
- * Refresh the user and update both tokens in cookies. Removes
+ * Refreshes the user and updates both tokens in cookies. Removes
  * user from cookies and returns `undefined` if:
  * - The old refresh token is not defined.
  * - The refresh did not go successfully.
