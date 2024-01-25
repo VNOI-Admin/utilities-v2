@@ -2,7 +2,7 @@ import { fail, redirect } from "@sveltejs/kit";
 
 import { API_ENDPOINT } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
-import { setUser } from "$lib/setUser";
+import { setUser } from "$lib/users";
 
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -11,7 +11,7 @@ export const load: PageServerLoad = ({ locals }) => {
     redirect(303, "/");
   }
   return {
-    title: "Sign in",
+    title: "Login",
   };
 };
 
@@ -42,6 +42,7 @@ export const actions: Actions = {
           password,
         }),
         headers: {
+          Accept: "application/json",
           "Content-Type": "application/json",
         },
         signal: AbortSignal.timeout(10000),
@@ -51,8 +52,8 @@ export const actions: Actions = {
         return fail(500, { error: "Internal Server Error" });
       }
       const data = (await res.json()) as {
-        accessToken: any;
-        refreshToken: any;
+        accessToken: unknown;
+        refreshToken: unknown;
       };
       if (typeof data.accessToken !== "string" || typeof data.refreshToken !== "string") {
         console.error(
@@ -61,7 +62,7 @@ export const actions: Actions = {
         return fail(500, { error: "Internal Server Error" });
       }
       console.log(`Successfully logged in (${requestInfo})`);
-      setUser(cookies, data.accessToken, data.refreshToken);
+      setUser({ cookies, accessToken: data.accessToken, refreshToken: data.refreshToken });
     } catch (err) {
       if (err instanceof Error && err.name === "TimeoutError") {
         console.error(

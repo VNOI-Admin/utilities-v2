@@ -1,6 +1,6 @@
 import { type Handle, type HandleServerError } from "@sveltejs/kit";
 
-import { getUser } from "$lib/getUser";
+import { getUser } from "$lib/users";
 
 export const handleError: HandleServerError = ({ error }) => {
   return {
@@ -10,6 +10,6 @@ export const handleError: HandleServerError = ({ error }) => {
 };
 
 export const handle: Handle = async ({ event, resolve }) => {
-  event.locals.user = getUser(event.cookies);
+  event.locals.user = getUser({ cookies: event.cookies });
   return await resolve(event);
 };
