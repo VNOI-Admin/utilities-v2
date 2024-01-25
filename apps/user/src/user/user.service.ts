@@ -1,8 +1,11 @@
 import type { OnModuleInit } from '@nestjs/common';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
+import * as axios from 'axios';
 import { plainToInstance } from 'class-transformer';
+import FormData from 'form-data';
 import { Model } from 'mongoose';
 
 import type { GroupDocument } from '../database/schema/group.schema';
@@ -11,17 +14,22 @@ import type { Role, UserDocument } from '../database/schema/user.schema';
 import { User } from '../database/schema/user.schema';
 import type { CreateGroupDto } from './dtos/createGroup.dto';
 import type { CreateUserDto } from './dtos/createUser.dto';
+import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {
+  private printUrl: string;
   constructor(
+    private readonly configService: ConfigService,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
-  ) {}
+  ) {
+    this.printUrl = this.configService.get('PRINTER_URL');
+  }
 
   async onModuleInit() {
     let admin = await this.userModel.findOne({ username: 'admin' });
@@ -81,6 +89,14 @@ export class UserService implements OnModuleInit {
     return plainToInstance(UserEntity, user);
   }
 
+  async getUserByIp(ipAddress: string): Promise<string> {
+    const user = await this.userModel.findOne({ vpnIpAddress: ipAddress }).lean();
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    return user._id.toString();
+  }
+
   async getGroups(): Promise<GroupEntity[]> {
     const groups = await this.groupModel.find().lean();
     return plainToInstance(GroupEntity, groups);
@@ -99,5 +115,36 @@ export class UserService implements OnModuleInit {
     }
 
     return plainToInstance(GroupEntity, group.toObject());
+  }
+
+  async reportUsage(userId: string, usage: ReportUsageDto) {
+    const user = await this.userModel.findOne({ _id: userId }).lean();
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    user.machineUsage.cpu = usage.cpu;
+    user.machineUsage.memory = usage.memory;
+    user.machineUsage.disk = usage.disk;
+    user.machineUsage.lastReportedAt = new Date();
+    user.save();
+  }
+
+  async print(callerId: string, file: Express.Multer.File) {
+    const user = await this.userModel.findOne({ _id: callerId }).lean();
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    const username = user.username;
+    const formData = new FormData();
+    formData.append('file', file, {
+      filename: `${username}-${file.originalname}`,
+      contentType: file.mimetype,
+    });
+    const response = await axios.default.post(this.printUrl, formData, {
+      headers: formData.getHeaders(),
+    });
+    if (response.status !== 200) {
+      throw new BadRequestException('Unable to print');
+    }
   }
 }
