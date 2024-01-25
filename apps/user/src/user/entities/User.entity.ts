@@ -1,5 +1,23 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Expose } from "class-transformer";
+import { Expose, Type } from "class-transformer";
+
+export class MachineUsageEntity {
+  @Expose()
+  @ApiProperty()
+  cpu: number;
+
+  @Expose()
+  @ApiProperty()
+  memory: number;
+
+  @Expose()
+  @ApiProperty()
+  disk: number;
+
+  @Expose()
+  @ApiProperty()
+  ping: number;
+};
 
 export class UserEntity {
   @Expose()
@@ -21,4 +39,9 @@ export class UserEntity {
   @Expose()
   @ApiProperty()
   isActive: boolean;
+
+  @Expose()
+  @Type(() => MachineUsageEntity)
+  @ApiProperty({ type: MachineUsageEntity })
+  machineUsage: MachineUsageEntity;
 }
