@@ -25,7 +25,7 @@ export class VpnController {
     description: 'WireGuard configuration',
     type: VpnConfig,
   })
-  @Get('user/config/')
+  @Get('config')
   async getWireGuardConfig(
     @Request() req: any
   ) {
@@ -41,7 +41,7 @@ export class VpnController {
     description: 'WireGuard configuration',
     type: VpnConfig,
   })
-  @Get('user/config/:username')
+  @Get('config/:username')
   async getWireGuardConfigByUsername(
     @Request() req: any,
     @Param('username') username: string,
