@@ -31,6 +31,10 @@ export class VpnService implements OnModuleInit {
     const reqCaller = await this.userModel.findById(caller);
     let user: UserDocument;
 
+    if (username === 'core') {
+      return await this.getWireGuardCoreConfig(caller);
+    }
+
     if (username) {
       user = await this.userModel.findOne({ username: username });
     } else {
