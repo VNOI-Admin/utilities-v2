@@ -15,6 +15,7 @@
     "@sveltejs/enhanced-img": "0.1.8",
     "@sveltejs/kit": "2.3.2",
     "@sveltejs/vite-plugin-svelte": "3.0.1",
+    "@types/uuid": "9.0.7",
     "autoprefixer": "10.4.16",
     "npm-check-updates": "16.14.12",
     "postcss": "8.4.33",
@@ -23,6 +24,7 @@
     "tailwindcss": "3.4.1",
     "tslib": "2.6.2",
     "typescript": "5.3.3",
+    "uuid": "9.0.1",
     "vite": "5.0.11"
   }
 }

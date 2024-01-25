@@ -32,7 +32,7 @@
       class={clsx(
         "input block h-[44px] w-full rounded-lg px-2.5 pt-2.5 text-sm shadow-md transition-opacity disabled:opacity-50",
         "focus:border-accent-light dark:focus:border-accent-dark border border-neutral-400 focus:outline-none dark:border-neutral-700",
-        "dark:bg-neutral-1000 bg-white text-black dark:text-white opacity-80",
+        "dark:bg-neutral-1000 bg-white text-black opacity-80 dark:text-white",
       )}
       aria-invalid={!!errorText}
       aria-describedby={errorTextId}
@@ -47,6 +47,6 @@
     </label>
   </div>
   {#if !!errorText && errorTextId}
-    <p id={errorTextId}>{errorText}</p>
+    <p class="text-error" id={errorTextId}>{errorText}</p>
   {/if}
 </div>
