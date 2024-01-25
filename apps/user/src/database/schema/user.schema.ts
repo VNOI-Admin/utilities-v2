@@ -15,6 +15,14 @@ export type KeyPairType = {
 
 export type Role = 'admin' | 'coach' | 'user';
 
+export type MachineUsage = {
+  cpu: number;
+  memory: number;
+  disk: number;
+  ping: number;
+  lastReportedAt: Date;
+}
+
 @Schema()
 export class User {
   @Prop({ required: true, unique: true })
@@ -46,6 +54,15 @@ export class User {
     }),
   )
   keyPair: KeyPairType;
+
+  @Prop(raw({
+    cpu: { type: Number, default: 0 },
+    memory: { type: Number, default: 0 },
+    disk: { type: Number, default: 0 },
+    ping: { type: Number, default: 0 },
+    lastReportedAt: { type: Date, default: null },
+  }))
+  machineUsage: MachineUsage;
 
   // Belong to one group
   @Prop({ type: SchemaTypes.ObjectId, ref: 'Group' })

@@ -3,18 +3,23 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Get,
+  MaxFileSizeValidator,
   Param,
+  ParseFilePipe,
   Post,
   Request,
   SerializeOptions,
+  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { AccessTokenGuard } from '../common/guards/accessToken.guard';
 import { CreateGroupDto } from './dtos/createGroup.dto';
 import { CreateUserDto } from './dtos/createUser.dto';
+import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
 import { UserService } from './user.service';
@@ -99,5 +104,38 @@ export class UserController {
     const callerId = req.user['sub'];
     await this.userService.checkPrivilege(callerId, ['admin']);
     return await this.userService.createGroup(createGroupDto);
+  }
+
+  @ApiOperation({ summary: 'Receive machine status report from user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Update user machine usage report',
+  })
+  @Post('/report')
+  async report(@Request() req: any, @Body() report: ReportUsageDto) {
+    // Get caller ip address
+    const callerIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const callerId = await this.userService.getUserByIp(callerIp);
+
+    await this.userService.checkPrivilege(callerId, ['user']);
+    return await this.userService.reportUsage(callerId, report);
+  }
+
+  @ApiOperation({ summary: 'Send print job' })
+  @ApiResponse({
+    status: 200,
+    description: 'Receive print job',
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @Post('/print')
+  async print(
+    @Request() req: any,
+    @UploadedFile(
+      new ParseFilePipe({ validators: [new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 })] })
+    ) file: Express.Multer.File) {
+    const callerIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const callerId = await this.userService.getUserByIp(callerIp);
+    await this.userService.checkPrivilege(callerId, ['user', 'admin']);
+    return await this.userService.print(callerId, file);
   }
 }
