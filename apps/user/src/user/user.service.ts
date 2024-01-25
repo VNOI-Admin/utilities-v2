@@ -3,9 +3,8 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
-import * as axios from 'axios';
 import { plainToInstance } from 'class-transformer';
-import FormData from 'form-data';
+import { FormData } from 'formdata-node';
 import { Model } from 'mongoose';
 
 import type { GroupDocument } from '../database/schema/group.schema';
@@ -135,15 +134,23 @@ export class UserService implements OnModuleInit {
       throw new BadRequestException('User not found');
     }
     const username = user.username;
+
+    const filename = `${username}-${file.originalname}`;
+
     const formData = new FormData();
-    formData.append('file', file, {
-      filename: `${username}-${file.originalname}`,
-      contentType: file.mimetype,
-    });
-    const response = await axios.default.post(this.printUrl, formData, {
-      headers: formData.getHeaders(),
-    });
-    if (response.status !== 200) {
+    const fileBuffer = new Blob([file.buffer], { type: file.mimetype });
+    formData.append('file', fileBuffer, filename);
+
+    // print formdata file content
+    try {
+      const response = await fetch(`${this.printUrl}/print`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new BadRequestException('Unable to print');
+      }
+    } catch (error) {
       throw new BadRequestException('Unable to print');
     }
   }

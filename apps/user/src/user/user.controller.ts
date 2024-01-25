@@ -135,7 +135,7 @@ export class UserController {
     ) file: Express.Multer.File) {
     const callerIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const callerId = await this.userService.getUserByIp(callerIp);
-    await this.userService.checkPrivilege(callerId, ['user']);
+    await this.userService.checkPrivilege(callerId, ['user', 'admin']);
     return await this.userService.print(callerId, file);
   }
 }
