@@ -1,12 +1,16 @@
 import type { VALID_ORDER_BY_VALUES, VALID_ORDER_VALUES } from "./$page.constants";
 
 export interface Device {
-  userId: string;
-  ip: string;
+  username: string;
+  vpnIpAddress: string;
+  fullName: string;
+  role: string;
+  isActive: boolean;
   cpu: number;
-  ram: number;
+  memory: number;
+  disk: number;
   ping: number;
-  isOnline: boolean;
+  lastReportedAt: string;
 }
 
 export type DeviceInfoKeys = keyof Device;

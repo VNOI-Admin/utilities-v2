@@ -49,4 +49,7 @@
   .text-error {
     @apply text-red-500 dark:text-red-400;
   }
+  .link {
+		@apply text-blue-800 underline dark:text-sky-300;
+	}
 }

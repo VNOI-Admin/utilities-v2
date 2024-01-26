@@ -9,7 +9,11 @@
   import { clsx } from "$lib/clsx";
   import { range } from "$lib/range";
 
-  import type { DeviceInfoKeys, OrderBy } from "./$page.types";
+  import {
+    DEVICE_KEYS,
+    MAP_DEVICE_INFO_KEYS_TO_NAME,
+    MAP_DEVICE_INFO_KEYS_TO_ORDER_BY,
+  } from "./$page.constants";
   import DeviceInfo from "./DeviceInfo.svelte";
   import PaginationButton from "./PaginationButton.svelte";
 
@@ -24,29 +28,9 @@
 
     return () => clearInterval(interval);
   });
-
-  const mapDeviceInfoKeyToName: Record<DeviceInfoKeys, string> = {
-    userId: "ID",
-    ip: "IP",
-    isOnline: "Online",
-    ping: "Ping",
-    cpu: "CPU usage",
-    ram: "RAM usage",
-  };
-
-  const mapDeviceInfoKeyToOrderBy: Partial<Record<DeviceInfoKeys, OrderBy>> = {
-    userId: "username",
-    ip: "ip",
-    ping: "ping",
-    cpu: "cpu",
-    ram: "ram",
-  };
-
-  // This should be in the same order as the one used in DeviceInfo.
-  const deviceKeys = ["userId", "ip", "isOnline", "ping", "cpu", "ram"] satisfies DeviceInfoKeys[];
 </script>
 
-<div class="h-full w-full px-6 py-8 flex gap-2 flex-col">
+<div class="flex h-full w-full flex-col gap-2 px-6 py-8">
   <h2>Monitor</h2>
 
   <h3 class="text-accent-light dark:text-accent-dark inline-block">
@@ -76,7 +60,7 @@
   </button>
   <div class="flex h-fit w-full flex-col gap-2">
     {#if isQuickNavigateOpen}
-      <form method="GET" action="/">
+      <form method="GET" action="/" class="w-fit">
         <Input
           label="To page"
           id="home-quick-navigate-page"
@@ -88,29 +72,18 @@
           max={data.totalPages - 1}
         />
       </form>
+      <div class="flex h-fit w-full flex-row flex-wrap gap-2">
+        {#each range(0, data.totalPages - 1) as navigatePage}
+          <PaginationButton
+            as="a"
+            href={addURLSearch($page.url, { page: "" + navigatePage }).toString()}
+            active={!!currentPage && +currentPage === navigatePage}
+          >
+            {navigatePage}
+          </PaginationButton>
+        {/each}
+      </div>
     {/if}
-    <div class="flex h-fit w-full flex-row flex-wrap gap-2">
-      {#each range(0, data.totalPages - 1) as navigatePage}
-        <PaginationButton
-          as="a"
-          href={addURLSearch($page.url, { page: "" + navigatePage }).toString()}
-          active={!!currentPage && +currentPage === navigatePage}
-        >
-          {navigatePage}
-        </PaginationButton>
-      {/each}
-    </div>
-
-    <!-- Create a filter input with content from filter in url search param -->
-    <form method="GET" action="/">
-      <Input
-        label="Filter"
-        id="home-filter"
-        type="search"
-        name="filter"
-        value={$page.url.searchParams.get("filter") ?? ""}
-      />
-    </form>
   </div>
   <a
     class="text-accent-light dark:text-accent-dark underline"
@@ -127,11 +100,11 @@
           <tr
             class="dark:[&>th]:bg-neutral-1000 z-10 [&>th]:sticky [&>th]:top-0 [&>th]:bg-white [&>th]:transition-colors [&>th]:duration-100"
           >
-            {#each deviceKeys as key}
-              {@const keyAsOrderByValue = mapDeviceInfoKeyToOrderBy[key]}
+            {#each DEVICE_KEYS as key}
+              {@const keyAsOrderByValue = MAP_DEVICE_INFO_KEYS_TO_ORDER_BY[key]}
               <th class="text-left md:w-[calc(100%/6)]">
                 <div class="flex items-center gap-2">
-                  <h3>{mapDeviceInfoKeyToName[key]}</h3>
+                  <h3>{MAP_DEVICE_INFO_KEYS_TO_NAME[key]}</h3>
                   {#if !!keyAsOrderByValue}
                     {@const isCurrentOrder = orderBy === keyAsOrderByValue}
                     <a
