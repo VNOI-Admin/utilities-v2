@@ -25,6 +25,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies, locals, dep
     cookies,
     fetch,
     user: locals.user,
+    omitAuthorizationIfUndefined: false,
   });
 
   if (res === undefined) {

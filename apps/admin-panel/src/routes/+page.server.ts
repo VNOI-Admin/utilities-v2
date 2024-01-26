@@ -49,6 +49,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
     cookies,
     fetch,
     user: locals.user,
+    omitAuthorizationIfUndefined: false,
   });
 
   if (res === undefined) {
