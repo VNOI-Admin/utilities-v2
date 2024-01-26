@@ -134,7 +134,7 @@ export const refreshUser = async ({
     );
     return removeUser({ cookies }), undefined;
   }
-  logger.success("refreshed successfully:", `(${requestInfo})`);
+  logger.success("refresh successful:", `(${requestInfo})`);
   return setUser({ cookies, accessToken: data.accessToken, refreshToken: data.refreshToken });
 };
 
