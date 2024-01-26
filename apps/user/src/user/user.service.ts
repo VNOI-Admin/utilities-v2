@@ -117,7 +117,7 @@ export class UserService implements OnModuleInit {
   }
 
   async reportUsage(userId: string, usage: ReportUsageDto) {
-    const user = await this.userModel.findOne({ _id: userId }).lean();
+    const user = await this.userModel.findOne({ _id: userId });
     if (!user) {
       throw new BadRequestException('User not found');
     }
