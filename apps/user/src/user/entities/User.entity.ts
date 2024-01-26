@@ -17,6 +17,10 @@ export class MachineUsageEntity {
   @Expose()
   @ApiProperty()
   ping: number;
+
+  @Expose()
+  @ApiProperty()
+  lastReportedAt: Date;
 };
 
 export class UserEntity {
