@@ -30,19 +30,19 @@ export class UserEntity {
 
   @Expose()
   @ApiProperty()
-  vpnIpAddress: string;
-
-  @Expose()
-  @ApiProperty()
   fullName: string;
 
   @Expose()
   @ApiProperty()
-  role: string;
+  isActive: boolean;
 
   @Expose()
   @ApiProperty()
-  isActive: boolean;
+  vpnIpAddress: string;
+
+  @Expose()
+  @ApiProperty()
+  role: string;
 
   @Expose()
   @Type(() => MachineUsageEntity)

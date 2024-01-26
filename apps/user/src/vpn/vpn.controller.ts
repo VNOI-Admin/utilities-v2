@@ -45,6 +45,9 @@ export class VpnController {
     @Param('username') username: string,
   ) {
     const callerId = req.user['sub'];
+    if (username === 'core') {
+      return await this.vpnService.getWireGuardCoreConfig(callerId);
+    }
     return await this.vpnService.getWireGuardConfig(callerId, username);
   }
 }
