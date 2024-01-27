@@ -61,7 +61,7 @@
             <p class="text-error">{quickSwitchMenu.error}</p>
           {:else}
             <h2>Quick switch</h2>
-            <ul class="flex w-full h-full overflow-y-auto flex-col gap-2">
+            <ul class="flex h-full w-full flex-col gap-2 overflow-y-auto">
               {#each quickSwitchMenu as { username }}
                 <li>
                   <NavLink href={`/contestant/${username}`}>{username}</NavLink>
