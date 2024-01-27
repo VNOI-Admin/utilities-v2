@@ -84,7 +84,7 @@
         class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
       >
         <h2>
-          RAM usage <span class={ramColor}>{data.cpu}%</span>
+          RAM usage <span class={ramColor}>{data.ram}%</span>
         </h2>
         <div class="w-full max-w-[500px] overflow-y-auto">
           <CpuRamChart
