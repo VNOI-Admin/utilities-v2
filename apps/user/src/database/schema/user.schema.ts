@@ -20,6 +20,7 @@ export type MachineUsage = {
   memory: number;
   disk: number;
   ping: number;
+  isOnline: boolean;
   lastReportedAt: Date;
 }
 
@@ -60,6 +61,7 @@ export class User {
     memory: { type: Number, default: 0 },
     disk: { type: Number, default: 0 },
     ping: { type: Number, default: 0 },
+    isOnline: { type: Boolean, default: false },
     lastReportedAt: { type: Date, default: null },
   }))
   machineUsage: MachineUsage;
