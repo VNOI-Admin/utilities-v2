@@ -20,6 +20,10 @@ export class MachineUsageEntity {
 
   @Expose()
   @ApiProperty()
+  isOnline: boolean;
+
+  @Expose()
+  @ApiProperty()
   lastReportedAt: Date;
 };
 
