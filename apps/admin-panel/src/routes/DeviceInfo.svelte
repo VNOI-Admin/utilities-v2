@@ -7,9 +7,9 @@
 
   const { device } = $props<{ device: Device }>();
 
-  const pingColor = $derived(getPingColorClass(device.ping)),
-    cpuColor = $derived(getUsageColorClass(device.cpu)),
-    ramColor = $derived(getUsageColorClass(device.memory));
+  const pingColor = $derived(getPingColorClass(device.ping));
+  const cpuColor = $derived(getUsageColorClass(device.cpu));
+  const ramColor = $derived(getUsageColorClass(device.memory));
 </script>
 
 <tr>

@@ -5,6 +5,7 @@
 
   import { invalidate } from "$app/navigation";
   import noAvatar from "$images/no-avatar.webp";
+  import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
 
   import type { PageData } from "./$types";
@@ -12,8 +13,9 @@
 
   const { data } = $props<{ data: PageData }>();
 
-  const cpuUsage = $derived(data.cpu);
-  const ramUsage = $derived(data.ram);
+  const cpuColor = $derived(getUsageColorClass(data.cpu));
+  const ramColor = $derived(getUsageColorClass(data.ram));
+  const pingColor = $derived(getPingColorClass(data.ping));
 
   $effect(() => {
     const interval = setInterval(() => invalidate("contestant:data:info"), 10000);
@@ -56,7 +58,7 @@
         <span class="sr-only">Contestant </span>{data.userId}
       </h1>
       <h2>
-        IP: {data.ip} • Online: {data.isOnline ? "✅" : "❌"} • Ping: {data.ping}ms
+        IP: {data.ip} • Online: {data.isOnline ? "✅" : "❌"} • Ping: <span class={pingColor}>{data.ping}ms</span>
       </h2>
     </div>
   </div>
@@ -66,7 +68,7 @@
         class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
       >
         <h2>
-          CPU usage <span class={getUsageColorClass(cpuUsage)}>{cpuUsage}%</span>
+          CPU usage <span class={cpuColor}>{data.cpu}%</span>
         </h2>
         <div class="w-full max-w-[500px] overflow-y-auto">
           <CpuRamChart
@@ -74,7 +76,7 @@
             chartWidth={500}
             chartHeight={200}
             chartLabel="CPU%"
-            chartUsage={cpuUsage}
+            chartUsage={data.cpu}
           />
         </div>
       </div>
@@ -82,7 +84,7 @@
         class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
       >
         <h2>
-          RAM usage <span class={getUsageColorClass(ramUsage)}>{ramUsage}%</span>
+          RAM usage <span class={ramColor}>{data.cpu}%</span>
         </h2>
         <div class="w-full max-w-[500px] overflow-y-auto">
           <CpuRamChart
@@ -90,7 +92,7 @@
             chartWidth={500}
             chartHeight={200}
             chartLabel="RAM%"
-            chartUsage={ramUsage}
+            chartUsage={data.ram}
           />
         </div>
       </div>
