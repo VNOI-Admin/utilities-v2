@@ -6,14 +6,21 @@ from werkzeug.utils import secure_filename
 from flask_restful import Api, Resource, request
 
 import logging
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 api = Api(app)
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000
 app.config['UPLOAD_FOLDER'] = os.path.join('data', 'uploads')
+
+# check if folder data/uploads exists, if not, create it
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+
+@app.route('/')
+def default():
+    return 'Hello, World!'
 
 @api.resource('/print')
 class Print(Resource):
@@ -23,6 +30,7 @@ class Print(Resource):
             return {'error': 'No file selected'}, 400
 
         if file:
+            # write the file to the uploads folder
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             subprocess.Popen(f'lpr -o media=A4 -o prettyprint -o fit-to-page '
