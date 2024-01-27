@@ -1,6 +1,6 @@
 <script lang="ts">
   import Button from "$components/Button.svelte";
-import { getPingColorClass } from "$lib/getPingColorClass";
+  import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
 
   import type { Device } from "./$page.types";
@@ -15,9 +15,9 @@ import { getPingColorClass } from "$lib/getPingColorClass";
 <tr>
   <td>
     <!-- <a class="link" href={`/contestant/${device.username}`}> -->
-      <h3>
-        {device.username}
-      </h3>
+    <h3>
+      {device.username}
+    </h3>
     <!-- </a> -->
   </td>
   <td>
@@ -45,10 +45,11 @@ import { getPingColorClass } from "$lib/getPingColorClass";
       {device.memory}%
     </h3>
   </td>
-  <td>
-    <!-- Link button to contestant page -->
-    <a href={`/contestant/${device.username}`}>
-      <Button disabled={!device.isOnline}>View</Button>
-    </a>
+  <td class="[&>*]:inline-block [&>*]:w-full">
+    {#if device.isOnline}
+      <Button as="a" href={`/contestant/${device.username}`}>View</Button>
+    {:else}
+      <span class="text-center">Not Available</span>
+    {/if}
   </td>
 </tr>

@@ -2,7 +2,6 @@
   // import { browser } from "$app/environment";
   import { invalidate } from "$app/navigation";
   import { page } from "$app/stores";
-  import Button from "$components/Button.svelte";
   import ChevronRight from "$components/icons/ChevronRight.svelte";
   import Sort from "$components/icons/Sort.svelte";
   import Input from "$components/Input.svelte";
@@ -131,6 +130,7 @@
               </th>
             {/each}
             <th class="text-left md:w-[calc(100%/7)]">
+              <span class="sr-only">View user</span>
             </th>
           </tr>
         </thead>

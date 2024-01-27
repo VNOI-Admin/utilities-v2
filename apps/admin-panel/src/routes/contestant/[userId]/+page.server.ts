@@ -1,8 +1,7 @@
-import { randomUUID } from "node:crypto";
-
 import { error, redirect } from "@sveltejs/kit";
 
 import { USER_SERVICE_URI } from "$env/static/private";
+import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
 import type { UserData } from "$lib/types";
 import { fetchWithUser } from "$lib/users";
@@ -11,7 +10,7 @@ import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, fetch, cookies, locals, depends }) => {
   depends("contestant:data:info");
-  const requestInfo = `page = /contestant/[userId], requestId = ${randomUUID()}, userId = ${params.userId}`;
+  const requestInfo = `page = /contestant/[userId], requestId = ${getRequestId()}, userId = ${params.userId}`;
 
   logger.log("fetching:", `(${requestInfo})...`);
 
