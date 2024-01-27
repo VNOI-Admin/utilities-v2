@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { UserModule } from './user/user.module';
 import { VpnModule } from './vpn/vpn.module';
+import { TaskModule } from './task/task.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { VpnModule } from './vpn/vpn.module';
     AuthModule,
     DatabaseModule,
     VpnModule,
+    TaskModule,
   ],
   controllers: [AppController],
   providers: [AppService],
