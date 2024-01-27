@@ -20,6 +20,7 @@ export interface UserData {
     memory: number;
     disk: number;
     ping: number;
+    isOnline: boolean;
     lastReportedAt: string;
   };
 }

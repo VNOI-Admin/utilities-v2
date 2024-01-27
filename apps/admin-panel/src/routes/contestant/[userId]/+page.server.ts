@@ -45,10 +45,10 @@ export const load: PageServerLoad = async ({ params, fetch, cookies, locals, dep
   return {
     title: `Contestant ${data.username}`,
     userId: data.username,
-    isOnline: data.isActive,
     ip: data.vpnIpAddress,
     cpu: data.machineUsage.cpu,
     ram: data.machineUsage.memory,
+    isOnline: data.machineUsage.isOnline,
     ping: data.machineUsage.ping,
   };
 };

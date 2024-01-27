@@ -1,10 +1,13 @@
 <script lang="ts">
+  import videojs from "video.js";
   import { invalidate } from "$app/navigation";
   import noAvatar from "$images/no-avatar.webp";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
 
   import type { PageData } from "./$types";
   import CpuRamChart from "./CpuRamChart.svelte";
+  import { onDestroy, onMount } from "svelte";
+  import "video.js/dist/video-js.min.css";
 
   const { data } = $props<{ data: PageData }>();
 
@@ -15,6 +18,22 @@
     const interval = setInterval(() => invalidate("contestant:data:info"), 10000);
 
     return () => clearInterval(interval);
+  });
+
+  let player: any;
+
+  onMount(() => {
+    player = videojs("player", {
+      controls: false,
+      autoplay: true,
+      preload: "auto",
+      fluid: true,
+      liveui: true,
+    });
+  });
+
+  onDestroy(() => {
+    if (player) player.dispose();
   });
 </script>
 
@@ -72,4 +91,35 @@
       </div>
     </div>
   </div>
+  <!-- <video class="w-full rounded-xl shadow-lg bg-gray-100 video-js" id="player" autoplay loop controls>
+    <source src={`http://${data.ip}:100/stream.ogg`} type="video/ogg" />
+    <track kind="captions" />
+  </video> -->
+  <!-- make video view with height fill parent without scrolling -->
+  <div class="flex w-full flex-col gap-4 md:flex-row md:flex-wrap">
+    <div
+      class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg md:flex-[1_1_0] md:overflow-x-auto"
+    >
+      <h2>Video</h2>
+      <div class="w-full max-w-[900px] overflow-y-auto">
+        <video
+          class="w-full rounded-xl shadow-lg bg-gray-100 video-js"
+          id="player"
+          autoplay
+          loop
+          controls
+        >
+          <source
+            src={`http://${data.ip}:100/stream.ogg`}
+            type="video/ogg"
+          />
+          <track kind="captions" />
+        </video>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- <style>
+  @import url("https://cdn.jsdelivr.net/npm/video.js/dist/video-js.min.css");
+</style> -->

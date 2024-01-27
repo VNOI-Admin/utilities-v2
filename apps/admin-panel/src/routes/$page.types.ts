@@ -6,6 +6,7 @@ export interface Device {
   fullName: string;
   role: string;
   isActive: boolean;
+  isOnline: boolean;
   cpu: number;
   memory: number;
   disk: number;

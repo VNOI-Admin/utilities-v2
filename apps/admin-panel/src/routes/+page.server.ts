@@ -68,12 +68,13 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   const orderByDeviceKey = MAP_ORDER_BY_TO_DEVICE_INFO_KEY[orderByQuery];
 
   let devices = data.map(
-    ({ machineUsage: { cpu, memory, disk, ping, lastReportedAt }, ...rest }) => {
+    ({ machineUsage: { cpu, memory, disk, ping, isOnline, lastReportedAt }, ...rest }) => {
       return {
         cpu,
         memory,
         disk,
         ping,
+        isOnline,
         lastReportedAt,
         ...rest,
       } satisfies Device;
@@ -81,16 +82,8 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   );
 
   const totalPages = Math.ceil(devices.length / PAGE_SIZE);
-  let onlineCount = 0;
-  let offlineCount = 0;
-
-  for (const device of devices) {
-    if (device.isActive) {
-      onlineCount++;
-    } else {
-      offlineCount++;
-    }
-  }
+  const onlineCount = devices.filter((device) => device.isOnline).length;
+  const offlineCount = devices.length - onlineCount;
 
   if (page === undefined || Number.isNaN(page) || page < 0 || page > totalPages - 1) {
     redirect(301, addURLSearch(url, { page: "0" }));

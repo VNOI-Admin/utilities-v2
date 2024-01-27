@@ -2,6 +2,7 @@
   // import { browser } from "$app/environment";
   import { invalidate } from "$app/navigation";
   import { page } from "$app/stores";
+  import Button from "$components/Button.svelte";
   import ChevronRight from "$components/icons/ChevronRight.svelte";
   import Sort from "$components/icons/Sort.svelte";
   import Input from "$components/Input.svelte";
@@ -35,10 +36,8 @@
 
   <h3 class="text-accent-light dark:text-accent-dark inline-block">
     <!-- Show number of online by counting isOnline in devices -->
-    <span aria-hidden="true">✓</span>
     {data.onlineCount} online +
     <!-- Show number of offline by counting isOnline in devices -->
-    <span aria-hidden="true">⛌</span>
     {data.offlineCount} offline =
     <!-- Total -->
     {data.onlineCount + data.offlineCount} total
@@ -102,7 +101,7 @@
           >
             {#each DEVICE_KEYS as key}
               {@const keyAsOrderByValue = MAP_DEVICE_INFO_KEYS_TO_ORDER_BY[key]}
-              <th class="text-left md:w-[calc(100%/6)]">
+              <th class="text-left md:w-[calc(100%/7)]">
                 <div class="flex items-center gap-2">
                   <h3>{MAP_DEVICE_INFO_KEYS_TO_NAME[key]}</h3>
                   {#if !!keyAsOrderByValue}
@@ -131,6 +130,8 @@
                 </div>
               </th>
             {/each}
+            <th class="text-left md:w-[calc(100%/7)]">
+            </th>
           </tr>
         </thead>
         <tbody>

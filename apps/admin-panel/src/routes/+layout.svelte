@@ -35,7 +35,7 @@
   const ASIDE_MENU_LINKS = [
     {
       href: "/",
-      title: "Home",
+      title: "Monitor",
     },
     {
       href: "/logging",
