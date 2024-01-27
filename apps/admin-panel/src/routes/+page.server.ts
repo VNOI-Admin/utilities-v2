@@ -1,6 +1,6 @@
 import { error, redirect } from "@sveltejs/kit";
 
-import { API_ENDPOINT } from "$env/static/private";
+import { USER_SERVICE_URI } from "$env/static/private";
 import { addURLSearch } from "$lib/addURLSearch";
 import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
@@ -39,7 +39,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
     redirect(301, addURLSearch(url, { order: "asc" }));
   }
 
-  const res = await fetchWithUser(new URL("/user", API_ENDPOINT), {
+  const res = await fetchWithUser(new URL("/user", USER_SERVICE_URI), {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -96,7 +96,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
     redirect(301, addURLSearch(url, { page: "0" }));
   }
 
-  devices = devices.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).toSorted((a, b) => {
+  devices = devices.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).sort((a, b) => {
     switch (orderQuery) {
       case "asc":
         return a[orderByDeviceKey] < b[orderByDeviceKey] ? -1 : 1;

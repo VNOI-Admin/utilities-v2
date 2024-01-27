@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { error, redirect } from "@sveltejs/kit";
 
-import { API_ENDPOINT } from "$env/static/private";
+import { USER_SERVICE_URI } from "$env/static/private";
 import * as logger from "$lib/logger";
 import type { UserData } from "$lib/types";
 import { fetchWithUser } from "$lib/users";
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies, locals, dep
 
   logger.log("fetching:", `(${requestInfo})...`);
 
-  const res = await fetchWithUser(new URL(`/user/${params.userId}`, API_ENDPOINT), {
+  const res = await fetchWithUser(new URL(`/user/${params.userId}`, USER_SERVICE_URI), {
     method: "GET",
     headers: {
       Accept: "application/json",
