@@ -19,8 +19,8 @@ export class TaskService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    this.logger.debug('Initializing task service');
-    const users = await this.userModel.find({ role: 'user', 'vpnIpAddress': { $ne: null }, 'isActive': true });
+    const users = await this.userModel.find({ role: 'user', 'vpnIpAddress': { $ne: null }, isActive: true });
+    this.logger.debug(`Initializing ${users.length} cron jobs for users`);
 
     for (const user of users) {
       const job = new CronJob(CronExpression.EVERY_5_SECONDS, async () => {
