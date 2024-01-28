@@ -10,6 +10,7 @@
 
   import type { PageData } from "./$types";
   import CpuRamChart from "./CpuRamChart.svelte";
+  import Button from "$components/Button.svelte";
 
   const { data } = $props<{ data: PageData }>();
 
@@ -33,7 +34,7 @@
         controls: false,
         autoplay: true,
         preload: "auto",
-        fluid: true,
+        fill: true,
         liveui: true,
       });
     }
@@ -63,7 +64,7 @@
     </div>
   </div>
   <div class="flex h-full w-full flex-col gap-[inherit] lg:flex-row">
-    <div class="flex w-full flex-col gap-4">
+    <div class="flex w-full flex-col gap-4 basis-1/3">
       <div
         class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
       >
@@ -98,7 +99,7 @@
       </div>
     </div>
     <!-- make video view with height fill parent without scrolling -->
-    <div class="flex w-full flex-col gap-4">
+    <div class="flex w-full flex-col gap-4 basis-2/3">
       <div
         class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
       >

@@ -63,6 +63,20 @@ export class UserController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
+  @ApiOperation({ summary: 'Get current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return user',
+    type: UserEntity,
+  })
+  @Get('/me')
+  async getCurrentUser(@Request() req: any) {
+    const callerId = req.user['sub'];
+    return await this.userService.getUserById(callerId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: 'Create new user' })
   @ApiResponse({
     status: 200,
