@@ -10,6 +10,6 @@ export const handleError: HandleServerError = ({ error }) => {
 };
 
 export const handle: Handle = async ({ event, resolve }) => {
-  event.locals.user = getUser({ cookies: event.cookies });
+  event.locals.user = await getUser({ cookies: event.cookies, fetch: event.fetch });
   return await resolve(event);
 };

@@ -3,7 +3,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { USER_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
-import { setUser } from "$lib/users";
+import { setUserTokens } from "$lib/users";
 
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -63,7 +63,7 @@ export const actions: Actions = {
         return fail(500, { error: "Internal Server Error" });
       }
       logger.success("logged in successfully:", `(${requestInfo})`);
-      setUser({ cookies, accessToken: data.accessToken, refreshToken: data.refreshToken });
+      setUserTokens({ cookies, accessToken: data.accessToken, refreshToken: data.refreshToken });
     } catch (err) {
       if (err instanceof Error && err.name === "TimeoutError") {
         logger.error(

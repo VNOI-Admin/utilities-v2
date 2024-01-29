@@ -4,7 +4,7 @@ import type { COLOR_SCHEMES } from "./constants";
 
 export type ColorScheme = (typeof COLOR_SCHEMES)[number];
 
-export interface User {
+export interface UserTokens {
   accessToken: string;
   refreshToken: string;
 }
@@ -24,6 +24,11 @@ export interface UserData {
     lastReportedAt: string;
   };
 }
+
+export type User = {
+  token: UserTokens;
+  data: UserData;
+};
 
 export type ChartWorkerEvent<
   TChart extends string,

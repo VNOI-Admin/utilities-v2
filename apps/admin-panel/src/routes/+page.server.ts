@@ -18,7 +18,6 @@ import type { Device } from "./$page.types";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ url, cookies, fetch, depends, locals }) => {
-  depends("home:query");
   const requestInfo = `page = /, requestId = ${getRequestId()}`;
 
   if (!locals.user) {
@@ -101,6 +100,8 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
       }
     }
   });
+
+  depends("home:query");
 
   return {
     totalPages,

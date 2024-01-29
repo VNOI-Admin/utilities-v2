@@ -4,9 +4,9 @@ import { USER_SERVICE_URI } from "$env/static/private";
 import * as logger from "$lib/logger";
 
 import { getRequestId } from "./getRequestId";
-import type { User } from "./types";
+import type { User, UserData, UserTokens } from "./types";
 
-export interface RemoveUserOptions {
+export interface RemoveUserTokensOptions {
   cookies: Cookies;
 }
 
@@ -14,7 +14,7 @@ export interface RemoveUserOptions {
  * Removes the tokens from cookies.
  * @param options
  */
-export const removeUser = ({ cookies }: RemoveUserOptions) => {
+export const removeUserTokens = ({ cookies }: RemoveUserTokensOptions) => {
   cookies.delete("accessToken", {
     httpOnly: true,
     sameSite: "strict",
@@ -29,30 +29,7 @@ export const removeUser = ({ cookies }: RemoveUserOptions) => {
   });
 };
 
-export interface GetUserOptions {
-  cookies: Cookies;
-}
-
-/**
- * Retrieves the tokens from cookies.
- * @param options
- * @returns
- */
-export const getUser = ({ cookies }: GetUserOptions): User | undefined => {
-  const accessToken = cookies.get("accessToken");
-  const refreshToken = cookies.get("refreshToken");
-
-  if (accessToken === undefined || refreshToken === undefined) {
-    return undefined;
-  }
-
-  return {
-    accessToken,
-    refreshToken,
-  };
-};
-
-export interface SetUserOptions {
+export interface SetUserTokensOptions {
   cookies: Cookies;
   accessToken: string;
   refreshToken: string;
@@ -63,7 +40,11 @@ export interface SetUserOptions {
  * @param options
  * @returns
  */
-export const setUser = ({ cookies, accessToken, refreshToken }: SetUserOptions): User => {
+export const setUserTokens = ({
+  cookies,
+  accessToken,
+  refreshToken,
+}: SetUserTokensOptions): UserTokens => {
   cookies.set("accessToken", accessToken, {
     httpOnly: true,
     sameSite: "strict",
@@ -80,6 +61,61 @@ export const setUser = ({ cookies, accessToken, refreshToken }: SetUserOptions):
     accessToken,
     refreshToken,
   };
+};
+
+export interface RefreshUserTokensOptions {
+  cookies: Cookies;
+  fetch: typeof fetch;
+}
+
+export const refreshUserTokens = async ({
+  cookies,
+  fetch,
+}: RefreshUserTokensOptions): Promise<UserTokens | undefined> => {
+  const requestInfo = `requestId = ${getRequestId()}`;
+  logger.log("refreshUserTokens initiated:", `(${requestInfo})`);
+  const oldRefreshToken = cookies.get("refreshToken");
+  if (oldRefreshToken === undefined) {
+    logger.error(
+      "refreshUserTokens failed:",
+      `(${requestInfo}, error = User did not provide a refresh token.)`,
+    );
+    return removeUserTokens({ cookies }), undefined;
+  }
+  const res = await fetch(new URL("/auth/refresh", USER_SERVICE_URI), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${oldRefreshToken}`,
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!res.ok) {
+    logger.error("refreshUserTokens failed:", `(${requestInfo}, error = ${await res.text()})`);
+    return removeUserTokens({ cookies }), undefined;
+  }
+  const data = (await res.json()) as {
+    accessToken: unknown;
+    refreshToken: unknown;
+  };
+  if (typeof data.accessToken !== "string" || typeof data.refreshToken !== "string") {
+    logger.error(
+      "refreshUserTokens failed:",
+      `(${requestInfo}, error = Data is not valid (value: ${JSON.stringify(data, null, 2)}).)`,
+    );
+    return removeUserTokens({ cookies }), undefined;
+  }
+
+  const userTokens = setUserTokens({
+    cookies,
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+  });
+
+  logger.success("refreshUserTokens successful:", `(${requestInfo})`);
+
+  return userTokens;
 };
 
 export interface RefreshUserOptions {
@@ -100,42 +136,36 @@ export const refreshUser = async ({
   cookies,
   fetch,
 }: RefreshUserOptions): Promise<User | undefined> => {
-  const requestInfo = `function = refreshUser, requestId = ${getRequestId()}`;
-  logger.log("refresh initiated:", `(${requestInfo})`);
-  const oldRefreshToken = cookies.get("refreshToken");
-  if (oldRefreshToken === undefined) {
-    logger.error(
-      "refresh failed:",
-      `(${requestInfo}, error = User did not provide a refresh token.)`,
-    );
-    return removeUser({ cookies }), undefined;
+  const requestInfo = `requestId = ${getRequestId()}`;
+  logger.log("refreshUser initiated:", `(${requestInfo})`);
+
+  const userTokens = await refreshUserTokens({ cookies, fetch });
+
+  if (userTokens === undefined) {
+    return undefined;
   }
-  const res = await fetch(new URL("/auth/refresh", USER_SERVICE_URI), {
-    method: "POST",
+
+  const userDataRes = await fetch(new URL("/user/me", USER_SERVICE_URI), {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      Authorization: `Bearer ${oldRefreshToken}`,
+      Authorization: `Bearer ${userTokens.accessToken}`,
     },
-    signal: AbortSignal.timeout(10000),
   });
-  if (!res.ok) {
-    logger.error("refresh failed:", `(${requestInfo}, error = ${await res.text()})`);
-    return removeUser({ cookies }), undefined;
+
+  if (!userDataRes.ok) {
+    logger.error("refreshUser failed:", `(${requestInfo}, error = ${await userDataRes.text()}).)`);
+    return removeUserTokens({ cookies }), undefined;
   }
-  const data = (await res.json()) as {
-    accessToken: unknown;
-    refreshToken: unknown;
+
+  const userData = (await userDataRes.json()) as UserData;
+
+  logger.success("refreshUser successful:", `(${requestInfo})`);
+
+  return {
+    token: userTokens,
+    data: userData,
   };
-  if (typeof data.accessToken !== "string" || typeof data.refreshToken !== "string") {
-    logger.error(
-      "refresh failed:",
-      `(${requestInfo}, error = Data is not valid (value: ${JSON.stringify(data, null, 2)}).)`,
-    );
-    return removeUser({ cookies }), undefined;
-  }
-  logger.success("refresh successful:", `(${requestInfo})`);
-  return setUser({ cookies, accessToken: data.accessToken, refreshToken: data.refreshToken });
 };
 
 export interface FetchWithUserOptions extends RequestInit {
@@ -171,46 +201,111 @@ export const fetchWithUser = async (
     ...init
   }: FetchWithUserOptions,
 ): Promise<Response | undefined> => {
-  const requestInfo = `function = fetchWithUser, requestId = ${getRequestId()}, url = ${url.href}`;
+  const requestInfo = `requestId = ${getRequestId()}, url = ${url.href}`;
   const headers = new Headers(headersInit);
 
-  logger.log("fetch initiated:", `(${requestInfo})`);
+  logger.log("fetchWithUser initiated:", `(${requestInfo})`);
 
   if (user === undefined) {
     if (omitAuthorizationIfUndefined) {
-      logger.log("fetch fallback:", `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`);
+      logger.log("fetchWithUser fallback:", `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`);
       return await fetch(url, { ...init, headers });
     }
-    logger.log("fetch removed user:", `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`);
-    return removeUser({ cookies }), undefined;
+    logger.log("fetchWithUser removed user:", `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`);
+    return removeUserTokens({ cookies }), undefined;
   }
 
-  headers.set("Authorization", `Bearer ${user.accessToken}`);
+  headers.set("Authorization", `Bearer ${user.token.accessToken}`);
   const resCurrentAccess = await fetch(url, { ...init, headers });
   if (resCurrentAccess.status !== 401) {
-    logger.success("fetch successful:", `(${requestInfo}, attempt = 0)`);
+    logger.success("fetchWithUser successful:", `(${requestInfo}, attempt = 0)`);
     return resCurrentAccess;
   }
 
-  logger.log("fetch attempt 2:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
+  logger.log("fetchWithUser attempt 2:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
   headers.delete("Authorization");
   user = await refreshUser({ cookies, fetch });
   if (user === undefined) {
     if (omitAuthorizationIfUndefined) {
-      logger.log("fetch fallback:", `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`);
+      logger.log("fetchWithUser fallback:", `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`);
       return await fetch(url, { ...init, headers });
     }
-    logger.log("fetch removed user:", `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`);
-    return removeUser({ cookies }), undefined;
+    logger.log("fetchWithUser removed user:", `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`);
+    return removeUserTokens({ cookies }), undefined;
   }
 
-  headers.set("Authorization", `Bearer ${user.accessToken}`);
+  headers.set("Authorization", `Bearer ${user.token.accessToken}`);
   const resNewAccess = await fetch(url, { ...init, headers });
   if (resNewAccess.status !== 401) {
-    logger.success("fetch successful:", `(${requestInfo}, attempt = 1)`);
+    logger.success("fetchWithUser successful:", `(${requestInfo}, attempt = 1)`);
     return resNewAccess;
   }
 
-  logger.log("fetch removed user:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
-  return removeUser({ cookies }), undefined;
+  logger.log("fetchWithUser removed user:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
+  return removeUserTokens({ cookies }), undefined;
+};
+
+export interface GetUserOptions {
+  cookies: Cookies;
+  fetch: typeof fetch;
+}
+
+/**
+ * Retrieves the tokens from cookies.
+ * @param options
+ * @returns
+ */
+export const getUser = async ({ cookies, fetch }: GetUserOptions): Promise<User | undefined> => {
+  const requestInfo = `requestId = ${getRequestId()}`;
+  logger.log("getUser initiated:", `${requestInfo}`);
+
+  const accessToken = cookies.get("accessToken");
+  const refreshToken = cookies.get("refreshToken");
+
+  if (accessToken === undefined || refreshToken === undefined) {
+    logger.success("getUser successful:", `${requestInfo}, status = LOGGED_OUT`);
+    return undefined;
+  }
+
+  const userMeUrl = new URL("/user/me", USER_SERVICE_URI);
+
+  let userTokens: UserTokens | undefined = {
+    accessToken,
+    refreshToken,
+  };
+
+  const headers = new Headers();
+
+  headers.set("Authorization", `Bearer ${userTokens.accessToken}`);
+  const userDataResCurrent = await fetch(userMeUrl, { headers });
+  if (userDataResCurrent.status !== 401) {
+    logger.success("getUser successful:", `(${requestInfo}, attempt = 0)`);
+    const userData = await userDataResCurrent.json();
+    return {
+      token: userTokens,
+      data: userData,
+    };
+  }
+
+  logger.log("getUser attempt 2:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
+  headers.delete("Authorization");
+  userTokens = await refreshUserTokens({ cookies, fetch });
+  if (userTokens === undefined) {
+    logger.log("getUser removed user:", `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`);
+    return removeUserTokens({ cookies }), undefined;
+  }
+
+  headers.set("Authorization", `Bearer ${userTokens.accessToken}`);
+  const userDataResNew = await fetch(userMeUrl, { headers });
+  if (userDataResNew.status !== 401) {
+    logger.success("getUser successful:", `(${requestInfo}, attempt = 1)`);
+    const userData = await userDataResNew.json();
+    return {
+      token: userTokens,
+      data: userData,
+    };
+  }
+
+  logger.log("getUser removed user:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
+  return removeUserTokens({ cookies }), undefined;
 };

@@ -9,7 +9,6 @@ import { fetchWithUser } from "$lib/users";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, fetch, cookies, locals, depends }) => {
-  depends("contestant:data:info");
   const requestInfo = `page = /contestant/[userId], requestId = ${getRequestId()}, userId = ${params.userId}`;
 
   logger.log("fetching:", `(${requestInfo})...`);
@@ -41,13 +40,17 @@ export const load: PageServerLoad = async ({ params, fetch, cookies, locals, dep
 
   logger.success("fetched:", `(${requestInfo})...`);
 
+  depends("contestant:data:info");
+
   return {
     title: `Contestant ${data.username}`,
     userId: data.username,
-    ip: data.vpnIpAddress,
-    cpu: data.machineUsage.cpu,
-    ram: data.machineUsage.memory,
-    isOnline: data.machineUsage.isOnline,
-    ping: data.machineUsage.ping,
+    ...(locals.user?.data.role === "admin" && {
+      ip: data.vpnIpAddress,
+      cpu: data.machineUsage.cpu,
+      ram: data.machineUsage.memory,
+      isOnline: data.machineUsage.isOnline,
+      ping: data.machineUsage.ping,
+    }),
   };
 };
