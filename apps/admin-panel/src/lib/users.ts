@@ -1,6 +1,6 @@
 import type { Cookies } from "@sveltejs/kit";
 
-import { USER_SERVICE_URI } from "$env/static/private";
+import { SECURE_COOKIES, USER_SERVICE_URI } from "$env/static/private";
 import * as logger from "$lib/logger";
 
 import { getRequestId } from "./getRequestId";
@@ -10,6 +10,8 @@ export interface RemoveUserTokensOptions {
   cookies: Cookies;
 }
 
+const secureCookies = SECURE_COOKIES === "true";
+
 /**
  * Removes the tokens from cookies.
  * @param options
@@ -18,13 +20,13 @@ export const removeUserTokens = ({ cookies }: RemoveUserTokensOptions) => {
   cookies.delete("accessToken", {
     httpOnly: true,
     sameSite: "strict",
-    secure: true,
+    secure: secureCookies,
     path: "/",
   });
   cookies.delete("refreshToken", {
     httpOnly: true,
     sameSite: "strict",
-    secure: true,
+    secure: secureCookies,
     path: "/",
   });
 };
@@ -208,10 +210,16 @@ export const fetchWithUser = async (
 
   if (user === undefined) {
     if (omitAuthorizationIfUndefined) {
-      logger.log("fetchWithUser fallback:", `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`);
+      logger.log(
+        "fetchWithUser fallback:",
+        `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`,
+      );
       return await fetch(url, { ...init, headers });
     }
-    logger.log("fetchWithUser removed user:", `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`);
+    logger.log(
+      "fetchWithUser removed user:",
+      `(${requestInfo}, attempt = 0, reason = USER_NOT_DEFINED)`,
+    );
     return removeUserTokens({ cookies }), undefined;
   }
 
@@ -222,15 +230,24 @@ export const fetchWithUser = async (
     return resCurrentAccess;
   }
 
-  logger.log("fetchWithUser attempt 2:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
+  logger.log(
+    "fetchWithUser attempt 2:",
+    `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`,
+  );
   headers.delete("Authorization");
   user = await refreshUser({ cookies, fetch });
   if (user === undefined) {
     if (omitAuthorizationIfUndefined) {
-      logger.log("fetchWithUser fallback:", `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`);
+      logger.log(
+        "fetchWithUser fallback:",
+        `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`,
+      );
       return await fetch(url, { ...init, headers });
     }
-    logger.log("fetchWithUser removed user:", `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`);
+    logger.log(
+      "fetchWithUser removed user:",
+      `(${requestInfo}, attempt = 1, reason = USER_NOT_DEFINED)`,
+    );
     return removeUserTokens({ cookies }), undefined;
   }
 
@@ -241,7 +258,10 @@ export const fetchWithUser = async (
     return resNewAccess;
   }
 
-  logger.log("fetchWithUser removed user:", `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`);
+  logger.log(
+    "fetchWithUser removed user:",
+    `(${requestInfo}, attempt = 1, reason = FETCH_UNAUTHORIZED)`,
+  );
   return removeUserTokens({ cookies }), undefined;
 };
 
