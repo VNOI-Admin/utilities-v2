@@ -40,7 +40,7 @@ build/
 # Envs
 .env
 .env.*
-!.env.example
+!.env.sample
 
 # Rollup
 .rollup.cache
