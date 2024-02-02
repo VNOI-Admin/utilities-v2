@@ -6,10 +6,18 @@ import { fetchWithUser } from "$lib/users";
 
 import type { LayoutServerLoad } from "./$types";
 
-export const load: LayoutServerLoad = ({ cookies, locals }) => {
-  const requestInfo = `page = /contestant/[userId], requestId = ${getRequestId()}`;
+export const load: LayoutServerLoad = ({ cookies, locals, url }) => {
+  const requestInfo = `file = routes/+layout.server.ts, requestId = ${getRequestId()}`;
   return {
     quickSwitch: (async () => {
+      if (!url.pathname.startsWith("/contestant")) {
+        return undefined;
+      }
+
+      if (!locals.user) {
+        return undefined;
+      }
+
       try {
         const resOthers = await fetchWithUser(new URL("/user", USER_SERVICE_URI), {
           method: "GET",

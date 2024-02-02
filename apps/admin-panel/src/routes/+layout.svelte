@@ -15,7 +15,7 @@
     $page.data.title ? `${$page.data.title} - VNCS Admin Panel` : "VNCS Admin Panel",
   );
   const isDark = $derived($colorScheme === "dark");
-  const { children } = $props();
+  const { children, data } = $props();
   let isNavMobileMenuOpened = $state(false);
 
   $effect(() => {
@@ -142,9 +142,7 @@
 
 <div class="flex h-full w-full flex-row">
   <div class="sticky left-0 top-0 z-50 flex h-full max-h-dvh flex-row">
-    <nav
-      class="hidden h-full w-[90dvw] max-w-[350px] flex-col items-center gap-4 bg-gray-50 px-4 py-8 md:flex dark:bg-neutral-950"
-    >
+    {#snippet navbarContent()}
       <div class="flex w-full items-center justify-between gap-2">
         <a
           href="/"
@@ -155,7 +153,7 @@
             width={32}
             height={32}
             alt=""
-            class="h-auto w-[32px] rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
+            class="h-auto min-w-[32px] max-w-[32px] rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
           />
           <h2>VNCS</h2>
         </a>
@@ -168,38 +166,38 @@
           </li>
         {/each}
       </ul>
+      <!-- Ignore the red squiggle. Seems to be a bug in Svelte at the moment. -->
+      {#await data.quickSwitch then quickSwitchMenu}
+        {#if quickSwitchMenu}
+          {#if "error" in quickSwitchMenu}
+            <p class="text-error">{quickSwitchMenu.error}</p>
+          {:else}
+            <h2>Quick switch</h2>
+            <ul class="mt-4 flex w-full flex-col gap-2">
+              {#each quickSwitchMenu as { username }}
+                <li>
+                  <NavLink href={`/contestant/${username}`}>{username}</NavLink>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        {/if}
+      {/await}
+    {/snippet}
+    <nav
+      class="hidden h-full w-[90dvw] max-w-[350px] flex-col gap-4 bg-gray-50 px-4 py-8 md:flex dark:bg-neutral-950"
+    >
+      {@render navbarContent()}
     </nav>
     {#if isNavMobileMenuOpened}
       <nav
-        class="dark:bg-neutral-1000 flex h-full w-[90dvw] max-w-[350px] flex-col items-center gap-4 bg-white px-4 py-8 md:hidden"
+        class="dark:bg-neutral-1000 flex h-full w-[90dvw] max-w-[350px] flex-col gap-4 bg-white px-4 py-8 shadow-lg md:hidden"
         transition:fly={{
           x: "-100%",
           duration: 250,
         }}
       >
-        <div class="flex w-full items-center justify-between gap-2">
-          <a
-            href="/"
-            class="flex items-center gap-2 [&>*]:!text-[#dd2219] dark:[&>*]:!text-[#fbfb00]"
-            aria-label="Go to home"
-          >
-            <enhanced:img
-              width={32}
-              height={32}
-              alt=""
-              class="h-auto w-[32px] rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
-            />
-            <h2>VNCS</h2>
-          </a>
-          <ToggleScheme />
-        </div>
-        <ul class="mt-4 flex w-full flex-col gap-2">
-          {#each ASIDE_MENU_LINKS as { href, title }}
-            <li>
-              <NavLink {href}>{title}</NavLink>
-            </li>
-          {/each}
-        </ul>
+        {@render navbarContent()}
       </nav>
     {/if}
     <div>
