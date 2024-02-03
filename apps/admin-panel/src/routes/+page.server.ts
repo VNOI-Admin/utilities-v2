@@ -1,5 +1,6 @@
 import { error, redirect } from "@sveltejs/kit";
 
+import { base } from "$app/paths";
 import { USER_SERVICE_URI } from "$env/static/private";
 import { addURLSearch } from "$lib/addURLSearch";
 import { getRequestId } from "$lib/getRequestId";
@@ -21,7 +22,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   const requestInfo = `page = /, requestId = ${getRequestId()}`;
 
   if (!locals.user) {
-    redirect(307, "/login");
+    redirect(307, `${base}/login`);
   }
 
   logger.log("fetching:", `(${requestInfo})...`);
@@ -52,7 +53,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   });
 
   if (res === undefined) {
-    redirect(307, "/login");
+    redirect(307, `${base}/login`);
   }
 
   if (!res.ok) {

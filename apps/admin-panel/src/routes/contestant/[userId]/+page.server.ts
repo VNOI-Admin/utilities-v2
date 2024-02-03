@@ -1,5 +1,6 @@
 import { error, redirect } from "@sveltejs/kit";
 
+import { base } from "$app/paths";
 import { USER_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
@@ -28,7 +29,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies, locals, dep
 
   if (res === undefined) {
     logger.error("fetch failed:", `(${requestInfo}, err = REQUEST_NOT_DEFINED)...`);
-    redirect(307, "/login");
+    redirect(307, `${base}/login`);
   }
 
   if (!res.ok) {

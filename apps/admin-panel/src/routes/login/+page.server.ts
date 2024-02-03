@@ -1,5 +1,6 @@
 import { fail, redirect } from "@sveltejs/kit";
 
+import { base } from "$app/paths";
 import { USER_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
@@ -9,7 +10,7 @@ import type { Actions, PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = ({ locals }) => {
   if (locals.user) {
-    redirect(303, "/");
+    redirect(303, `${base}/`);
   }
   return {
     title: "Login",
