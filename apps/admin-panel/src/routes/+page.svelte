@@ -5,6 +5,7 @@
   import ChevronRight from "$components/icons/ChevronRight.svelte";
   import Sort from "$components/icons/Sort.svelte";
   import Input from "$components/Input.svelte";
+  import Link from "$components/Link.svelte";
   import { addURLSearch } from "$lib/addURLSearch";
   import { clsx } from "$lib/clsx";
   import { range } from "$lib/range";
@@ -83,14 +84,14 @@
       </div>
     {/if}
   </div>
-  <a
+  <Link
     class="text-accent-light dark:text-accent-dark underline"
     href={addURLSearch($page.url, {
       order: order === "desc" ? "asc" : "desc",
     }).toString()}
   >
     Sort by {order === "desc" ? "ascending" : "descending"} order
-  </a>
+  </Link>
   <div class="dark:bg-neutral-1000 h-full w-full rounded-xl bg-white shadow-2xl">
     <div class="relative h-full w-full overflow-x-auto overflow-y-auto">
       <table class="absolute w-full table-auto border-separate border-spacing-4">
@@ -105,7 +106,7 @@
                   <h3>{MAP_DEVICE_INFO_KEYS_TO_NAME[key]}</h3>
                   {#if !!keyAsOrderByValue}
                     {@const isCurrentOrder = orderBy === keyAsOrderByValue}
-                    <a
+                    <Link
                       href={addURLSearch($page.url, {
                         orderBy: keyAsOrderByValue,
                       }).toString()}
@@ -124,7 +125,7 @@
                             : "text-black dark:text-white",
                         )}
                       />
-                    </a>
+                    </Link>
                   {/if}
                 </div>
               </th>

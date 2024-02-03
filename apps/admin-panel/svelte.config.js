@@ -1,3 +1,4 @@
+// @ts-check
 import adapter from "@sveltejs/adapter-node";
 import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 
@@ -7,6 +8,10 @@ const config = {
   // for more information about preprocessors
   preprocess: vitePreprocess(),
   kit: {
+    paths: {
+      base: "/admin",
+      relative: false,
+    },
     adapter: adapter(),
     csp: {
       directives: {
@@ -18,9 +23,6 @@ const config = {
       $images: "./src/images",
     },
     inlineStyleThreshold: 2048,
-    paths: {
-      relative: false,
-    },
   },
 };
 

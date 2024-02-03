@@ -5,6 +5,7 @@
 
   import { page } from "$app/stores";
   import ToggleScheme from "$components/layouts/ToggleScheme.svelte";
+  import Link from "$components/Link.svelte";
   import { clsx } from "$lib/clsx";
   import { isColorScheme } from "$lib/isColorScheme";
   import { colorScheme } from "$lib/stores/colorScheme";
@@ -62,7 +63,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 100;
-      src: url("/fonts/geist-100.woff2") format("woff2");
+      src: url("/admin/fonts/geist-100.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -71,7 +72,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 200;
-      src: url("/fonts/geist-200.woff2") format("woff2");
+      src: url("/admin/fonts/geist-200.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -80,7 +81,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 300;
-      src: url("/fonts/geist-300.woff2") format("woff2");
+      src: url("/admin/fonts/geist-300.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -89,7 +90,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 400;
-      src: url("/fonts/geist-400.woff2") format("woff2");
+      src: url("/admin/fonts/geist-400.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -98,7 +99,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 500;
-      src: url("/fonts/geist-500.woff2") format("woff2");
+      src: url("/admin/fonts/geist-500.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -107,7 +108,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 600;
-      src: url("/fonts/geist-600.woff2") format("woff2");
+      src: url("/admin/fonts/geist-600.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -116,7 +117,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 700;
-      src: url("/fonts/geist-700.woff2") format("woff2");
+      src: url("/admin/fonts/geist-700.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -125,7 +126,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 800;
-      src: url("/fonts/geist-800.woff2") format("woff2");
+      src: url("/admin/fonts/geist-800.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
 
@@ -134,7 +135,7 @@
       font-style: normal;
       font-display: swap;
       font-weight: 900;
-      src: url("/fonts/geist-900.woff2") format("woff2");
+      src: url("/admin/fonts/geist-900.woff2") format("woff2");
       unicode-range: var(--latin-unicode-range);
     }
   </style>
@@ -144,7 +145,7 @@
   <div class="sticky left-0 top-0 z-50 flex h-full max-h-dvh flex-row">
     {#snippet navbarContent()}
       <div class="flex w-full items-center justify-between gap-2">
-        <a
+        <Link
           href="/"
           class="flex items-center gap-2 [&>*]:!text-[#dd2219] dark:[&>*]:!text-[#fbfb00]"
           aria-label="Go to home"
@@ -156,7 +157,7 @@
             class="h-auto min-w-[32px] max-w-[32px] rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
           />
           <h2>VNCS</h2>
-        </a>
+        </Link>
         <ToggleScheme />
       </div>
       <ul class="mt-4 flex w-full flex-col gap-2">

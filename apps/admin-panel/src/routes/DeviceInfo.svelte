@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { base } from "$app/paths";
   import Button from "$components/Button.svelte";
   import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
@@ -14,11 +15,9 @@
 
 <tr>
   <td>
-    <!-- <a class="link" href={`/contestant/${device.username}`}> -->
     <h3>
       {device.username}
     </h3>
-    <!-- </a> -->
   </td>
   <td>
     <h3>
@@ -47,7 +46,7 @@
   </td>
   <td class="[&>*]:inline-block [&>*]:w-full">
     {#if device.isOnline}
-      <Button as="a" href={`/contestant/${device.username}`}>View</Button>
+      <Button as="a" href={`${base}/contestant/${device.username}`}>View</Button>
     {:else}
       <span class="text-center">Not Available</span>
     {/if}
