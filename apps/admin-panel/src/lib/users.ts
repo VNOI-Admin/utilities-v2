@@ -50,13 +50,13 @@ export const setUserTokens = ({
   cookies.set("accessToken", accessToken, {
     httpOnly: true,
     sameSite: "strict",
-    secure: true,
+    secure: secureCookies,
     path: "/",
   });
   cookies.set("refreshToken", refreshToken, {
     httpOnly: true,
     sameSite: "strict",
-    secure: true,
+    secure: secureCookies,
     path: "/",
   });
   return {
