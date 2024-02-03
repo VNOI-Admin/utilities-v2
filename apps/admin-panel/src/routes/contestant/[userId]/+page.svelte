@@ -12,6 +12,8 @@
 
   const { data } = $props();
 
+  const ip = $derived(data.ip);
+
   $effect(() => {
     const interval = setInterval(() => invalidate("contestant:data:info"), 10000);
 
@@ -19,10 +21,9 @@
   });
 
   let video = $state<HTMLVideoElement | null>(null);
+  let player = $state<ReturnType<typeof videojs> | null>(null);
 
   $effect(() => {
-    let player: ReturnType<typeof videojs> | null = null;
-
     if (video) {
       player = videojs(video, {
         controls: false,
@@ -34,6 +35,13 @@
     }
 
     return () => player?.dispose();
+  });
+
+  $effect(() => {
+    if (player) {
+      player.src(`http://${ip}:100/stream.ogg`);
+      player.play();
+    }
   });
 </script>
 
@@ -53,7 +61,7 @@
         <span class="sr-only">Contestant </span>{data.userId}
       </h1>
       <h2>
-        IP: {data.ip} • Online: {data.isOnline ? "✅" : "❌"}
+        IP: {ip} • Online: {data.isOnline ? "✅" : "❌"}
         {#if data.ping !== undefined}
           {@const pingColor = getPingColorClass(data.ping)}
           • Ping: <span class={pingColor}>{data.ping}ms</span>
@@ -112,7 +120,6 @@
         loop
         controls
       >
-        <source src={`http://${data.ip}:100/stream.ogg`} type="video/ogg" />
         <track kind="captions" />
       </video>
     </div>
