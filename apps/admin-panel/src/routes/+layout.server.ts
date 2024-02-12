@@ -1,3 +1,4 @@
+import { base } from "$app/paths";
 import { USER_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
@@ -10,7 +11,7 @@ export const load: LayoutServerLoad = ({ cookies, locals, url }) => {
   const requestInfo = `file = routes/+layout.server.ts, requestId = ${getRequestId()}`;
   return {
     quickSwitch: (async () => {
-      if (!url.pathname.startsWith("/contestant")) {
+      if (!url.pathname.startsWith(`${base}/contestant`)) {
         return undefined;
       }
 
