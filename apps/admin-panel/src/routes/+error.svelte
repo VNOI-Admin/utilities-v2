@@ -9,13 +9,7 @@
     </h1>
     <h2>{$page.error?.message}</h2>
     <div class="flex flex-row items-center gap-2">
-      <img
-        width={32}
-        height={32}
-        class="h-8 w-8 rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
-        alt=""
-      />
-      <h2>VNCS Admin Panel</h2>
+      <h2>VCS Admin Panel</h2>
     </div>
   </div>
 </div>

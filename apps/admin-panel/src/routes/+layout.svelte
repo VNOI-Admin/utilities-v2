@@ -13,7 +13,7 @@
   import NavLink from "./NavLink.svelte";
 
   const title = $derived(
-    $page.data.title ? `${$page.data.title} - VNCS Admin Panel` : "VNCS Admin Panel",
+    $page.data.title ? `${$page.data.title} - VCS Admin Panel` : "VCS Admin Panel",
   );
   const isDark = $derived($colorScheme === "dark");
   const { children, data } = $props();
@@ -150,13 +150,7 @@
           class="flex items-center gap-2 [&>*]:!text-[#dd2219] dark:[&>*]:!text-[#fbfb00]"
           aria-label="Go to home"
         >
-          <enhanced:img
-            width={32}
-            height={32}
-            alt=""
-            class="h-auto min-w-[32px] max-w-[32px] rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
-          />
-          <h2>VNCS</h2>
+          <h2>VCS Project</h2>
         </Link>
         <ToggleScheme />
       </div>
