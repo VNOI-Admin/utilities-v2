@@ -39,7 +39,7 @@
 
   $effect(() => {
     if (player) {
-      player.src(`/${ip}/stream`);
+      player.src(`/${ip}/stream.m3u8`);
       player.play();
     }
   });
