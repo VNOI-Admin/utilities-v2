@@ -39,7 +39,7 @@
 
   $effect(() => {
     if (player) {
-      player.src(`http://${ip}:100/stream.ogg`);
+      player.src(`/${ip}/stream.ogg`);
       player.play();
     }
   });
