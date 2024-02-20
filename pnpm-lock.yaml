@@ -44,6 +44,9 @@ importers:
       '@types/multer':
         specifier: ^1.4.11
         version: 1.4.11
+      '@videojs/http-streaming':
+        specifier: ^3.10.0
+        version: 3.10.0(video.js@8.10.0)
       argon2:
         specifier: ^0.31.2
         version: 0.31.2
