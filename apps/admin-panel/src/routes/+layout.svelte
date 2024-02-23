@@ -5,6 +5,7 @@
 
   import { page } from "$app/stores";
   import ToggleScheme from "$components/layouts/ToggleScheme.svelte";
+  import Link from "$components/Link.svelte";
   import { clsx } from "$lib/clsx";
   import { isColorScheme } from "$lib/isColorScheme";
   import { colorScheme } from "$lib/stores/colorScheme";
@@ -12,10 +13,10 @@
   import NavLink from "./NavLink.svelte";
 
   const title = $derived(
-    $page.data.title ? `${$page.data.title} - VNCS Admin Panel` : "VNCS Admin Panel",
+    $page.data.title ? `${$page.data.title} - VCS Admin Panel` : "VCS Admin Panel",
   );
   const isDark = $derived($colorScheme === "dark");
-  const { children } = $props();
+  const { children, data } = $props();
   let isNavMobileMenuOpened = $state(false);
 
   $effect(() => {
@@ -35,7 +36,7 @@
   const ASIDE_MENU_LINKS = [
     {
       href: "/",
-      title: "Home",
+      title: "Monitor",
     },
     {
       href: "/logging",
@@ -50,27 +51,107 @@
   <meta name="twitter:title" content={title} />
   <link rel="canonical" href={$page.url.href} />
   <meta name="theme-color" content={isDark ? "#000000" : "#FFFFFF"} />
+  <style>
+    :root {
+      --latin-unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+        U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+        U+FEFF, U+FFFD;
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100;
+      src: url("/admin/fonts/geist-100.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 200;
+      src: url("/admin/fonts/geist-200.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 300;
+      src: url("/admin/fonts/geist-300.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 400;
+      src: url("/admin/fonts/geist-400.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 500;
+      src: url("/admin/fonts/geist-500.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 600;
+      src: url("/admin/fonts/geist-600.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 700;
+      src: url("/admin/fonts/geist-700.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 800;
+      src: url("/admin/fonts/geist-800.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+
+    @font-face {
+      font-family: "Geist";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 900;
+      src: url("/admin/fonts/geist-900.woff2") format("woff2");
+      unicode-range: var(--latin-unicode-range);
+    }
+  </style>
 </svelte:head>
 
 <div class="flex h-full w-full flex-row">
   <div class="sticky left-0 top-0 z-50 flex h-full max-h-dvh flex-row">
-    <nav
-      class="hidden h-full w-[90dvw] max-w-[350px] flex-col items-center gap-4 bg-gray-50 px-4 py-8 md:flex dark:bg-neutral-950"
-    >
+    {#snippet navbarContent()}
       <div class="flex w-full items-center justify-between gap-2">
-        <a
+        <Link
           href="/"
           class="flex items-center gap-2 [&>*]:!text-[#dd2219] dark:[&>*]:!text-[#fbfb00]"
           aria-label="Go to home"
         >
-          <enhanced:img
-            width={32}
-            height={32}
-            alt=""
-            class="h-auto w-[32px] rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
-          />
-          <h2>VNCS</h2>
-        </a>
+          <h2>VCS Project</h2>
+        </Link>
         <ToggleScheme />
       </div>
       <ul class="mt-4 flex w-full flex-col gap-2">
@@ -80,38 +161,38 @@
           </li>
         {/each}
       </ul>
+      <!-- Ignore the red squiggle. Seems to be a bug in Svelte at the moment. -->
+      {#await data.quickSwitch then quickSwitchMenu}
+        {#if quickSwitchMenu}
+          {#if "error" in quickSwitchMenu}
+            <p class="text-error">{quickSwitchMenu.error}</p>
+          {:else}
+            <h2>Quick switch</h2>
+            <ul class="mt-4 flex w-full flex-col gap-2">
+              {#each quickSwitchMenu as { username }}
+                <li>
+                  <NavLink href={`/contestant/${username}`}>{username}</NavLink>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        {/if}
+      {/await}
+    {/snippet}
+    <nav
+      class="hidden h-full w-[90dvw] max-w-[350px] flex-col gap-4 bg-gray-50 px-4 py-8 md:flex dark:bg-neutral-950"
+    >
+      {@render navbarContent()}
     </nav>
     {#if isNavMobileMenuOpened}
       <nav
-        class="dark:bg-neutral-1000 flex h-full w-[90dvw] max-w-[350px] flex-col items-center gap-4 bg-white px-4 py-8 md:hidden"
+        class="dark:bg-neutral-1000 flex h-full w-[90dvw] max-w-[350px] flex-col gap-4 bg-white px-4 py-8 shadow-lg md:hidden"
         transition:fly={{
           x: "-100%",
           duration: 250,
         }}
       >
-        <div class="flex w-full items-center justify-between gap-2">
-          <a
-            href="/"
-            class="flex items-center gap-2 [&>*]:!text-[#dd2219] dark:[&>*]:!text-[#fbfb00]"
-            aria-label="Go to home"
-          >
-            <enhanced:img
-              width={32}
-              height={32}
-              alt=""
-              class="h-auto w-[32px] rounded-md content-[url(/vncs-light.png)] dark:content-[url(/vncs-dark.png)]"
-            />
-            <h2>VNCS</h2>
-          </a>
-          <ToggleScheme />
-        </div>
-        <ul class="mt-4 flex w-full flex-col gap-2">
-          {#each ASIDE_MENU_LINKS as { href, title }}
-            <li>
-              <NavLink {href}>{title}</NavLink>
-            </li>
-          {/each}
-        </ul>
+        {@render navbarContent()}
       </nav>
     {/if}
     <div>
@@ -150,11 +231,9 @@
       </span>
     </div>
   </div>
-  <main class="h-full w-full" id="main-content">
-    <div class="flex h-full w-full flex-col gap-2 px-4 py-8 md:flex-row">
-      <section class="flex h-full w-full flex-col gap-2 px-2 md:flex-[5_5_0]">
-        {@render children()}
-      </section>
-    </div>
+  <main class="md:flex-[5_5_0 h-full w-full" id="main-content">
+    <section class="flex h-full w-full gap-2">
+      {@render children()}
+    </section>
   </main>
 </div>

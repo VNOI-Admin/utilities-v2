@@ -88,6 +88,14 @@ export class UserService implements OnModuleInit {
     return plainToInstance(UserEntity, user);
   }
 
+  async getUserById(userId: string): Promise<UserEntity> {
+    const user = await this.userModel.findOne({ _id: userId }).lean();
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    return plainToInstance(UserEntity, user);
+  }
+
   async getUserByIp(ipAddress: string): Promise<string> {
     const user = await this.userModel.findOne({ vpnIpAddress: ipAddress }).lean();
     if (!user) {

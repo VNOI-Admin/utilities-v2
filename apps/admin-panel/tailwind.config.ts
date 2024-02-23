@@ -1,10 +1,14 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 export default {
   darkMode: ["class", "[data-theme='dark']"],
   content: ["./src/**/*.{html,js,svelte,ts}"],
   theme: {
     extend: {
+      transitionProperty: {
+				"colors-opacity": `${defaultTheme.transitionProperty.colors}, opacity`,
+			},
       colors: {
         accent: {
           light: "#1e40af",

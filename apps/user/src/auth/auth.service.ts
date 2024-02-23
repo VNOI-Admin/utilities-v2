@@ -75,6 +75,7 @@ export class AuthService {
       user.username,
     );
     user.refreshToken = await argon2.hash(tokens.refreshToken);
+    await user.save();
     return plainToInstance(TokensEntity, tokens);
   }
 
