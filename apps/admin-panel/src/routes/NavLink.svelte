@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { HTMLAnchorAttributes } from "svelte/elements";
 
+  import { base } from "$app/paths";
   import { page } from "$app/stores";
-  import Link from "$components/Link.svelte";
   import { clsx } from "$lib/clsx";
 
   interface NavLinkProps extends Omit<HTMLAnchorAttributes, "class" | "href"> {
@@ -10,19 +10,21 @@
   }
 
   const { href, children, ...rest } = $props<NavLinkProps>();
+
+  const resolvedHref = $derived(href.startsWith("/") ? `${base}${href}` : href);
 </script>
 
-<Link
-  {href}
+<a
+  href={resolvedHref}
   class={clsx(
-    "inline-block w-full rounded-md px-2 py-1 shadow-md transition-colors duration-100",
-    $page.url.pathname === href
+    "flex size-full cursor-pointer flex-row justify-between gap-2 break-words rounded-md px-3 py-2 text-base font-medium text-black duration-100 md:text-sm dark:text-white",
+    $page.url.pathname === resolvedHref
       ? "bg-gray-200 text-black dark:bg-neutral-800 dark:text-white"
-      : "bg-white text-neutral-700 hover:bg-gray-200 hover:text-black dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white",
+      : "bg-gray-100 text-neutral-700 hover:bg-gray-200 hover:text-black dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white",
   )}
   {...rest}
 >
   {#if children}
     {@render children()}
   {/if}
-</Link>
+</a>

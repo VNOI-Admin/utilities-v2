@@ -41,7 +41,7 @@
         errorTextId="login-password-error-text"
       />
       <span>
-        <Button disabled={isLoading} type="submit">Login</Button>
+        <Button as="button" disabled={isLoading} type="submit">Login</Button>
       </span>
       {#if form?.error}
         <p class="text-error">{form.error}</p>

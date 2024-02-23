@@ -17,3 +17,12 @@ export interface Device {
 export type DeviceInfoKeys = keyof Device;
 export type Order = (typeof VALID_ORDER_VALUES)[number];
 export type OrderBy = (typeof VALID_ORDER_BY_VALUES)[number];
+export type QuickSwitch = Promise<
+  | {
+      username: string;
+    }[]
+  | {
+      error: string;
+    }
+  | undefined
+>;

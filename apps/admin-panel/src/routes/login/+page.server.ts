@@ -4,7 +4,7 @@ import { base } from "$app/paths";
 import { USER_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
-import { setUserTokens } from "$lib/users";
+import { fetchWithUser, removeUserTokens, setUserTokens } from "$lib/users";
 
 import type { Actions, PageServerLoad } from "./$types";
 
@@ -74,6 +74,44 @@ export const actions: Actions = {
         return fail(500, { error: "Server is currently under heavy load." });
       }
       logger.error("failed to login:", `(${requestInfo}, error = ${err})`);
+      return fail(500, { error: "Internal Server Error" });
+    }
+  },
+  async logout({ locals, fetch, cookies }) {
+    const requestInfo = `page = /login, action = /logout, requestId = ${getRequestId()}`;
+    try {
+      logger.log("logging in:", `(${requestInfo})...`);
+      const res = await fetchWithUser(new URL("/auth/logout", USER_SERVICE_URI), {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(10000),
+        fetch,
+        cookies,
+        user: locals.user,
+      });
+      if (res === undefined) {
+        logger.error("failed to logout:", `(${requestInfo}, error = POSSIBLY_NOT_LOGGED_IN?)`);
+        return fail(500, { error: "You are not logged in!" });
+      }
+      if (!res.ok) {
+        logger.error("fetch failed:", `(${requestInfo}, error = ${await res.text()})`);
+        return fail(500, { error: "Failed to log out." });
+      }
+      logger.success("logged out successfully:", `(${requestInfo}, message = ${await res.text()})`);
+      removeUserTokens({ cookies });
+      locals.user = undefined;
+    } catch (err) {
+      if (err instanceof Error && err.name === "TimeoutError") {
+        logger.error(
+          "failed to logout:",
+          `(${requestInfo}, error = Timeout. It took too long to get the result!)`,
+        );
+        return fail(500, { error: "Server is currently under heavy load." });
+      }
+      logger.error("failed to logout:", `(${requestInfo}, error = ${err})`);
       return fail(500, { error: "Internal Server Error" });
     }
   },
