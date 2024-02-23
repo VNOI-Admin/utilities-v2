@@ -14,6 +14,8 @@
   }
 
   const { isLoggedIn, quickSwitch } = $props<NavProps>();
+  let isLoggingOut = $state(false);
+  let logoutError = $state<string | undefined>(undefined);
 
   interface AsideMenuLink {
     href: string;
@@ -30,6 +32,16 @@
       title: "Logging",
     },
   ] satisfies AsideMenuLink[];
+
+  $effect(() => {
+    let timeout: NodeJS.Timeout | null = null;
+    if (logoutError) {
+      timeout = setTimeout(() => {
+        logoutError = undefined;
+      }, 5000);
+    }
+    return () => timeout && clearTimeout(timeout);
+  });
 </script>
 
 <div class="flex w-full flex-col justify-between gap-2">
@@ -44,16 +56,35 @@
   <div class="flex items-center gap-2">
     <ToggleScheme />
     {#if isLoggedIn}
-      <form method="POST" action={`${base}/login?/logout`} use:enhance>
-        <button type="submit" class="nav-button">
+      <form
+        method="POST"
+        action={`${base}/login?/logout`}
+        use:enhance={() => {
+          isLoggingOut = true;
+          return async ({ result, update }) => {
+            isLoggingOut = false;
+            if (result.type === "failure") {
+              logoutError =
+                typeof result.data?.error === "string"
+                  ? result.data.error
+                  : "Failed to log out.";
+            }
+            update();
+          };
+        }}
+      >
+        <button type="submit" disabled={isLoggingOut} class="nav-button disabled:opacity-70">
           <Logout width={24} height={24} />
           <p class="sr-only">Logout</p>
         </button>
       </form>
     {/if}
   </div>
+  {#if logoutError}
+    <p class="text-error">{logoutError}</p>
+  {/if}
 </div>
-<ul class="mt-4 flex w-full flex-col gap-2">
+<ul class="flex w-full flex-col gap-2">
   {#each ASIDE_MENU_LINKS as { href, title }}
     <li>
       <NavLink {href}>{title}</NavLink>
