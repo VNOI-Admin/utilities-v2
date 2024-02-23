@@ -52,8 +52,16 @@ export const actions: Actions = {
         signal: AbortSignal.timeout(10000),
       });
       if (!res.ok) {
-        logger.error("failed to login:", `(${requestInfo}, error = ${await res.text()})`);
-        return fail(500, { error: "Internal Server Error" });
+        const { error, message, statusCode } = (await res.json()) as {
+          message: string;
+          error: string;
+          statusCode: number;
+        };
+        logger.error(
+          "failed to login:",
+          `(${requestInfo}, error = ${error}, message = ${message}, status = ${statusCode})`,
+        );
+        return fail(statusCode, { error: message });
       }
       const data = (await res.json()) as {
         accessToken: unknown;
