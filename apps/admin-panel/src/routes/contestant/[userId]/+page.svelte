@@ -1,10 +1,11 @@
 <script lang="ts">
   import "video.js/dist/video-js.min.css";
+  import "@videojs/http-streaming";
 
   import videojs from "video.js";
-  import "@videojs/http-streaming"
 
   import { invalidate } from "$app/navigation";
+  import Button from "$components/Button.svelte";
   import noAvatar from "$images/no-avatar.webp";
   import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
@@ -28,7 +29,7 @@
     if (video) {
       player = videojs(video, {
         controls: false,
-        autoplay: 'any',
+        autoplay: "any",
         preload: "auto",
         fill: true,
         liveui: true,
@@ -38,18 +39,7 @@
     return () => player?.dispose();
   });
 
-  $effect(() => {
-    if (player) {
-      // player.src(`/${ip}/stream.m3u8`);
-      player.src({
-        src: `/${ip}/stream.m3u8`,
-        type: "application/x-mpegURL",
-      });
-      player.play();
-    }
-  });
-
-  function reloadVideo() {
+  const reloadVideo = () => {
     if (player) {
       player.src({
         src: `/${ip}/stream.m3u8`,
@@ -57,7 +47,9 @@
       });
       player.load();
     }
-  }
+  };
+
+  $effect(reloadVideo);
 </script>
 
 <div class="flex h-full w-full flex-col gap-4 p-4 md:p-10">
@@ -128,18 +120,9 @@
     >
       <div class="flex w-full flex-row items-center justify-between">
         <h2>Video</h2>
-        <button
-          class="bg-accent-light dark:bg-accent-dark text-white dark:text-white rounded-xl p-2"
-          on:click={reloadVideo}
-        >
-          Reload stream
-        </button>
+        <Button as="button" onclick={reloadVideo}>Reload stream</Button>
       </div>
-      <video
-        bind:this={video}
-        class="video-js w-full rounded-xl shadow-lg"
-        id="player"
-      >
+      <video bind:this={video} class="video-js w-full rounded-xl shadow-lg" id="player">
         <track kind="captions" />
       </video>
     </div>
