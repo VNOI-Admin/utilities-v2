@@ -1,6 +1,5 @@
 <script lang="ts">
   import "video.js/dist/video-js.min.css";
-  import "@videojs/http-streaming";
 
   import videojs from "video.js";
 
