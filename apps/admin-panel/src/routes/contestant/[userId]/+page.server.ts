@@ -47,6 +47,7 @@ export const load: PageServerLoad = async ({ params, fetch, cookies, locals, dep
     title: `Contestant ${data.username}`,
     userId: data.username,
     ip: data.vpnIpAddress,
+    accessToken: cookies.get("accessToken"),
     ...(locals.user?.data.role === "admin" && {
       cpu: data.machineUsage.cpu,
       ram: data.machineUsage.memory,

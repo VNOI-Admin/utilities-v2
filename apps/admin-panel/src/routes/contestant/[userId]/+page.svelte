@@ -2,7 +2,6 @@
   import "video.js/dist/video-js.min.css";
 
   import videojs from "video.js";
-  import "@videojs/http-streaming"
 
   import { invalidate } from "$app/navigation";
   import noAvatar from "$images/no-avatar.webp";
@@ -22,11 +21,25 @@
   });
 
   let video = $state<HTMLVideoElement | null>(null);
-  let player = $state<ReturnType<typeof videojs> | null>(null);
+  // let player = $state<Hls | null>(null);
+    let player = $state<ReturnType<typeof videojs> | null>(null);
 
   $effect(() => {
     if (video) {
+      (videojs as any).Vhs.xhr.onRequest((options: any) => {
+        // Set authorization header from the accessToken in cookies
+        options.headers = {
+          ...options.headers,
+          "Authorization": `Bearer ${data.accessToken}`,
+        };
+        return options;
+      });
       player = videojs(video, {
+        html5: {
+          hls: {
+            overrideNative: true,
+          },
+        },
         controls: false,
         autoplay: 'any',
         preload: "auto",
@@ -40,12 +53,10 @@
 
   $effect(() => {
     if (player) {
-      // player.src(`/${ip}/stream.m3u8`);
       player.src({
         src: `/${ip}/stream.m3u8`,
         type: "application/x-mpegURL",
       });
-      player.play();
     }
   });
 
