@@ -26,14 +26,14 @@
 
   $effect(() => {
     if (video) {
-      (videojs as any).Vhs.xhr.onRequest((options: any) => {
-        // Set authorization header from the accessToken in cookies
-        options.headers = {
-          ...options.headers,
-          "Authorization": `Bearer ${data.accessToken}`,
-        };
-        return options;
-      });
+      // (videojs as any).Vhs.xhr.onRequest((options: any) => {
+      //   // Set authorization header from the accessToken in cookies
+      //   options.headers = {
+      //     ...options.headers,
+      //     "Authorization": `Bearer ${data.accessToken}`,
+      //   };
+      //   return options;
+      // });
       player = videojs(video, {
         html5: {
           hls: {
