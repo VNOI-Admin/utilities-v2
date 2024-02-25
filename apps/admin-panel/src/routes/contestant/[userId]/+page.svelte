@@ -23,11 +23,25 @@
   });
 
   let video = $state<HTMLVideoElement | null>(null);
-  let player = $state<ReturnType<typeof videojs> | null>(null);
+  // let player = $state<Hls | null>(null);
+    let player = $state<ReturnType<typeof videojs> | null>(null);
 
   $effect(() => {
     if (video) {
+      // (videojs as any).Vhs.xhr.onRequest((options: any) => {
+      //   // Set authorization header from the accessToken in cookies
+      //   options.headers = {
+      //     ...options.headers,
+      //     "Authorization": `Bearer ${data.accessToken}`,
+      //   };
+      //   return options;
+      // });
       player = videojs(video, {
+        html5: {
+          hls: {
+            overrideNative: true,
+          },
+        },
         controls: false,
         autoplay: "any",
         preload: "auto",
