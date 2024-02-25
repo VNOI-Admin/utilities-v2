@@ -7,8 +7,7 @@
     @apply relative box-border min-w-0;
   }
   body {
-    @apply flex min-h-dvh bg-gray-50 font-sans text-black transition-colors duration-100 dark:bg-neutral-950 dark:text-white;
-    font-family: "Geist";
+    @apply font-mono flex min-h-dvh bg-gray-50 text-black transition-colors duration-100 dark:bg-neutral-950 dark:text-white;
   }
   h1,
   h2,
@@ -46,10 +45,17 @@
 }
 
 @layer utilities {
+  .nav-button {
+    @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-transparent p-3 duration-100 hover:bg-gray-200 dark:hover:bg-neutral-800;
+  }
   .text-error {
-    @apply text-red-500 dark:text-red-400;
+    @apply text-[#a51a12] dark:text-red-400;
   }
   .link {
 		@apply text-blue-800 underline dark:text-sky-300;
 	}
+  html[data-theme="light"] .visible-dark,
+  html[data-theme="dark"] .visible-light {
+    @apply !invisible !hidden;
+  }
 }

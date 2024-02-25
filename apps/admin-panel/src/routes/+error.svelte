@@ -1,5 +1,6 @@
 <script>
   import { page } from "$app/stores";
+  import Button from "$components/Button.svelte";
 </script>
 
 <div class="flex h-full w-full items-center justify-center">
@@ -11,5 +12,6 @@
     <div class="flex flex-row items-center gap-2">
       <h2>VCS Admin Panel</h2>
     </div>
+    <Button as="button" onclick={() => window.location.reload()}>Refresh</Button>
   </div>
 </div>

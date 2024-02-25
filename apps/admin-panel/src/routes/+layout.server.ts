@@ -10,6 +10,7 @@ import type { LayoutServerLoad } from "./$types";
 export const load: LayoutServerLoad = ({ cookies, locals, url }) => {
   const requestInfo = `file = routes/+layout.server.ts, requestId = ${getRequestId()}`;
   return {
+    isLoggedIn: !!locals.user,
     quickSwitch: (async () => {
       if (!url.pathname.startsWith(`${base}/contestant`)) {
         return undefined;

@@ -4,13 +4,11 @@
   import { fly } from "svelte/transition";
 
   import { page } from "$app/stores";
-  import ToggleScheme from "$components/layouts/ToggleScheme.svelte";
-  import Link from "$components/Link.svelte";
   import { clsx } from "$lib/clsx";
   import { isColorScheme } from "$lib/isColorScheme";
   import { colorScheme } from "$lib/stores/colorScheme";
 
-  import NavLink from "./NavLink.svelte";
+  import Nav from "./Nav.svelte";
 
   const title = $derived(
     $page.data.title ? `${$page.data.title} - VCS Admin Panel` : "VCS Admin Panel",
@@ -27,22 +25,6 @@
       localStorage.setItem("theme", value);
     });
   });
-
-  interface AsideMenuLink {
-    href: string;
-    title: string;
-  }
-
-  const ASIDE_MENU_LINKS = [
-    {
-      href: "/",
-      title: "Monitor",
-    },
-    {
-      href: "/logging",
-      title: "Logging",
-    },
-  ] satisfies AsideMenuLink[];
 </script>
 
 <svelte:head>
@@ -51,133 +33,12 @@
   <meta name="twitter:title" content={title} />
   <link rel="canonical" href={$page.url.href} />
   <meta name="theme-color" content={isDark ? "#000000" : "#FFFFFF"} />
-  <style>
-    :root {
-      --latin-unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-        U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
-        U+FEFF, U+FFFD;
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 100;
-      src: url("/admin/fonts/geist-100.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 200;
-      src: url("/admin/fonts/geist-200.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 300;
-      src: url("/admin/fonts/geist-300.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 400;
-      src: url("/admin/fonts/geist-400.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 500;
-      src: url("/admin/fonts/geist-500.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 600;
-      src: url("/admin/fonts/geist-600.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 700;
-      src: url("/admin/fonts/geist-700.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 800;
-      src: url("/admin/fonts/geist-800.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-
-    @font-face {
-      font-family: "Geist";
-      font-style: normal;
-      font-display: swap;
-      font-weight: 900;
-      src: url("/admin/fonts/geist-900.woff2") format("woff2");
-      unicode-range: var(--latin-unicode-range);
-    }
-  </style>
 </svelte:head>
 
 <div class="flex h-full w-full flex-row">
   <div class="sticky left-0 top-0 z-50 flex h-full max-h-dvh flex-row">
     {#snippet navbarContent()}
-      <div class="flex w-full items-center justify-between gap-2">
-        <Link
-          href="/"
-          class="flex items-center gap-2 [&>*]:!text-[#dd2219] dark:[&>*]:!text-[#fbfb00]"
-          aria-label="Go to home"
-        >
-          <h2>VCS Project</h2>
-        </Link>
-        <ToggleScheme />
-      </div>
-      <ul class="mt-4 flex w-full flex-col gap-2">
-        {#each ASIDE_MENU_LINKS as { href, title }}
-          <li>
-            <NavLink {href}>{title}</NavLink>
-          </li>
-        {/each}
-      </ul>
-      <!-- Ignore the red squiggle. Seems to be a bug in Svelte at the moment. -->
-      {#await data.quickSwitch then quickSwitchMenu}
-        {#if quickSwitchMenu}
-          {#if "error" in quickSwitchMenu}
-            <p class="text-error">{quickSwitchMenu.error}</p>
-          {:else}
-            <h2>Quick switch</h2>
-            <ul class="mt-4 flex w-full flex-col gap-2">
-              {#each quickSwitchMenu as { username }}
-                <li>
-                  <NavLink href={`/contestant/${username}`}>{username}</NavLink>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        {/if}
-      {/await}
+      <Nav isLoggedIn={data.isLoggedIn} quickSwitch={data.quickSwitch} />
     {/snippet}
     <nav
       class="hidden h-full w-[90dvw] max-w-[350px] flex-col gap-4 bg-gray-50 px-4 py-8 md:flex dark:bg-neutral-950"
