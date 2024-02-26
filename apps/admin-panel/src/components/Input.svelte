@@ -25,7 +25,8 @@
       )}
       aria-invalid={!!errorText}
       aria-describedby={errorTextId}
-      placeholder=" "
+      placeholder=""
+      value={value}
       {...rest}
     />
     <label

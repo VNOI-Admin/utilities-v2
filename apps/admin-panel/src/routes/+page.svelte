@@ -84,6 +84,17 @@
       </div>
     {/if}
   </div>
+  <!-- Text field that after enter will add a query q to the page for searching users -->
+  <!-- The place -->
+  <form method="GET" action="/" class="w-fit">
+    <Input
+      label="Search"
+      id="home-search"
+      type="search"
+      name="q"
+      value={$page.url.searchParams.get("q")}
+    />
+  </form>
   <Link
     class="text-accent-light dark:text-accent-dark underline"
     href={addURLSearch($page.url, {

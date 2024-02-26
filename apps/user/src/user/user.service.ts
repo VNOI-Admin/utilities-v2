@@ -13,6 +13,7 @@ import type { Role, UserDocument } from '../database/schema/user.schema';
 import { User } from '../database/schema/user.schema';
 import type { CreateGroupDto } from './dtos/createGroup.dto';
 import type { CreateUserDto } from './dtos/createUser.dto';
+import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
@@ -75,8 +76,14 @@ export class UserService implements OnModuleInit {
     return plainToInstance(UserEntity, user.toObject());
   }
 
-  async getUsers(): Promise<UserEntity[]> {
-    const users = await this.userModel.find({ role: 'user' }).lean();
+  async getUsers(query: GetUserDto): Promise<UserEntity[]> {
+    const q = query.q;
+    const users = await this.userModel.aggregate([
+      { $match: { username: { $regex: q || '', $options: 'i' } } },
+      { $match: { role: 'user' } },
+      { $match: { isActive: true } },
+    ]);
+
     return plainToInstance(UserEntity, users);
   }
 
