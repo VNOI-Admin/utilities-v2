@@ -2,6 +2,7 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Get,
   Post,
   Request,
   SerializeOptions,
@@ -10,7 +11,6 @@ import {
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
-  ApiExcludeEndpoint,
   ApiOperation,
   ApiResponse,
   ApiTags,
@@ -61,19 +61,19 @@ export class AuthController {
   async refresh(@Request() req: any): Promise<TokensEntity> {
     const userId = req.user['sub'];
     const refreshToken = req.user['refreshToken'];
-    return this.authService.refreshTokens(userId, refreshToken);
+    const sessionId = req.user['sessionId'];
+    return this.authService.refreshTokens(userId, refreshToken, sessionId);
   }
 
   @ApiBearerAuth()
-  @ApiExcludeEndpoint()
   @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: 'Test protected endpoint' })
   @ApiResponse({
     status: 200,
     description: 'Test successful',
   })
-  @Post('protected')
-  async protected(@Request() req: any): Promise<any> {
-    return { message: 'This is a protected endpoint', ...req.user };
+  @Get('protected')
+  async protected(): Promise<any> {
+    return { message: 'This is a protected endpoint' };
   }
 }

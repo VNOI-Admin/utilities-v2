@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import { plainToInstance } from 'class-transformer';
+import { randomUUID } from 'crypto';
 import { Model } from 'mongoose';
 
 import type { UserDocument } from '../database/schema/user.schema';
@@ -54,6 +55,7 @@ export class AuthService {
   async refreshTokens(
     userId: string,
     refreshToken: string,
+    sessionId: string,
   ): Promise<TokensEntity> {
     const user = await this.userModel.findById(userId);
 
@@ -73,6 +75,7 @@ export class AuthService {
     const tokens = await this.generateTokens(
       user._id.toString(),
       user.username,
+      sessionId,
     );
     user.refreshToken = await argon2.hash(tokens.refreshToken);
     await user.save();
@@ -82,10 +85,15 @@ export class AuthService {
   async generateTokens(
     userId: string,
     username: string,
+    sessionId?: string,
   ): Promise<TokensEntity> {
+    if (!sessionId) {
+      sessionId = randomUUID();
+    }
+
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: userId, username },
+        { sub: userId, username: username, sessionId: sessionId },
         {
           secret: this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET'),
           expiresIn: this.configService.get<string>(
@@ -94,7 +102,7 @@ export class AuthService {
         },
       ),
       this.jwtService.signAsync(
-        { sub: userId, username },
+        { sub: userId, username: username, sessionId: sessionId },
         {
           secret: this.configService.get<string>('JWT_REFRESH_TOKEN_SECRET'),
           expiresIn: this.configService.get<string>(
@@ -103,6 +111,11 @@ export class AuthService {
         },
       ),
     ]);
+
+    // Add the tokens to the database
+    const user = await this.userModel.findById(userId);
+    user.sessionId = sessionId;
+    await user.save();
 
     const plain = {
       accessToken: accessToken,

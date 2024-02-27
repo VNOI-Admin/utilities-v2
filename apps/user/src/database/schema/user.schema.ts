@@ -45,6 +45,9 @@ export class User {
   @Prop({ unique: true, sparse: true })
   vpnIpAddress: string;
 
+  @Prop({ type: String, default: null })
+  sessionId: string;
+
   @Prop({ required: true, default: true })
   isActive: boolean;
 
