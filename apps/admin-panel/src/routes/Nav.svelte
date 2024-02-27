@@ -50,7 +50,7 @@
     class="flex items-center gap-2 [&>*]:!text-[#a51a12] dark:[&>*]:!text-[#fbfb00]"
     aria-label="Go to home"
   >
-    <enhanced:img src="$images/VNOI.png" class="h-8 w-8" alt="" />
+    <enhanced:img src="$images/VNOI.png" class="min-w-8 max-w-8 min-h-8 max-h-8" alt="" />
     <h2>VCS</h2>
   </Link>
   <div class="flex items-center gap-2">

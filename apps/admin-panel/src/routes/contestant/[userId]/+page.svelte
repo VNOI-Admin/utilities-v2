@@ -67,7 +67,7 @@
 
 <div class="flex h-full w-full flex-col gap-4 p-4 md:p-10">
   <div
-    class="dark:bg-neutral-1000 flex w-full flex-row items-center gap-8 rounded-xl bg-white px-4 py-2 shadow-lg"
+    class="dark:bg-neutral-1000 flex w-full flex-row items-center gap-4 rounded-xl bg-white px-4 py-2 shadow-lg"
   >
     <img
       src={noAvatar}
@@ -97,9 +97,9 @@
         <div
           class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
         >
-          <h2>
+          <h3>
             CPU usage <span class={cpuColor}>{data.cpu}%</span>
-          </h2>
+          </h3>
           <div class="w-full max-w-[500px] overflow-y-auto">
             <CpuRamChart
               chartType="cpu"
@@ -113,9 +113,9 @@
         <div
           class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
         >
-          <h2>
+          <h3>
             RAM usage <span class={ramColor}>{data.ram}%</span>
-          </h2>
+          </h3>
           <div class="w-full max-w-[500px] overflow-y-auto">
             <CpuRamChart
               chartType="ram"
@@ -132,7 +132,7 @@
       class="dark:bg-neutral-1000 flex h-[50dvh] w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:h-[unset] lg:flex-[2_2_0] lg:overflow-x-auto"
     >
       <div class="flex w-full flex-row items-center justify-between">
-        <h2>Video</h2>
+        <h3>Video</h3>
         <Button as="button" onclick={reloadVideo}>Reload stream</Button>
       </div>
       <video bind:this={video} class="video-js w-full rounded-xl shadow-lg" id="player">

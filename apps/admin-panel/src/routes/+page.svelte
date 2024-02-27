@@ -35,18 +35,18 @@
 </script>
 
 <div class="flex h-full w-full flex-col gap-2 px-6 py-8">
-  <h2>Monitor</h2>
+  <h1>Monitor</h1>
 
-  <h3 class="text-accent-light dark:text-accent-dark inline-block">
+  <h2 class="text-accent-light dark:text-accent-dark inline-block">
     <!-- Show number of online by counting isOnline in devices -->
     {data.onlineCount} online +
     <!-- Show number of offline by counting isOnline in devices -->
     {data.offlineCount} offline =
     <!-- Total -->
     {data.onlineCount + data.offlineCount} total
-  </h3>
+  </h2>
 
-  <h3>Search</h3>
+  <h2>Search</h2>
   <div class="flex h-fit w-full flex-col gap-2">
     <form
       bind:this={searchForm}
@@ -103,7 +103,7 @@
     </div>
   </div>
 
-  <h3 class="sr-only">Users</h3>
+  <h2 class="sr-only">Users</h2>
   <div class="dark:bg-neutral-1000 h-full w-full rounded-xl bg-white shadow-2xl">
     <div class="relative h-full w-full overflow-x-auto overflow-y-auto">
       <table class="absolute w-full table-auto border-separate border-spacing-4">
@@ -113,20 +113,20 @@
           >
             {#each DEVICE_KEYS as [_, name, keyOrderBy]}
               <th class="text-left md:w-[calc(100%/7)]">
-                <div class="flex items-center gap-2">
-                  <h4>{name}</h4>
+                <div class="flex items-center gap-3">
+                  <h3>{name}</h3>
                   {#if !!keyOrderBy}
                     {@const isCurrentOrder = orderBy === keyOrderBy}
                     <Link
                       href={addURLSearch($page.url, { orderBy: keyOrderBy }).toString()}
                       class={clsx(
-                        "max-h-10 min-h-10 min-w-10 max-w-10 rounded p-2 transition-colors duration-100",
+                        "max-h-9 min-h-9 min-w-9 max-w-9 rounded p-2 transition-colors duration-100",
                         isCurrentOrder && "bg-accent-light dark:bg-accent-dark",
                       )}
                     >
                       <Sort
-                        width={24}
-                        height={24}
+                        width={20}
+                        height={20}
                         class={clsx(
                           "transition-[filter] duration-100",
                           isCurrentOrder

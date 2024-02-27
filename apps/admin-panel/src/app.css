@@ -18,19 +18,19 @@
     @apply text-balance break-words;
   }
   h1 {
-    @apply text-4xl font-semibold leading-10 tracking-tight;
-  }
-  h2 {
     @apply text-3xl font-semibold leading-10 tracking-tight;
   }
+  h2 {
+    @apply text-2xl font-semibold leading-10 tracking-tight;
+  }
   h3 {
-    @apply text-2xl leading-7 tracking-tight;
+    @apply text-xl leading-7 tracking-tight;
   }
   h4 {
-    @apply text-xl leading-5 tracking-tight;
+    @apply text-lg leading-7 tracking-tight;
   }
   p {
-    @apply text-pretty;
+    @apply text-base text-pretty;
   }
   @media (prefers-reduced-motion) {
     html {
