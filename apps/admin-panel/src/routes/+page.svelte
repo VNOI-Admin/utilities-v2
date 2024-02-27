@@ -48,11 +48,26 @@
   </h2>
 
   <details open class="[&[open]>summary>svg]:rotate-90">
-    <summary class="flex flex-row gap-2 items-center">
+    <summary class="flex flex-row items-center gap-2">
       <h2>Search</h2>
-      <ChevronRight width={24} height={24} class="-mt-1 min-w-6 max-w-6 min-h-6 max-h-6 transition-transform duration-100" />
+      <ChevronRight
+        width={24}
+        height={24}
+        class="-mt-1 max-h-6 min-h-6 min-w-6 max-w-6 transition-transform duration-100"
+      />
     </summary>
     <div class="flex h-fit w-full flex-col gap-2">
+      <div class="flex h-fit w-full gap-2 overflow-x-auto md:flex-wrap md:overflow-x-visible">
+        {#each range(0, data.totalPages - 1) as navigatePage}
+          <PaginationButton
+            as="a"
+            href={addURLSearch($page.url, { page: "" + navigatePage }).toString()}
+            active={!!currentPage && +currentPage === navigatePage}
+          >
+            {navigatePage}
+          </PaginationButton>
+        {/each}
+      </div>
       <div class="w-full overflow-x-auto md:overflow-x-visible">
         <form
           bind:this={searchForm}
@@ -96,17 +111,6 @@
           />
           <Button as="button" type="submit">Search</Button>
         </form>
-      </div>
-      <div class="flex h-fit w-full flex-row flex-wrap gap-2">
-        {#each range(0, data.totalPages - 1) as navigatePage}
-          <PaginationButton
-            as="a"
-            href={addURLSearch($page.url, { page: "" + navigatePage }).toString()}
-            active={!!currentPage && +currentPage === navigatePage}
-          >
-            {navigatePage}
-          </PaginationButton>
-        {/each}
       </div>
     </div>
   </details>

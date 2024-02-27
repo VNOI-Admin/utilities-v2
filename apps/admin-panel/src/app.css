@@ -54,6 +54,15 @@
   .nav-button {
     @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-transparent p-3 duration-100 hover:bg-gray-200 dark:hover:bg-neutral-800;
   }
+  .pagination-button {
+    @apply transition-colors-opacity relative inline-flex h-[2.5rem] w-fit min-w-[2.5rem] select-none items-center justify-center rounded-md p-2 text-sm font-medium duration-100 focus:z-20 disabled:opacity-50;
+  }
+  .pagination-button.active {
+    @apply bg-gray-200 text-black dark:bg-neutral-800 dark:text-white;
+  }
+  .pagination-button.inactive {
+    @apply bg-gray-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 [&:not(:disabled)]:hover:bg-gray-200 [&:not(:disabled)]:hover:text-black dark:[&:not(:disabled)]:hover:bg-neutral-800 dark:[&:not(:disabled)]:hover:text-white;
+  }
   .text-error {
     @apply text-[#a51a12] dark:text-red-400;
   }
