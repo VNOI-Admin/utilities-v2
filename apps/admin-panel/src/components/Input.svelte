@@ -27,7 +27,7 @@
     {...rest}
   />
   <label
-    class="label absolute left-2.5 block font-medium transition-all duration-100 ease-in"
+    class="label absolute left-2.5 block font-medium transition-all duration-100 ease-in select-none"
     for={id}
   >
     {label}

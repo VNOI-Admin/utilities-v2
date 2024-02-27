@@ -13,7 +13,7 @@
 </script>
 
 <div class="relative">
-  <label for={id} class="z-[2] top-0.5 text-xs text-neutral-700 dark:text-gray-300 absolute left-2.5 block font-medium transition-all duration-100 ease-in">
+  <label for={id} class="z-[2] top-0.5 text-xs text-neutral-700 dark:text-gray-300 absolute left-2.5 block font-medium transition-all duration-100 ease-in select-none">
     {label}
   </label>
   <select
