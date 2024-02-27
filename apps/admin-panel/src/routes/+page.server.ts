@@ -40,18 +40,21 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
     redirect(301, addURLSearch(url, { order: "asc" }));
   }
 
-  const res = await fetchWithUser(addURLSearch(new URL("/user", USER_SERVICE_URI), { q: searchQuery ?? "" }), {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
+  const res = await fetchWithUser(
+    addURLSearch(new URL("/user", USER_SERVICE_URI), { q: searchQuery }),
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      signal: AbortSignal.timeout(10000),
+      cookies,
+      fetch,
+      user: locals.user,
+      omitAuthorizationIfUndefined: false,
     },
-    signal: AbortSignal.timeout(10000),
-    cookies,
-    fetch,
-    user: locals.user,
-    omitAuthorizationIfUndefined: false,
-  });
+  );
 
   if (res === undefined) {
     redirect(307, `${base}/login`);
@@ -87,7 +90,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   const offlineCount = devices.length - onlineCount;
 
   if (page === undefined || Number.isNaN(page) || page < 0 || page > totalPages - 1) {
-    redirect(301, addURLSearch(url, { page: "0", q: "" }));
+    redirect(301, addURLSearch(url, { page: "0" }));
   }
 
   devices = devices.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).sort((a, b) => {
