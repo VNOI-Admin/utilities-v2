@@ -6,7 +6,7 @@
   interface SelectProps extends HTMLSelectAttributes {
     id: string;
     label: string;
-    values: readonly string[];
+    values: readonly [string, string][];
   }
 
   const { id, label, values, ...rest } = $props<SelectProps>();
@@ -25,8 +25,8 @@
     )}
     {...rest}
   >
-    {#each values as value}
-      <option {value}>{value}</option>
+    {#each values as [value, name]}
+      <option {value}>{name}</option>
     {/each}
   </select>
 </div>

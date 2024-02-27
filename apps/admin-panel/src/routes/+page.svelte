@@ -13,10 +13,8 @@
 
   import {
     DEVICE_KEYS,
-    MAP_DEVICE_INFO_KEYS_TO_NAME,
-    MAP_DEVICE_INFO_KEYS_TO_ORDER_BY,
-    VALID_ORDER_BY_VALUES,
-    VALID_ORDER_VALUES,
+    VALID_ORDER_BY_SELECT_VALUES,
+    VALID_ORDER_SELECT_VALUES,
   } from "./$page.constants";
   import DeviceInfo from "./DeviceInfo.svelte";
   import PaginationButton from "./PaginationButton.svelte";
@@ -78,7 +76,7 @@
         label="Order"
         id="home-quick-navigate-order"
         name="order"
-        values={VALID_ORDER_VALUES}
+        values={VALID_ORDER_SELECT_VALUES}
         value={order}
         onchange={() => searchForm?.requestSubmit()}
       />
@@ -86,7 +84,7 @@
         label="Order by"
         id="home-quick-navigate-order-by"
         name="orderBy"
-        values={VALID_ORDER_BY_VALUES}
+        values={VALID_ORDER_BY_SELECT_VALUES}
         value={orderBy}
         onchange={() => searchForm?.requestSubmit()}
       />
@@ -113,17 +111,14 @@
           <tr
             class="dark:[&>th]:bg-neutral-1000 z-10 [&>th]:sticky [&>th]:top-0 [&>th]:bg-white [&>th]:transition-colors [&>th]:duration-100"
           >
-            {#each DEVICE_KEYS as key}
-              {@const keyAsOrderByValue = MAP_DEVICE_INFO_KEYS_TO_ORDER_BY[key]}
+            {#each DEVICE_KEYS as [_, name, keyOrderBy]}
               <th class="text-left md:w-[calc(100%/7)]">
                 <div class="flex items-center gap-2">
-                  <h3>{MAP_DEVICE_INFO_KEYS_TO_NAME[key]}</h3>
-                  {#if !!keyAsOrderByValue}
-                    {@const isCurrentOrder = orderBy === keyAsOrderByValue}
+                  <h4>{name}</h4>
+                  {#if !!keyOrderBy}
+                    {@const isCurrentOrder = orderBy === keyOrderBy}
                     <Link
-                      href={addURLSearch($page.url, {
-                        orderBy: keyAsOrderByValue,
-                      }).toString()}
+                      href={addURLSearch($page.url, { orderBy: keyOrderBy }).toString()}
                       class={clsx(
                         "max-h-10 min-h-10 min-w-10 max-w-10 rounded p-2 transition-colors duration-100",
                         isCurrentOrder && "bg-accent-light dark:bg-accent-dark",
