@@ -27,6 +27,8 @@
   const order = $derived($page.url.searchParams.get("order"));
   const orderBy = $derived($page.url.searchParams.get("orderBy"));
 
+  let searchForm = $state<HTMLFormElement | null>(null);
+
   $effect(() => {
     const interval = setInterval(() => invalidate("home:query"), 10000);
 
@@ -48,7 +50,12 @@
 
   <h3>Search</h3>
   <div class="flex h-fit w-full flex-col gap-2">
-    <form method="GET" action={`${base}/`} class="flex w-fit flex-row flex-wrap gap-2">
+    <form
+      bind:this={searchForm}
+      method="GET"
+      action={`${base}/`}
+      class="flex w-fit flex-row flex-wrap gap-2"
+    >
       <Input
         label="To page"
         id="home-quick-navigate-page"
@@ -60,13 +67,20 @@
         max={data.totalPages - 1}
         value={currentPage}
       />
-      <Input label="Search user" id="home-quick-navigate-search" type="search" name="q" value={search} />
+      <Input
+        label="Search user"
+        id="home-quick-navigate-search"
+        type="search"
+        name="q"
+        value={search}
+      />
       <Select
         label="Order"
         id="home-quick-navigate-order"
         name="order"
         values={VALID_ORDER_VALUES}
         value={order}
+        onchange={() => searchForm?.requestSubmit()}
       />
       <Select
         label="Order by"
@@ -74,6 +88,7 @@
         name="orderBy"
         values={VALID_ORDER_BY_VALUES}
         value={orderBy}
+        onchange={() => searchForm?.requestSubmit()}
       />
       <Button as="button" type="submit">Search</Button>
     </form>
@@ -89,7 +104,7 @@
       {/each}
     </div>
   </div>
-  
+
   <h3 class="sr-only">Users</h3>
   <div class="dark:bg-neutral-1000 h-full w-full rounded-xl bg-white shadow-2xl">
     <div class="relative h-full w-full overflow-x-auto overflow-y-auto">
@@ -110,7 +125,7 @@
                         orderBy: keyAsOrderByValue,
                       }).toString()}
                       class={clsx(
-                        "rounded p-2 transition-colors duration-100 min-w-10 max-w-10 min-h-10 max-h-10",
+                        "max-h-10 min-h-10 min-w-10 max-w-10 rounded p-2 transition-colors duration-100",
                         isCurrentOrder && "bg-accent-light dark:bg-accent-dark",
                       )}
                     >
