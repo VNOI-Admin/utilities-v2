@@ -1,4 +1,4 @@
-<script lang="ts">
+<script lang="ts" generics="T extends string">
   import type { HTMLSelectAttributes } from "svelte/elements";
 
   import { clsx } from "$lib/clsx";
@@ -6,14 +6,18 @@
   interface SelectProps extends Omit<HTMLSelectAttributes, "class"> {
     id: string;
     label: string;
-    values: readonly [string, string][];
+    values: readonly [T, string][];
+    initialValue?: T | null;
   }
 
-  const { id, label, values, ...rest } = $props<SelectProps>();
+  const { id, label, values, initialValue, ...rest } = $props<SelectProps>();
 </script>
 
 <div class="relative">
-  <label for={id} class="z-[2] top-0.5 text-xs text-neutral-700 dark:text-gray-300 absolute left-2.5 block font-medium transition-all duration-100 ease-in select-none">
+  <label
+    for={id}
+    class="absolute left-2.5 top-0.5 z-[2] block select-none text-xs font-medium text-neutral-700 transition-all duration-100 ease-in dark:text-gray-300"
+  >
     {label}
   </label>
   <select
@@ -26,7 +30,7 @@
     {...rest}
   >
     {#each values as [value, name]}
-      <option {value}>{name}</option>
+      <option selected={value === initialValue} {value}>{name}</option>
     {/each}
   </select>
 </div>

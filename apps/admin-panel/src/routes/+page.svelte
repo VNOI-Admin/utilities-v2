@@ -98,7 +98,7 @@
             id="home-quick-navigate-order"
             name="order"
             values={VALID_ORDER_SELECT_VALUES}
-            value={order}
+            initialValue={order}
             onchange={() => searchForm?.requestSubmit()}
           />
           <Select
@@ -106,7 +106,7 @@
             id="home-quick-navigate-order-by"
             name="orderBy"
             values={VALID_ORDER_BY_SELECT_VALUES}
-            value={orderBy}
+            initialValue={orderBy}
             onchange={() => searchForm?.requestSubmit()}
           />
           <Button as="button" type="submit">Search</Button>

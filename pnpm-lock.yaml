@@ -220,8 +220,8 @@ importers:
         specifier: 2.6.2
         version: 2.6.2
       typescript:
-        specifier: 5.3.3
-        version: 5.3.3
+        specifier: 5.5.0-dev.20240227
+        version: 5.5.0-dev.20240227
       uuid:
         specifier: 9.0.1
         version: 9.0.1
@@ -8704,6 +8704,12 @@ packages:
     resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  /typescript@5.5.0-dev.20240227:
+    resolution: {integrity: sha512-cPljzopUqWPey1Yh7KAE78JSTjoOZUqm8csCGLiu+Hl12xZxGUZFLQRS74IwoDvM+lzoOBwnM528UbYITO9ouA==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+    dev: true
 
   /uid@2.0.2:
     resolution: {integrity: sha512-u3xV3X7uzvi5b1MncmZo3i2Aw222Zk1keqLA1YkHldREkAhAqi65wuPfe7lHx8H/Wzy+8CE7S7uS3jekIM5s8g==}
