@@ -3,6 +3,7 @@
   import { base } from "$app/paths";
   import { page } from "$app/stores";
   import Button from "$components/Button.svelte";
+  import ChevronRight from "$components/icons/ChevronRight.svelte";
   import Sort from "$components/icons/Sort.svelte";
   import Input from "$components/Input.svelte";
   import Link from "$components/Link.svelte";
@@ -46,62 +47,69 @@
     {data.onlineCount + data.offlineCount} total
   </h2>
 
-  <h2>Search</h2>
-  <div class="flex h-fit w-full flex-col gap-2">
-    <form
-      bind:this={searchForm}
-      method="GET"
-      action={`${base}/`}
-      class="flex w-fit flex-row flex-wrap gap-2"
-    >
-      <Input
-        label="To page"
-        id="home-quick-navigate-page"
-        type="search"
-        inputmode="numeric"
-        pattern="[0-9]*"
-        name="page"
-        min={0}
-        max={data.totalPages - 1}
-        value={currentPage}
-      />
-      <Input
-        label="Search user"
-        id="home-quick-navigate-search"
-        type="search"
-        name="q"
-        value={search}
-      />
-      <Select
-        label="Order"
-        id="home-quick-navigate-order"
-        name="order"
-        values={VALID_ORDER_SELECT_VALUES}
-        value={order}
-        onchange={() => searchForm?.requestSubmit()}
-      />
-      <Select
-        label="Order by"
-        id="home-quick-navigate-order-by"
-        name="orderBy"
-        values={VALID_ORDER_BY_SELECT_VALUES}
-        value={orderBy}
-        onchange={() => searchForm?.requestSubmit()}
-      />
-      <Button as="button" type="submit">Search</Button>
-    </form>
-    <div class="flex h-fit w-full flex-row flex-wrap gap-2">
-      {#each range(0, data.totalPages - 1) as navigatePage}
-        <PaginationButton
-          as="a"
-          href={addURLSearch($page.url, { page: "" + navigatePage }).toString()}
-          active={!!currentPage && +currentPage === navigatePage}
+  <details open class="[&[open]>summary>svg]:rotate-90">
+    <summary class="flex flex-row gap-2 items-center">
+      <h2>Search</h2>
+      <ChevronRight width={24} height={24} class="-mt-1 min-w-6 max-w-6 min-h-6 max-h-6 transition-transform duration-100" />
+    </summary>
+    <div class="flex h-fit w-full flex-col gap-2">
+      <div class="w-full overflow-x-auto md:overflow-x-visible">
+        <form
+          bind:this={searchForm}
+          method="GET"
+          action={`${base}/`}
+          class="flex w-fit min-w-max max-w-full flex-row gap-2 md:min-w-0 md:flex-wrap"
         >
-          {navigatePage}
-        </PaginationButton>
-      {/each}
+          <Input
+            label="To page"
+            id="home-quick-navigate-page"
+            type="search"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            name="page"
+            min={0}
+            max={data.totalPages - 1}
+            value={currentPage}
+          />
+          <Input
+            label="Search user"
+            id="home-quick-navigate-search"
+            type="search"
+            name="q"
+            value={search}
+          />
+          <Select
+            label="Order"
+            id="home-quick-navigate-order"
+            name="order"
+            values={VALID_ORDER_SELECT_VALUES}
+            value={order}
+            onchange={() => searchForm?.requestSubmit()}
+          />
+          <Select
+            label="Order by"
+            id="home-quick-navigate-order-by"
+            name="orderBy"
+            values={VALID_ORDER_BY_SELECT_VALUES}
+            value={orderBy}
+            onchange={() => searchForm?.requestSubmit()}
+          />
+          <Button as="button" type="submit">Search</Button>
+        </form>
+      </div>
+      <div class="flex h-fit w-full flex-row flex-wrap gap-2">
+        {#each range(0, data.totalPages - 1) as navigatePage}
+          <PaginationButton
+            as="a"
+            href={addURLSearch($page.url, { page: "" + navigatePage }).toString()}
+            active={!!currentPage && +currentPage === navigatePage}
+          >
+            {navigatePage}
+          </PaginationButton>
+        {/each}
+      </div>
     </div>
-  </div>
+  </details>
 
   <h2 class="sr-only">Users</h2>
   <div class="dark:bg-neutral-1000 h-full w-full rounded-xl bg-white shadow-2xl">

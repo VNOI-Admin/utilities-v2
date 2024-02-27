@@ -7,7 +7,7 @@
     @apply relative box-border min-w-0;
   }
   body {
-    @apply flex min-h-dvh bg-gray-50 font-mono text-black transition-colors duration-100 dark:bg-neutral-950 dark:text-white;
+    @apply flex min-h-dvh bg-gray-50 font-mono text-base text-black transition-colors duration-100 dark:bg-neutral-950 dark:text-white;
   }
   h1,
   h2,
@@ -30,7 +30,13 @@
     @apply text-lg leading-7 tracking-tight;
   }
   p {
-    @apply text-base text-pretty;
+    @apply text-pretty text-base;
+  }
+  details > summary {
+    @apply cursor-pointer select-none list-none;
+  }
+  details > summary::-webkit-details-marker {
+    @apply hidden;
   }
   @media (prefers-reduced-motion) {
     html {

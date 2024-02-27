@@ -3,7 +3,7 @@
 
   import { clsx } from "$lib/clsx";
 
-  interface SelectProps extends HTMLSelectAttributes {
+  interface SelectProps extends Omit<HTMLSelectAttributes, "class"> {
     id: string;
     label: string;
     values: readonly [string, string][];
