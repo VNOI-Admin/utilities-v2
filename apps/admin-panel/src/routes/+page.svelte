@@ -110,7 +110,7 @@
                         orderBy: keyAsOrderByValue,
                       }).toString()}
                       class={clsx(
-                        "rounded p-2 transition-colors duration-100",
+                        "rounded p-2 transition-colors duration-100 min-w-10 max-w-10 min-h-10 max-h-10",
                         isCurrentOrder && "bg-accent-light dark:bg-accent-dark",
                       )}
                     >
