@@ -30,6 +30,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   const pageQuery = url.searchParams.get("page");
   const orderByQuery = url.searchParams.get("orderBy");
   const orderQuery = url.searchParams.get("order");
+  const searchQuery = url.searchParams.get("q") || "";
   const page = pageQuery !== null ? parseInt(pageQuery, 10) : undefined;
 
   if (orderByQuery === null || !readonlyArrayIncludes(VALID_ORDER_BY_VALUES, orderByQuery)) {
@@ -39,7 +40,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
     redirect(301, addURLSearch(url, { order: "asc" }));
   }
 
-  const res = await fetchWithUser(new URL("/user", USER_SERVICE_URI), {
+  const res = await fetchWithUser(addURLSearch(new URL("/user", USER_SERVICE_URI), { q: searchQuery ?? "" }), {
     method: "GET",
     headers: {
       Accept: "application/json",
@@ -86,7 +87,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   const offlineCount = devices.length - onlineCount;
 
   if (page === undefined || Number.isNaN(page) || page < 0 || page > totalPages - 1) {
-    redirect(301, addURLSearch(url, { page: "0" }));
+    redirect(301, addURLSearch(url, { page: "0", q: "" }));
   }
 
   devices = devices.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).sort((a, b) => {

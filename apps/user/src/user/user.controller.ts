@@ -7,6 +7,7 @@ import {
   Param,
   ParseFilePipe,
   Post,
+  Query,
   Request,
   SerializeOptions,
   UploadedFile,
@@ -19,6 +20,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { AccessTokenGuard } from '../common/guards/accessToken.guard';
 import { CreateGroupDto } from './dtos/createGroup.dto';
 import { CreateUserDto } from './dtos/createUser.dto';
+import { GetUserDto } from './dtos/getUser.dto';
 import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
@@ -40,10 +42,10 @@ export class UserController {
     type: [UserEntity],
   })
   @Get('/')
-  async getUsers(@Request() req: any) {
+  async getUsers(@Request() req: any, @Query() query: GetUserDto) {
     const calledId = req.user['sub'];
     await this.userService.checkPrivilege(calledId, ['admin', 'coach']);
-    return await this.userService.getUsers();
+    return await this.userService.getUsers(query);
   }
 
   @ApiBearerAuth()
