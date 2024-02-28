@@ -198,6 +198,9 @@ importers:
       chart.js:
         specifier: 4.4.1
         version: 4.4.1
+      devalue:
+        specifier: 4.3.2
+        version: 4.3.2
       npm-check-updates:
         specifier: 16.14.15
         version: 16.14.15

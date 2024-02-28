@@ -48,7 +48,7 @@
     {#if device.isOnline}
       <Button as="a" href={`${base}/contestant/${device.username}`}>View</Button>
     {:else}
-      <span class="text-center">Not Available</span>
+      <Button as="button" disabled>Not Available</Button>
     {/if}
   </td>
 </tr>

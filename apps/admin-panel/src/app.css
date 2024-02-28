@@ -51,6 +51,18 @@
 }
 
 @layer utilities {
+  .button {
+    @apply min-w-max transition-colors-opacity rounded-md px-5 py-2.5 text-center text-sm font-medium duration-100 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800;
+  }
+  .button.nofill {
+    @apply bg-blue-100 text-blue-500 dark:bg-neutral-800 dark:text-sky-200 disabled:opacity-60 [&:not(:disabled)]:hover:bg-blue-200 dark:[&:not(:disabled)]:hover:bg-neutral-900;
+  }
+  .button.light {
+    @apply bg-blue-200 text-blue-900 dark:bg-neutral-700 dark:text-sky-200 disabled:opacity-60 [&:not(:disabled)]:hover:bg-blue-300 dark:[&:not(:disabled)]:hover:bg-neutral-800;
+  }
+  .button.filled {
+    @apply bg-blue-800 text-white dark:bg-sky-300 dark:text-black disabled:bg-gray-100 disabled:text-neutral-700 [&:not(:disabled)]:hover:bg-blue-900 dark:[&:not(:disabled)]:hover:bg-sky-200 dark:disabled:bg-neutral-900 dark:disabled:text-neutral-400;
+  }
   .nav-button {
     @apply inline-flex cursor-pointer items-center justify-center rounded-full bg-transparent p-3 duration-100 hover:bg-gray-200 dark:hover:bg-neutral-800;
   }

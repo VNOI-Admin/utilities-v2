@@ -18,6 +18,7 @@
     "@types/uuid": "9.0.8",
     "autoprefixer": "10.4.17",
     "chart.js": "4.4.1",
+    "devalue": "4.3.2",
     "npm-check-updates": "16.14.15",
     "picocolors": "1.0.0",
     "postcss": "8.4.35",

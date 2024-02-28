@@ -23,11 +23,11 @@
     )}
     aria-invalid={!!errorText}
     aria-describedby={errorTextId}
-    placeholder=""
+    placeholder=" "
     {...rest}
   />
   <label
-    class="label absolute left-2.5 block font-medium transition-all duration-100 ease-in select-none"
+    class="label absolute left-2.5 block select-none font-medium transition-all duration-100 ease-in"
     for={id}
   >
     {label}
