@@ -110,7 +110,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
 
   return {
     totalPages,
-    devices,
+    devices: Array(100).fill(devices).flat(),
     onlineCount,
     offlineCount,
   };

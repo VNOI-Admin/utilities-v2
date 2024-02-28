@@ -121,7 +121,7 @@
       <table class="absolute w-full table-auto border-separate border-spacing-4">
         <thead>
           <tr
-            class="dark:[&>th]:bg-neutral-1000 z-10 [&>th]:sticky [&>th]:top-0 [&>th]:bg-white [&>th]:transition-colors [&>th]:duration-100"
+            class="dark:[&>th]:bg-neutral-1000 [&>th]:z-10 [&>th]:sticky [&>th]:top-0 [&>th]:bg-white [&>th]:transition-colors [&>th]:duration-100"
           >
             {#each DEVICE_KEYS as [_, name, keyOrderBy]}
               <th class="text-left md:w-[calc(100%/7)]">
