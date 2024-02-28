@@ -12,7 +12,7 @@ import { Group } from '../database/schema/group.schema';
 import type { Role, UserDocument } from '../database/schema/user.schema';
 import { User } from '../database/schema/user.schema';
 import type { CreateGroupDto } from './dtos/createGroup.dto';
-import type { CreateUserDto } from './dtos/createUser.dto';
+import type { CreateUserBatchDto, CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import { GroupEntity } from './entities/Group.entity';
@@ -74,6 +74,21 @@ export class UserService implements OnModuleInit {
     }
 
     return plainToInstance(UserEntity, user.toObject());
+  }
+
+  async createUserBatch(createUserDto: CreateUserBatchDto) {
+    console.log(createUserDto);
+    const users: UserEntity[] = [];
+    for (const user of createUserDto.users) {
+      try {
+        users.push(await this.createUser(user));
+      } catch (error) {
+        if (error.code !== 11000) {
+          throw error;
+        }
+      }
+    }
+    return plainToInstance(UserEntity, users);
   }
 
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {

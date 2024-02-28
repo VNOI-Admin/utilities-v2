@@ -15,3 +15,8 @@ export class CreateUserDto {
   @ApiProperty({ required: true, enum: ['admin', 'coach', 'user'], default: 'user' })
   role: Role;
 }
+
+export class CreateUserBatchDto {
+  @ApiProperty({ type: [CreateUserDto] })
+  users: CreateUserDto[];
+}
