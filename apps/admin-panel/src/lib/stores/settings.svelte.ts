@@ -1,4 +1,4 @@
-const createSettings = () => {
+const createSettingsStore = () => {
   let _toastTimeout = $state<number>(null!);
   const saveSettings = <T>(
     key: string,
@@ -37,4 +37,4 @@ const createSettings = () => {
   };
 };
 
-export const settings = createSettings();
+export const settings = createSettingsStore();
