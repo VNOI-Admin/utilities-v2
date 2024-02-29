@@ -4,9 +4,11 @@
   import { fly } from "svelte/transition";
 
   import { page } from "$app/stores";
+  import Toast from "$components/Toast.svelte";
   import { clsx } from "$lib/clsx";
   import { isColorScheme } from "$lib/isColorScheme";
   import { colorScheme } from "$lib/stores/colorScheme";
+  import { settings } from "$lib/stores/settings.svelte";
 
   import Nav from "./Nav.svelte";
 
@@ -24,6 +26,10 @@
       document.documentElement.dataset.theme = value;
       localStorage.setItem("theme", value);
     });
+  });
+
+  $effect(() => {
+    settings.toastTimeout = localStorage.getItem("toastTimeout") || "5000";
   });
 </script>
 
@@ -97,4 +103,5 @@
       {@render children()}
     </section>
   </main>
+  <Toast />
 </div>

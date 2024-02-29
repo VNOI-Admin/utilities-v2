@@ -66,3 +66,12 @@ export type CpuRamChartType = "cpu" | "ram";
 export type CpuRamChartWorkerEvent = ChartWorkerEvent<CpuRamChartType, "line", number[], string>;
 
 export type RequireKeys<T, U extends keyof T> = T & Required<Pick<T, U>>;
+
+export type ToastVariant = "error" | "success" | "warning" | "info";
+
+export interface ToastItem {
+  variant: ToastVariant;
+  time: number;
+  title: string;
+  message: string;
+}

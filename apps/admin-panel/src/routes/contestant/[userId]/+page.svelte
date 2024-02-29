@@ -8,6 +8,7 @@
   import noAvatar from "$images/no-avatar.webp";
   import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
+  import { toast } from "$lib/stores/toast.svelte";
 
   import CpuRamChart from "./CpuRamChart.svelte";
 
@@ -22,19 +23,11 @@
   });
 
   let video = $state<HTMLVideoElement | null>(null);
-  // let player = $state<Hls | null>(null);
-    let player = $state<ReturnType<typeof videojs> | null>(null);
+  let player = $state<ReturnType<typeof videojs> | null>(null);
+  let offlineWarned = false;
 
   $effect(() => {
     if (video) {
-      // (videojs as any).Vhs.xhr.onRequest((options: any) => {
-      //   // Set authorization header from the accessToken in cookies
-      //   options.headers = {
-      //     ...options.headers,
-      //     "Authorization": `Bearer ${data.accessToken}`,
-      //   };
-      //   return options;
-      // });
       player = videojs(video, {
         html5: {
           hls: {
@@ -63,6 +56,25 @@
   };
 
   $effect(reloadVideo);
+
+  $effect(() => {
+    if (data.isOnline === undefined) {
+      return;
+    }
+    if (data.isOnline) {
+      offlineWarned = false;
+      return;
+    }
+    if (!offlineWarned) {
+      toast.push({
+        variant: "info",
+        time: Date.now(),
+        title: "Status",
+        message: `User ${data.userId} has gone offline.`,
+      });
+      offlineWarned = true;
+    }
+  });
 </script>
 
 <div class="flex h-full w-full flex-col gap-4 p-4 md:p-10">
