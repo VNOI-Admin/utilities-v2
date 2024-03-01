@@ -10,6 +10,7 @@
     </h1>
     <h2>{$page.error?.message}</h2>
     <div class="flex flex-row items-center gap-2">
+      <enhanced:img src="$images/VNOI.png" alt="" class="min-w-8 max-w-8 min-h-8 max-h-8" />
       <h2>VCS Admin Panel</h2>
     </div>
     <Button as="button" onclick={() => window.location.reload()}>Refresh</Button>

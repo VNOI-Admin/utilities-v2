@@ -15,40 +15,45 @@
 
 <tr>
   <td>
-    <h3>
+    <p>
       {device.username}
-    </h3>
+    </p>
   </td>
   <td>
-    <h3>
+    <p>
+      {device.fullName}
+    </p>
+  </td>
+  <td>
+    <p>
       {device.vpnIpAddress || "N/A"}
-    </h3>
+    </p>
   </td>
   <td>
-    <h3>
+    <p>
       {device.isOnline ? "✅" : "❌"}
-    </h3>
+    </p>
   </td>
   <td class={pingColor}>
-    <h3>
+    <p>
       {device.ping} ms
-    </h3>
+    </p>
   </td>
   <td class={cpuColor}>
-    <h3>
+    <p>
       {device.cpu}%
-    </h3>
+    </p>
   </td>
   <td class={ramColor}>
-    <h3>
+    <p>
       {device.memory}%
-    </h3>
+    </p>
   </td>
   <td class="[&>*]:inline-block [&>*]:w-full">
     {#if device.isOnline}
       <Button as="a" href={`${base}/contestant/${device.username}`}>View</Button>
     {:else}
-      <span class="text-center">Not Available</span>
+      <Button as="button" disabled>Not Available</Button>
     {/if}
   </td>
 </tr>

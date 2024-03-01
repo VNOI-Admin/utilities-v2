@@ -47,10 +47,11 @@ export const load: PageServerLoad = async ({ params, fetch, cookies, locals, dep
     title: `Contestant ${data.username}`,
     userId: data.username,
     ip: data.vpnIpAddress,
+    fullName: data.fullName,
+    isOnline: data.machineUsage.isOnline,
     ...(locals.user?.data.role === "admin" && {
       cpu: data.machineUsage.cpu,
       ram: data.machineUsage.memory,
-      isOnline: data.machineUsage.isOnline,
       ping: data.machineUsage.ping,
     }),
   };

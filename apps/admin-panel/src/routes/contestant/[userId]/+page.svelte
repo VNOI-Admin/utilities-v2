@@ -8,6 +8,7 @@
   import noAvatar from "$images/no-avatar.webp";
   import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
+  import { toast } from "$lib/stores/toast.svelte";
 
   import CpuRamChart from "./CpuRamChart.svelte";
 
@@ -22,19 +23,11 @@
   });
 
   let video = $state<HTMLVideoElement | null>(null);
-  // let player = $state<Hls | null>(null);
-    let player = $state<ReturnType<typeof videojs> | null>(null);
+  let player = $state<ReturnType<typeof videojs> | null>(null);
+  let offlineWarned = false;
 
   $effect(() => {
     if (video) {
-      // (videojs as any).Vhs.xhr.onRequest((options: any) => {
-      //   // Set authorization header from the accessToken in cookies
-      //   options.headers = {
-      //     ...options.headers,
-      //     "Authorization": `Bearer ${data.accessToken}`,
-      //   };
-      //   return options;
-      // });
       player = videojs(video, {
         html5: {
           hls: {
@@ -63,11 +56,30 @@
   };
 
   $effect(reloadVideo);
+
+  $effect(() => {
+    if (data.isOnline === undefined) {
+      return;
+    }
+    if (data.isOnline) {
+      offlineWarned = false;
+      return;
+    }
+    if (!offlineWarned) {
+      toast.push({
+        variant: "info",
+        time: Date.now(),
+        title: "Status",
+        message: `User ${data.userId} has gone offline.`,
+      });
+      offlineWarned = true;
+    }
+  });
 </script>
 
 <div class="flex h-full w-full flex-col gap-4 p-4 md:p-10">
   <div
-    class="dark:bg-neutral-1000 flex w-full flex-row items-center gap-8 rounded-xl bg-white px-4 py-2 shadow-lg"
+    class="dark:bg-neutral-1000 flex w-full flex-row items-center gap-4 rounded-xl bg-white px-4 py-2 shadow-lg"
   >
     <img
       src={noAvatar}
@@ -78,10 +90,10 @@
     />
     <div>
       <h1>
-        <span class="sr-only">Contestant </span>{data.userId}
+        <span class="sr-only">Contestant </span>{data.userId} - {data.fullName}
       </h1>
       <h2>
-        IP: {ip} • Online: {data.isOnline ? "✅" : "❌"}
+        Online: {data.isOnline ? "✅" : "❌"}
         {#if data.ping !== undefined}
           {@const pingColor = getPingColorClass(data.ping)}
           • Ping: <span class={pingColor}>{data.ping}ms</span>
@@ -97,9 +109,9 @@
         <div
           class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
         >
-          <h2>
+          <h3>
             CPU usage <span class={cpuColor}>{data.cpu}%</span>
-          </h2>
+          </h3>
           <div class="w-full max-w-[500px] overflow-y-auto">
             <CpuRamChart
               chartType="cpu"
@@ -113,9 +125,9 @@
         <div
           class="dark:bg-neutral-1000 flex w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:flex-[1_1_0] lg:overflow-x-auto"
         >
-          <h2>
+          <h3>
             RAM usage <span class={ramColor}>{data.ram}%</span>
-          </h2>
+          </h3>
           <div class="w-full max-w-[500px] overflow-y-auto">
             <CpuRamChart
               chartType="ram"
@@ -132,7 +144,7 @@
       class="dark:bg-neutral-1000 flex h-[50dvh] w-full flex-col gap-4 rounded-xl bg-white p-4 shadow-lg lg:h-[unset] lg:flex-[2_2_0] lg:overflow-x-auto"
     >
       <div class="flex w-full flex-row items-center justify-between">
-        <h2>Video</h2>
+        <h3>Video</h3>
         <Button as="button" onclick={reloadVideo}>Reload stream</Button>
       </div>
       <video bind:this={video} class="video-js w-full rounded-xl shadow-lg" id="player">

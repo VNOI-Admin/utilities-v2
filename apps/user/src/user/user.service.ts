@@ -12,9 +12,10 @@ import { Group } from '../database/schema/group.schema';
 import type { Role, UserDocument } from '../database/schema/user.schema';
 import { User } from '../database/schema/user.schema';
 import type { CreateGroupDto } from './dtos/createGroup.dto';
-import type { CreateUserDto } from './dtos/createUser.dto';
+import type { CreateUserBatchDto, CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
+import type { UpdateUserBatchDto, UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
 
@@ -76,13 +77,40 @@ export class UserService implements OnModuleInit {
     return plainToInstance(UserEntity, user.toObject());
   }
 
+  async createUserBatch(createUserDto: CreateUserBatchDto) {
+    console.log(createUserDto);
+    const users: UserEntity[] = [];
+    for (const user of createUserDto.users) {
+      try {
+        users.push(await this.createUser(user));
+      } catch (error) {
+        if (error.code !== 11000) {
+          throw error;
+        }
+      }
+    }
+    return plainToInstance(UserEntity, users);
+  }
+
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {
-    const q = query.q;
+    const q = query.q || '';
     const users = await this.userModel.aggregate([
-      { $match: { username: { $regex: q || '', $options: 'i' } } },
+      {
+        $match: {
+          $or: [
+            { username: { $regex: q, $options: 'i' } },
+            { fullName: { $regex: q, $options: 'i' } },
+          ],
+        },
+      },
       { $match: { role: 'user' } },
       { $match: { isActive: true } },
     ]);
+
+    // TODO: Need to fix this on client side, this is a workaround
+    if (users.length === 0) {
+      return this.getUsers({ q: '' });
+    }
 
     return plainToInstance(UserEntity, users);
   }
@@ -129,6 +157,34 @@ export class UserService implements OnModuleInit {
     }
 
     return plainToInstance(GroupEntity, group.toObject());
+  }
+
+  async updateUser(updateUserDto: UpdateUserDto) {
+    const user = await this.userModel.findOne({ username: updateUserDto.username });
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    // user.username = updateUserDto.username;
+    user.fullName = updateUserDto.fullName || user.fullName;
+    user.password = updateUserDto.password || user.password;
+    user.role = updateUserDto.role || user.role;
+    user.username = updateUserDto.usernameNew || user.username;
+    user.save();
+    return plainToInstance(UserEntity, user.toObject());
+  }
+
+  async updateUserBatch(updateUserDto: UpdateUserBatchDto) {
+    const users: UserEntity[] = [];
+    for (const user of updateUserDto.users) {
+      try {
+        users.push(await this.updateUser(user));
+      } catch (error) {
+        if (error.code !== 11000) {
+          throw error;
+        }
+      }
+    }
+    return plainToInstance(UserEntity, users);
   }
 
   async reportUsage(userId: string, usage: ReportUsageDto) {

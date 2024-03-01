@@ -1,9 +1,15 @@
 <script lang="ts">
+  import type { ComponentType, SvelteComponent } from "svelte";
+  import type { SVGAttributes } from "svelte/elements";
+
   import { enhance } from "$app/forms";
   import { base } from "$app/paths";
+  import Eye from "$components/icons/Eye.svelte";
   import Logout from "$components/icons/Logout.svelte";
+  import Settings from "$components/icons/Settings.svelte";
   import ToggleScheme from "$components/layouts/ToggleScheme.svelte";
   import Link from "$components/Link.svelte";
+  import { toast } from "$lib/stores/toast.svelte";
 
   import type { QuickSwitch } from "./$page.types";
   import NavLink from "./NavLink.svelte";
@@ -15,33 +21,25 @@
 
   const { isLoggedIn, quickSwitch } = $props<NavProps>();
   let isLoggingOut = $state(false);
-  let logoutError = $state<string | undefined>(undefined);
 
   interface AsideMenuLink {
     href: string;
     title: string;
+    icon: ComponentType<SvelteComponent<SVGAttributes<SVGElement>>>;
   }
 
   const ASIDE_MENU_LINKS = [
     {
       href: "/",
       title: "Monitor",
+      icon: Eye,
     },
     {
-      href: "/logging",
-      title: "Logging",
+      href: "/settings",
+      title: "Settings",
+      icon: Settings,
     },
   ] satisfies AsideMenuLink[];
-
-  $effect(() => {
-    let timeout: NodeJS.Timeout | null = null;
-    if (logoutError) {
-      timeout = setTimeout(() => {
-        logoutError = undefined;
-      }, 5000);
-    }
-    return () => timeout && clearTimeout(timeout);
-  });
 </script>
 
 <div class="flex w-full flex-col justify-between gap-2">
@@ -50,7 +48,7 @@
     class="flex items-center gap-2 [&>*]:!text-[#a51a12] dark:[&>*]:!text-[#fbfb00]"
     aria-label="Go to home"
   >
-    <enhanced:img src="$images/VNOI.png" class="h-8 w-8" alt="" />
+    <enhanced:img src="$images/VNOI.png" class="max-h-8 min-h-8 min-w-8 max-w-8" alt="" />
     <h2>VCS</h2>
   </Link>
   <div class="flex items-center gap-2">
@@ -64,10 +62,13 @@
           return async ({ result, update }) => {
             isLoggingOut = false;
             if (result.type === "failure") {
-              logoutError =
-                typeof result.data?.error === "string"
-                  ? result.data.error
-                  : "Failed to log out.";
+              toast.push({
+                variant: "error",
+                title: "Failed to log out.",
+                message:
+                  typeof result.data?.error === "string" ? result.data.error : "Unknown error.",
+                time: Date.now(),
+              });
             }
             update();
           };
@@ -80,9 +81,6 @@
       </form>
     {/if}
   </div>
-  {#if logoutError}
-    <p class="text-error">{logoutError}</p>
-  {/if}
 </div>
 <ul class="flex w-full flex-col gap-2">
   {#each ASIDE_MENU_LINKS as { href, title }}
@@ -97,7 +95,7 @@
       <p class="text-error">{quickSwitchMenu.error}</p>
     {:else}
       <h2>Quick switch</h2>
-      <ul class="mt-4 flex w-full flex-col gap-2">
+      <ul class="mt-4 flex max-h-full w-full flex-col gap-2 overflow-y-auto">
         {#each quickSwitchMenu as { username }}
           <li>
             <NavLink href={`/contestant/${username}`}>{username}</NavLink>

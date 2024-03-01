@@ -17,7 +17,7 @@
 <a
   href={resolvedHref}
   class={clsx(
-    "flex size-full cursor-pointer flex-row justify-between gap-2 break-words rounded-md px-3 py-2 text-base font-medium text-black duration-100 md:text-sm dark:text-white",
+    "flex size-full cursor-pointer flex-row justify-between gap-2 break-words rounded-md px-3 py-2 text-base font-medium duration-100 md:text-sm",
     $page.url.pathname === resolvedHref
       ? "bg-gray-200 text-black dark:bg-neutral-800 dark:text-white"
       : "bg-gray-100 text-neutral-700 hover:bg-gray-200 hover:text-black dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white",
