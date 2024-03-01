@@ -90,10 +90,10 @@
     />
     <div>
       <h1>
-        <span class="sr-only">Contestant </span>{data.userId}
+        <span class="sr-only">Contestant </span>{data.userId} - {data.fullName}
       </h1>
       <h2>
-        IP: {ip} • Online: {data.isOnline ? "✅" : "❌"}
+        Online: {data.isOnline ? "✅" : "❌"}
         {#if data.ping !== undefined}
           {@const pingColor = getPingColorClass(data.ping)}
           • Ping: <span class={pingColor}>{data.ping}ms</span>

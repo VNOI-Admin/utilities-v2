@@ -17,6 +17,7 @@ export const VALID_ORDER_BY_SELECT_VALUES = [
 // This should be in the same order as the one used in DeviceInfo.
 export const DEVICE_KEYS = [
   ["username", "ID", "username"],
+  ["fullName", "Full Name", null],
   ["vpnIpAddress", "IP", "ip"],
   ["isActive", "Active", null],
   ["ping", "Ping", "ping"],

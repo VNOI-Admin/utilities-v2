@@ -21,6 +21,11 @@
   </td>
   <td>
     <p>
+      {device.fullName}
+    </p>
+  </td>
+  <td>
+    <p>
       {device.vpnIpAddress || "N/A"}
     </p>
   </td>
