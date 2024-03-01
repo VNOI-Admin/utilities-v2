@@ -19,9 +19,10 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 
 import { AccessTokenGuard } from '../common/guards/accessToken.guard';
 import { CreateGroupDto } from './dtos/createGroup.dto';
-import { CreateUserDto } from './dtos/createUser.dto';
+import { CreateUserBatchDto, CreateUserDto } from './dtos/createUser.dto';
 import { GetUserDto } from './dtos/getUser.dto';
 import { ReportUsageDto } from './dtos/reportUsage.dto';
+import { UpdateUserBatchDto, UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
 import { UserService } from './user.service';
@@ -90,6 +91,51 @@ export class UserController {
     const callerId = req.user['sub'];
     await this.userService.checkPrivilege(callerId, ['admin']);
     return await this.userService.createUser(createUserDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({ summary: 'Create new users by batch' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return users',
+    type: [UserEntity],
+  })
+  @Post('/new/batch')
+  async createUserBatch(@Request() req: any, @Body() createUserDto: CreateUserBatchDto) {
+    const callerId = req.user['sub'];
+    await this.userService.checkPrivilege(callerId, ['admin']);
+    return await this.userService.createUserBatch(createUserDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({ summary: 'Update user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return user',
+    type: UserEntity,
+  })
+  @Post('/update')
+  async updateUser(@Request() req: any, @Body() updateUserDto: UpdateUserDto) {
+    const callerId = req.user['sub'];
+    await this.userService.checkPrivilege(callerId, ['admin']);
+    return await this.userService.updateUser(updateUserDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({ summary: 'Update users by batch' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return users',
+    type: [UserEntity],
+  })
+  @Post('/update/batch')
+  async updateUserBatch(@Request() req: any, @Body() updateUserBatchDto: UpdateUserBatchDto) {
+    const callerId = req.user['sub'];
+    await this.userService.checkPrivilege(callerId, ['admin']);
+    return await this.userService.updateUserBatch(updateUserBatchDto);
   }
 
   @ApiBearerAuth()
