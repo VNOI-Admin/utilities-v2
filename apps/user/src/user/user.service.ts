@@ -95,7 +95,14 @@ export class UserService implements OnModuleInit {
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {
     const q = query.q;
     const users = await this.userModel.aggregate([
-      { $match: { username: { $regex: q || '', $options: 'i' } } },
+      {
+        $match: {
+          $or: [
+            { username: { $regex: q, $options: 'i' } },
+            { fullName: { $regex: q, $options: 'i' } },
+          ],
+        },
+      },
       { $match: { role: 'user' } },
       { $match: { isActive: true } },
     ]);
