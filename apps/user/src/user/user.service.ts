@@ -93,7 +93,7 @@ export class UserService implements OnModuleInit {
   }
 
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {
-    const q = query.q;
+    const q = query.q || '';
     const users = await this.userModel.aggregate([
       {
         $match: {
