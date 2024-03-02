@@ -34,6 +34,9 @@ export class AccessTokenStrategy extends PassportStrategy(Strategy, 'jwt') {
     if (!user) {
       return null;
     }
+    if (user.isActive === false) {
+      throw new UnauthorizedException('User is not active');
+    }
     if (user.sessionId !== payload.sessionId) {
       throw new UnauthorizedException('Invalid session');
     }

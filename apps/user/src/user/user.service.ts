@@ -165,10 +165,11 @@ export class UserService implements OnModuleInit {
       throw new BadRequestException('User not found');
     }
     // user.username = updateUserDto.username;
-    user.fullName = updateUserDto.fullName || user.fullName;
-    user.password = updateUserDto.password || user.password;
-    user.role = updateUserDto.role || user.role;
-    user.username = updateUserDto.usernameNew || user.username;
+    user.fullName = updateUserDto.fullName ?? user.fullName;
+    user.password = updateUserDto.password ?? user.password;
+    user.role = updateUserDto.role ?? user.role;
+    user.username = updateUserDto.usernameNew ?? user.username;
+    user.isActive = updateUserDto.isActive ?? user.isActive;
     user.save();
     return plainToInstance(UserEntity, user.toObject());
   }

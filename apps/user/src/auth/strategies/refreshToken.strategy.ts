@@ -31,6 +31,9 @@ export class RefreshTokenStrategy extends PassportStrategy(
     if (!user) {
       return null;
     }
+    if (user.isActive === false) {
+      throw new UnauthorizedException('User is not active');
+    }
     if (user.sessionId !== payload.sessionId) {
       throw new UnauthorizedException('Invalid session');
     }

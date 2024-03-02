@@ -26,7 +26,7 @@ export class AuthService {
   ) {}
 
   async login(data: AuthDto): Promise<TokensEntity> {
-    const user = await this.userModel.findOne({ username: data.username });
+    const user = await this.userModel.findOne({ username: data.username, isActive: true });
     if (!user) {
       throw new BadRequestException('Invalid credentials');
     }

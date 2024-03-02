@@ -15,6 +15,9 @@ export class UpdateUserDto {
   @ApiProperty({ required: false })
   usernameNew: string;
 
+  @ApiProperty({ required: false })
+  isActive: boolean;
+
   @ApiProperty({ required: false, enum: ['admin', 'coach', 'user'], default: 'user' })
   role: Role;
 }
