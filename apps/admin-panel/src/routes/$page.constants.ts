@@ -6,9 +6,9 @@ export const VALID_ORDER_SELECT_VALUES = [
   ["asc", "Ascending"],
   ["desc", "Descending"],
 ] satisfies [Order, string][];
-export const VALID_ORDER_BY_VALUES = ["username", "ip", "ping", "cpu", "memory"] as const;
+export const VALID_ORDER_BY_VALUES = ["userid", "username", "ip", "ping", "cpu", "memory"] as const;
 export const VALID_ORDER_BY_SELECT_VALUES = [
-  ["username", "User ID"],
+  ["userid", "User ID"],
   ["ip", "IP"],
   ["ping", "Ping"],
   ["cpu", "CPU"],
@@ -16,8 +16,8 @@ export const VALID_ORDER_BY_SELECT_VALUES = [
 ] satisfies [OrderBy, string][];
 // This should be in the same order as the one used in DeviceInfo.
 export const DEVICE_KEYS = [
-  ["username", "ID", "username"],
-  ["fullName", "Full Name", null],
+  ["username", "ID", "userid"],
+  ["fullName", "Full name", "username"],
   ["vpnIpAddress", "IP", "ip"],
   ["isActive", "Active", null],
   ["ping", "Ping", "ping"],
@@ -25,7 +25,8 @@ export const DEVICE_KEYS = [
   ["memory", "RAM", "memory"],
 ] satisfies [DeviceInfoKeys, string, OrderBy | null][];
 export const MAP_ORDER_BY_TO_DEVICE_INFO_KEY = {
-  username: "username",
+  userid: "username",
+  username: "fullName",
   ip: "vpnIpAddress",
   ping: "ping",
   cpu: "cpu",

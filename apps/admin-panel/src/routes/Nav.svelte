@@ -96,9 +96,9 @@
     {:else}
       <h2>Quick switch</h2>
       <ul class="mt-4 flex max-h-full w-full flex-col gap-2 overflow-y-auto">
-        {#each quickSwitchMenu as { username }}
+        {#each quickSwitchMenu as username}
           <li>
-            <NavLink href={`/contestant/${username}`}>{username}</NavLink>
+            <NavLink href={`./${username}`}>{username}</NavLink>
           </li>
         {/each}
       </ul>

@@ -52,7 +52,7 @@ export const load: LayoutServerLoad = ({ cookies, locals, url }) => {
 
         const data = ((await resOthers.json()) as UserData[])
           .filter((user) => user.machineUsage.isOnline)
-          .map(({ username }) => ({ username }));
+          .map(({ username }) => username);
 
         logger.success("fetched:", `(${requestInfo}, type = QUICK_SWITCH_LIST)...`);
 
