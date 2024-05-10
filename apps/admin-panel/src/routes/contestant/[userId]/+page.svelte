@@ -4,8 +4,7 @@
   import videojs from "video.js";
 
   import { invalidate } from "$app/navigation";
-  import Button from "$components/Button.svelte";
-  import noAvatar from "$images/no-avatar.webp";
+    import noAvatar from "$images/no-avatar.webp";
   import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
   import { toast } from "$lib/stores/toast.svelte";
@@ -145,7 +144,7 @@
     >
       <div class="flex w-full flex-row items-center justify-between">
         <h3>Video</h3>
-        <Button as="button" onclick={reloadVideo}>Reload stream</Button>
+        <button class="button filled" onclick={reloadVideo}>Reload stream</button>
       </div>
       <video bind:this={video} class="video-js w-full rounded-xl shadow-lg" id="player">
         <track kind="captions" />

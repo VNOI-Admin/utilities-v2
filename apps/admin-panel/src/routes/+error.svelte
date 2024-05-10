@@ -1,6 +1,5 @@
 <script>
   import { page } from "$app/stores";
-  import Button from "$components/Button.svelte";
 </script>
 
 <div class="flex h-full w-full items-center justify-center">
@@ -13,6 +12,6 @@
       <enhanced:img src="$images/VNOI.png" alt="" class="min-w-8 max-w-8 min-h-8 max-h-8" />
       <h2>VCS Admin Panel</h2>
     </div>
-    <Button as="button" onclick={() => window.location.reload()}>Refresh</Button>
+    <button class="button filled" onclick={() => window.location.reload()}>Refresh</button>
   </div>
 </div>

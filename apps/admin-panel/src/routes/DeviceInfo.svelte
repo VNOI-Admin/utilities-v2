@@ -1,7 +1,6 @@
 <script lang="ts">
   import { base } from "$app/paths";
-  import Button from "$components/Button.svelte";
-  import { getPingColorClass } from "$lib/getPingColorClass";
+    import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
 
   import type { Device } from "./$page.types";
@@ -51,9 +50,9 @@
   </td>
   <td class="[&>*]:inline-block [&>*]:w-full">
     {#if device.isOnline}
-      <Button as="a" href={`${base}/contestant/${device.username}`}>View</Button>
+      <a class="button filled" href={`${base}/contestant/${device.username}`}>View</a>
     {:else}
-      <Button as="button" disabled>Not Available</Button>
+      <button class="button filled" disabled>Not Available</button>
     {/if}
   </td>
 </tr>

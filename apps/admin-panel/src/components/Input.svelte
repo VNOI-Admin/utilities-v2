@@ -17,9 +17,9 @@
   <input
     {id}
     class={clsx(
-      "input block h-[44px] w-full rounded-lg px-2.5 pt-2.5 text-sm shadow-md transition-opacity disabled:opacity-50",
-      "focus:border-accent-light dark:focus:border-accent-dark border border-neutral-400 focus:outline-none dark:border-neutral-700",
-      "dark:bg-neutral-1000 bg-white text-black opacity-80 dark:text-white",
+      "input block h-[44px] w-full rounded-md px-2.5 pt-2.5 text-sm shadow-md transition-opacity disabled:opacity-50",
+      "focus:border-accent-light dark:focus:border-accent-dark border border-neutral-300 focus:outline-none dark:border-neutral-800",
+      "dark:bg-neutral-900 bg-gray-100 text-black opacity-80 dark:text-white",
     )}
     aria-invalid={!!errorText}
     aria-describedby={errorTextId}
@@ -27,7 +27,7 @@
     {...rest}
   />
   <label
-    class="label absolute left-2.5 block select-none font-medium transition-all duration-100 ease-in"
+    class="label absolute left-2.5 select-none font-medium transition-all duration-100 ease-in line-clamp-1"
     for={id}
   >
     {label}

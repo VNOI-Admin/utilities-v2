@@ -1,6 +1,5 @@
 <script>
   import { enhance } from "$app/forms";
-  import Button from "$components/Button.svelte";
   import Input from "$components/Input.svelte";
 
   const { form } = $props();
@@ -9,7 +8,7 @@
 
 <div class="flex h-full w-full items-center justify-center p-4">
   <div
-    class="dark:bg-neutral-1000 flex w-[90dvw] max-w-[500px] items-center gap-6 rounded-lg bg-white p-8 shadow-xl"
+    class="flex w-[90dvw] max-w-[500px] items-center gap-6 rounded-lg border-[0.5px] border-neutral-300 bg-white p-8 shadow-xl dark:border-neutral-800 dark:bg-neutral-950"
   >
     <form
       method="POST"
@@ -41,7 +40,7 @@
         errorTextId="login-password-error-text"
       />
       <span>
-        <Button as="button" disabled={isLoading} type="submit">Login</Button>
+        <button class="button filled" disabled={isLoading} type="submit">Login</button>
       </span>
       {#if form?.error}
         <p class="text-error">{form.error}</p>

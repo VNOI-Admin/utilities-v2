@@ -2,8 +2,7 @@
   import { invalidate } from "$app/navigation";
   import { base } from "$app/paths";
   import { page } from "$app/stores";
-  import Button from "$components/Button.svelte";
-  import ChevronRight from "$components/icons/ChevronRight.svelte";
+    import ChevronRight from "$components/icons/ChevronRight.svelte";
   import Sort from "$components/icons/Sort.svelte";
   import Input from "$components/Input.svelte";
   import Link from "$components/Link.svelte";
@@ -109,7 +108,7 @@
             initialValue={orderBy}
             onchange={() => searchForm?.requestSubmit()}
           />
-          <Button as="button" type="submit">Search</Button>
+          <button class="button filled" type="submit">Search</button>
         </form>
       </div>
     </div>

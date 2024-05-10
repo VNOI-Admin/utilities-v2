@@ -1,6 +1,5 @@
 <script lang="ts">
-  import Button from "$components/Button.svelte";
-  import Input from "$components/Input.svelte";
+    import Input from "$components/Input.svelte";
   import { settings } from "$lib/stores/settings.svelte";
   import { toast } from "$lib/stores/toast.svelte";
 
@@ -45,7 +44,7 @@
   <h1>Settings</h1>
   <form onsubmit={saveSettings} class="flex w-full flex-col gap-2 overflow-y-auto">
     <div class="settings-item">
-      <span>Toast timeout</span>
+      <span class="p-2">Toast timeout</span>
       <div>
         <Input
           id="settings-toast-timeout-input"
@@ -59,7 +58,7 @@
       </div>
     </div>
     <div>
-      <Button as="button" disabled={loading} type="submit">Save</Button>
+      <button class="button filled" disabled={loading} type="submit">Save</button>
     </div>
   </form>
 </div>
