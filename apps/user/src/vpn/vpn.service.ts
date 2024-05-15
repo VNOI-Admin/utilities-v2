@@ -1,4 +1,4 @@
-import {User, type UserDocument } from '@libs/common-db';
+import {User, type UserDocument } from '@libs/common-db/user.schema';
 import type {
   OnModuleInit} from '@nestjs/common';
 import {

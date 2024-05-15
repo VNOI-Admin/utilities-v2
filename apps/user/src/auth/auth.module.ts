@@ -1,4 +1,4 @@
-import { User, UserSchema } from '@libs/common-db';
+import { User, UserSchema } from '@libs/common-db/user.schema';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';

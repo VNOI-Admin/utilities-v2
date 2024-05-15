@@ -1,4 +1,4 @@
-import { generateKeyPair } from '@libs/utils';
+import { generateKeyPair } from '@libs/utils/keygen';
 import type { ConfigService } from '@nestjs/config';
 import { Prop, raw,Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';

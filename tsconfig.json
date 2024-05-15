@@ -19,16 +19,16 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@libs/common-db": [
-		    "libs/common-db/schemas"
+		    "libs/common-db/src/schemas"
 	    ],
 	    "@libs/common-db/*": [
-		    "libs/common-db/schemas/*"
+		    "libs/common-db/src/schemas/*"
 	    ],
       "@libs/utils": [
-		    "libs/utils"
+		    "libs/utils/src"
 	    ],
       "@libs/utils/*": [
-		    "libs/utils/*"
+		    "libs/utils/src/*"
 	    ]
     },
   },
