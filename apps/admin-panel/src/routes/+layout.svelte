@@ -12,11 +12,13 @@
 
   import Nav from "./Nav.svelte";
 
+  const { children, data } = $props();
+
+  const appName = $derived(`VCS ${data.isAdmin ? "Admin Panel" : "Coach View"}`);
   const title = $derived(
-    $page.data.title ? `${$page.data.title} - VCS Admin Panel` : "VCS Admin Panel",
+    $page.data.title ? `${$page.data.title} - ${appName}` : appName,
   );
   const isDark = $derived($colorScheme === "dark");
-  const { children, data } = $props();
   let isNavMobileMenuOpened = $state(false);
 
   $effect(() => {

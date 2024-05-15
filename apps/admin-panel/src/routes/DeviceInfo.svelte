@@ -1,15 +1,20 @@
 <script lang="ts">
   import { base } from "$app/paths";
-    import { getPingColorClass } from "$lib/getPingColorClass";
+  import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
 
   import type { Device } from "./$page.types";
 
-  const { device } = $props<{ device: Device }>();
+  interface DeviceInfoProps {
+    isAdmin: boolean;
+    device: Device;
+  }
 
-  const pingColor = $derived(getPingColorClass(device.ping));
-  const cpuColor = $derived(getUsageColorClass(device.cpu));
-  const ramColor = $derived(getUsageColorClass(device.memory));
+  const { isAdmin, device }: DeviceInfoProps = $props();
+
+  const pingColor = $derived(device.ping ? getPingColorClass(device.ping) : undefined);
+  const cpuColor = $derived(device.cpu ? getUsageColorClass(device.cpu) : undefined);
+  const ramColor = $derived(device.memory ? getUsageColorClass(device.memory) : undefined);
 </script>
 
 <tr>
@@ -23,31 +28,35 @@
       {device.fullName}
     </p>
   </td>
-  <td>
-    <p>
-      {device.vpnIpAddress || "N/A"}
-    </p>
-  </td>
+  {#if isAdmin}
+    <td>
+      <p>
+        {device.vpnIpAddress}
+      </p>
+    </td>
+  {/if}
   <td>
     <p>
       {device.isOnline ? "✅" : "❌"}
     </p>
   </td>
-  <td class={pingColor}>
-    <p>
-      {device.ping} ms
-    </p>
-  </td>
-  <td class={cpuColor}>
-    <p>
-      {device.cpu}%
-    </p>
-  </td>
-  <td class={ramColor}>
-    <p>
-      {device.memory}%
-    </p>
-  </td>
+  {#if isAdmin}
+    <td class={pingColor}>
+      <p>
+        {device.ping || "N/A"} ms
+      </p>
+    </td>
+    <td class={cpuColor}>
+      <p>
+        {device.cpu || "N/A"}%
+      </p>
+    </td>
+    <td class={ramColor}>
+      <p>
+        {device.memory || "N/A"}%
+      </p>
+    </td>
+  {/if}
   <td class="[&>*]:inline-block [&>*]:w-full">
     {#if device.isOnline}
       <a class="button filled" href={`${base}/contestant/${device.username}`}>View</a>

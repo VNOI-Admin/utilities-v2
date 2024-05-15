@@ -13,6 +13,7 @@ import {
   MAP_ORDER_BY_TO_DEVICE_INFO_KEY,
   PAGE_SIZE,
   VALID_ORDER_BY_VALUES,
+  VALID_ORDER_BY_VALUES_ADMIN,
   VALID_ORDER_VALUES,
 } from "./$page.constants";
 import type { Device } from "./$page.types";
@@ -25,6 +26,8 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
     redirect(307, `${base}/login`);
   }
 
+  const isAdmin = locals.user.data.role === "admin";
+
   logger.log("fetching:", `(${requestInfo})...`);
 
   const pageQuery = url.searchParams.get("page");
@@ -33,7 +36,13 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   const searchQuery = url.searchParams.get("q") || "";
   const page = pageQuery !== null ? parseInt(pageQuery, 10) : undefined;
 
-  if (orderByQuery === null || !readonlyArrayIncludes(VALID_ORDER_BY_VALUES, orderByQuery)) {
+  if (
+    orderByQuery === null ||
+    !(
+      readonlyArrayIncludes(VALID_ORDER_BY_VALUES, orderByQuery) ||
+      (isAdmin && readonlyArrayIncludes(VALID_ORDER_BY_VALUES_ADMIN, orderByQuery))
+    )
+  ) {
     redirect(301, addURLSearch(url, { orderBy: "username" }));
   }
   if (orderQuery === null || !readonlyArrayIncludes(VALID_ORDER_VALUES, orderQuery)) {
@@ -69,15 +78,10 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
 
   logger.success("fetched:", `(${requestInfo})...`);
 
-  const orderByDeviceKey = MAP_ORDER_BY_TO_DEVICE_INFO_KEY[orderByQuery];
-
-  let devices = data.map(
+  const devices = data.map(
     ({ machineUsage: { cpu, memory, disk, ping, isOnline, lastReportedAt }, ...rest }) => {
       return {
-        cpu,
-        memory,
-        disk,
-        ping,
+        ...(isAdmin && { cpu, memory, disk, ping }),
         isOnline,
         lastReportedAt,
         ...rest,
@@ -88,29 +92,30 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   const totalPages = Math.ceil(devices.length / PAGE_SIZE);
   const onlineCount = devices.filter((device) => device.isOnline).length;
   const offlineCount = devices.length - onlineCount;
+  const orderByDeviceKey = MAP_ORDER_BY_TO_DEVICE_INFO_KEY[orderByQuery];
 
   if (page === undefined || Number.isNaN(page) || page < 0 || page > totalPages - 1) {
     redirect(301, addURLSearch(url, { page: "0" }));
   }
 
-  devices = devices.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE).sort((a, b) => {
-    switch (orderQuery) {
-      case "asc":
-        return a[orderByDeviceKey] < b[orderByDeviceKey] ? -1 : 1;
-      case "desc":
-        return a[orderByDeviceKey] < b[orderByDeviceKey] ? 1 : -1;
-      default: {
-        const _val: never = orderQuery;
-        throw new Error(`Unhandled orderQuery: ${_val}`);
-      }
-    }
-  });
-
   depends("home:query");
 
   return {
     totalPages,
-    devices,
+    devices: devices
+      .sort((a: any, b: any) => {
+        switch (orderQuery) {
+          case "asc":
+            return a[orderByDeviceKey] < b[orderByDeviceKey] ? -1 : 1;
+          case "desc":
+            return a[orderByDeviceKey] < b[orderByDeviceKey] ? 1 : -1;
+          default: {
+            const _val: never = orderQuery;
+            throw new Error(`Unhandled orderQuery: ${_val}`);
+          }
+        }
+      })
+      .slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
     onlineCount,
     offlineCount,
   };
