@@ -23,6 +23,12 @@
 	    ],
 	    "@common-db/schemas/*": [
 		    "apps/libs/common-db/schemas/*"
+	    ],
+      "@libs/utils": [
+		    "apps/libs/utils"
+	    ],
+      "@libs/utils/*": [
+		    "apps/libs/utils/*"
 	    ]
     },
   },
