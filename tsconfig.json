@@ -18,17 +18,17 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@common-db/schemas": [
-		    "apps/libs/common-db/schemas"
+      "@libs/common-db": [
+		    "libs/common-db/schemas"
 	    ],
-	    "@common-db/schemas/*": [
-		    "apps/libs/common-db/schemas/*"
+	    "@libs/common-db/*": [
+		    "libs/common-db/schemas/*"
 	    ],
       "@libs/utils": [
-		    "apps/libs/utils"
+		    "libs/utils"
 	    ],
       "@libs/utils/*": [
-		    "apps/libs/utils/*"
+		    "libs/utils/*"
 	    ]
     },
   },
@@ -39,5 +39,5 @@
   },
   "include": [
     "./apps"
-  ]
+, "libs"  ]
 }

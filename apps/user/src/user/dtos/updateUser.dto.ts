@@ -1,4 +1,4 @@
-import { Role } from "@common-db/schemas";
+import { Role } from "@libs/common-db";
 import { ApiProperty } from "@nestjs/swagger";
 
 

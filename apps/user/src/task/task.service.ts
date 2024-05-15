@@ -1,4 +1,4 @@
-import { User, type UserDocument } from '@common-db/schemas';
+import { User, type UserDocument } from '@libs/common-db';
 import type { OnModuleInit} from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';

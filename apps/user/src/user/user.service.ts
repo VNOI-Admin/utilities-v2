@@ -1,5 +1,5 @@
 
-import { Group, type GroupDocument, type Role, User, type UserDocument } from '@common-db/schemas';
+import { Group, type GroupDocument, type Role, User, type UserDocument } from '@libs/common-db';
 import type { OnModuleInit } from '@nestjs/common';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
