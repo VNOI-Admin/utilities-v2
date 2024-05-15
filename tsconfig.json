@@ -17,6 +17,21 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "paths": {}
-  }
+    "paths": {
+      "@common-db/schemas": [
+		    "apps/libs/common-db/schemas"
+	    ],
+	    "@common-db/schemas/*": [
+		    "apps/libs/common-db/schemas/*"
+	    ]
+    },
+  },
+  "ts-node": {
+    "require": [
+      "tsconfig-paths/register"
+    ]
+  },
+  "include": [
+    "./apps"
+  ]
 }

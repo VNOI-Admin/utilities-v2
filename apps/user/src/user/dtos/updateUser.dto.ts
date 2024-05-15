@@ -1,6 +1,6 @@
+import { Role } from "@common-db/schemas";
 import { ApiProperty } from "@nestjs/swagger";
 
-import { Role } from "../../database/schema/user.schema";
 
 export class UpdateUserDto {
   @ApiProperty({ required: true })

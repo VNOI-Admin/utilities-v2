@@ -1,3 +1,5 @@
+
+import { Group, type GroupDocument, type Role, User, type UserDocument } from '@common-db/schemas';
 import type { OnModuleInit } from '@nestjs/common';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,10 +9,6 @@ import { plainToInstance } from 'class-transformer';
 import { FormData } from 'formdata-node';
 import { Model } from 'mongoose';
 
-import type { GroupDocument } from '../database/schema/group.schema';
-import { Group } from '../database/schema/group.schema';
-import type { Role, UserDocument } from '../database/schema/user.schema';
-import { User } from '../database/schema/user.schema';
 import type { CreateGroupDto } from './dtos/createGroup.dto';
 import type { CreateUserBatchDto, CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';

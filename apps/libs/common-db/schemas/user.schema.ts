@@ -1,10 +1,10 @@
 import type { ConfigService } from '@nestjs/config';
 import { Prop, raw,Schema, SchemaFactory } from '@nestjs/mongoose';
+import { generateKeyPair } from 'apps/user/src/utils/keygen';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
 import { type Document, SchemaTypes, Types } from 'mongoose';
 
-import { generateKeyPair } from '../../utils/keygen';
 
 export type UserDocument = User & Document;
 
