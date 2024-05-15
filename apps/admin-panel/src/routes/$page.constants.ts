@@ -6,7 +6,8 @@ export const VALID_ORDER_SELECT_VALUES = [
   ["asc", "Ascending"],
   ["desc", "Descending"],
 ] satisfies [Order, string][];
-export const VALID_ORDER_BY_VALUES = ["userid", "username", "ip", "ping", "cpu", "memory"] as const;
+export const VALID_ORDER_BY_VALUES = ["userid", "username"] as const;
+export const VALID_ORDER_BY_VALUES_ADMIN = ["ip", "ping", "cpu", "memory"] as const;
 export const VALID_ORDER_BY_SELECT_VALUES = [
   ["userid", "User ID"],
   ["ip", "IP"],
@@ -19,7 +20,7 @@ export const DEVICE_KEYS = [
   ["username", "ID", "userid"],
   ["fullName", "Full name", "username"],
   ["vpnIpAddress", "IP", "ip"],
-  ["isActive", "Active", null],
+  ["isOnline", "Online", null],
   ["ping", "Ping", "ping"],
   ["cpu", "CPU", "cpu"],
   ["memory", "RAM", "memory"],
