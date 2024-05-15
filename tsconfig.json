@@ -38,6 +38,7 @@
     ]
   },
   "include": [
-    "./apps"
-, "libs"  ]
+    "./apps",
+    "./libs"  
+  ]
 }
