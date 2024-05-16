@@ -1,4 +1,4 @@
-import { buildUserSchema, User } from '@libs/common-db/user.schema';
+import { buildUserSchema, User } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';

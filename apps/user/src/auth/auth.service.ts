@@ -1,4 +1,4 @@
-import {User, type UserDocument} from '@libs/common-db/user.schema'
+import {User, type UserDocument} from '@libs/common-db/schemas/user.schema';
 import {
   BadRequestException,
   ForbiddenException,
