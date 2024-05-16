@@ -25,6 +25,6 @@ async function bootstrap() {
   });
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(8001, configService.get('LISTEN_HOST'));
+  await app.listen(8001);
 }
 bootstrap();

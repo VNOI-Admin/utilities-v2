@@ -17,6 +17,28 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "paths": {}
-  }
+    "paths": {
+      "@libs/common-db": [
+		    "libs/common-db/src"
+	    ],
+	    "@libs/common-db/*": [
+		    "libs/common-db/src/*"
+	    ],
+      "@libs/utils": [
+		    "libs/utils/src"
+	    ],
+      "@libs/utils/*": [
+		    "libs/utils/src/*"
+	    ]
+    },
+  },
+  "ts-node": {
+    "require": [
+      "tsconfig-paths/register"
+    ]
+  },
+  "include": [
+    "./apps",
+    "./libs"
+  ]
 }

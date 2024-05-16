@@ -1,3 +1,4 @@
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import type { OnModuleInit} from '@nestjs/common';
 import { Logger } from '@nestjs/common';
 import { Injectable } from '@nestjs/common';
@@ -7,8 +8,6 @@ import { CronJob } from 'cron';
 import { Model } from 'mongoose';
 import * as ping from 'ping';
 
-import type { UserDocument } from '../database/schema/user.schema';
-import { User } from '../database/schema/user.schema';
 
 @Injectable()
 export class TaskService implements OnModuleInit {

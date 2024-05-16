@@ -1,9 +1,9 @@
+import { buildUserSchema, User } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { GroupSchema } from 'libs/common-db/src/schemas/group.schema';
 
-import { GroupSchema } from '../database/schema/group.schema';
-import { buildUserSchema, User } from '../database/schema/user.schema';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 

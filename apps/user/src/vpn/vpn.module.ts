@@ -1,10 +1,10 @@
+import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { AccessTokenStrategy } from '../auth/strategies/accessToken.strategy';
 import { RefreshTokenStrategy } from '../auth/strategies/refreshToken.strategy';
-import { User, UserSchema } from '../database/schema/user.schema';
 import { VpnController } from './vpn.controller';
 import { VpnService } from './vpn.service';
 

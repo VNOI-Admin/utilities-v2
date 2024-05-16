@@ -1,3 +1,4 @@
+import {User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import type {
   OnModuleInit} from '@nestjs/common';
 import {
@@ -10,8 +11,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { plainToInstance } from 'class-transformer';
 import { Model } from 'mongoose';
 
-import type { UserDocument } from '../database/schema/user.schema';
-import { User } from '../database/schema/user.schema';
 import { VpnConfig } from './entities/vpnConfig.entity';
 
 @Injectable()
