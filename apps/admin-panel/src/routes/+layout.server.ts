@@ -22,7 +22,7 @@ export const load: LayoutServerLoad = ({ cookies, locals, url }) => {
       }
 
       try {
-        const resOthers = await fetchWithUser(new URL("/user", USER_SERVICE_URI), {
+        const resOthers = await fetchWithUser(`${USER_SERVICE_URI}/user`, {
           method: "GET",
           headers: {
             Accept: "application/json",

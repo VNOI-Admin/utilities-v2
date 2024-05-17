@@ -28,6 +28,7 @@
         label="Username"
         name="username"
         type="text"
+        required
         errorText={form?.usernameError}
         errorTextId="login-username-error-text"
       />
@@ -36,6 +37,7 @@
         label="Password"
         name="password"
         type="password"
+        required
         errorText={form?.passwordError}
         errorTextId="login-password-error-text"
       />

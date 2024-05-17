@@ -33,6 +33,7 @@
           label="Username"
           name="username"
           type="text"
+          required
           errorText={form?.validationErrors?.username?.join("\n")}
           errorTextId="edit-username-error-text"
           value={data.userId}
@@ -42,6 +43,7 @@
           label="Full name"
           name="fullName"
           type="text"
+          required
           errorText={form?.validationErrors?.fullName?.join("\n")}
           errorTextId="edit-username-error-text"
           value={data.fullName}
@@ -52,6 +54,7 @@
         label="Password"
         name="password"
         type="password"
+        required
         errorText={form?.validationErrors?.password?.join("\n")}
         errorTextId="edit-password-error-text"
       />
@@ -59,6 +62,7 @@
         label="Role"
         id="edit-role-select"
         name="role"
+        required
         values={[
           ["admin", "Admin"],
           ["user", "User"],

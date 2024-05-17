@@ -89,7 +89,7 @@ export const actions: Actions = {
     const requestInfo = `page = /login, action = /logout, requestId = ${getRequestId()}`;
     try {
       logger.log("logging in:", `(${requestInfo})...`);
-      const res = await fetchWithUser(new URL("/auth/logout", USER_SERVICE_URI), {
+      const res = await fetchWithUser(`${USER_SERVICE_URI}/auth/logout`, {
         method: "POST",
         headers: {
           Accept: "application/json",

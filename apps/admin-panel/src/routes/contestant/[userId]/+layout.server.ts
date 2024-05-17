@@ -23,7 +23,7 @@ export const load: LayoutServerLoad = async ({ params, fetch, cookies, locals, d
 
   logger.log("fetching:", `(${requestInfo})...`);
 
-  const res = await fetchWithUser(new URL(`/user/${params.userId}`, USER_SERVICE_URI), {
+  const res = await fetchWithUser(`${USER_SERVICE_URI}/user/${params.userId}`, {
     method: "GET",
     headers: {
       Accept: "application/json",

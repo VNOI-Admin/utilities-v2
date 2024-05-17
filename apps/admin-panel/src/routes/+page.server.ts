@@ -50,7 +50,7 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
   }
 
   const res = await fetchWithUser(
-    addURLSearch(new URL("/user", USER_SERVICE_URI), { q: searchQuery }),
+    `${USER_SERVICE_URI}/user?q=${searchQuery}`,
     {
       method: "GET",
       headers: {

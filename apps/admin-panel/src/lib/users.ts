@@ -84,7 +84,7 @@ export const refreshUserTokens = async ({
     );
     return removeUserTokens({ cookies }), undefined;
   }
-  const res = await fetch(new URL("/auth/refresh", USER_SERVICE_URI), {
+  const res = await fetch(`${USER_SERVICE_URI}/auth/refresh`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -147,7 +147,7 @@ export const refreshUser = async ({
     return undefined;
   }
 
-  const userDataRes = await fetch(new URL("/user/me", USER_SERVICE_URI), {
+  const userDataRes = await fetch(`${USER_SERVICE_URI}/user/me`, {
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
@@ -287,8 +287,6 @@ export const getUser = async ({ cookies, fetch }: GetUserOptions): Promise<User 
     return undefined;
   }
 
-  const userMeUrl = new URL("/user/me", USER_SERVICE_URI);
-
   let userTokens: UserTokens | undefined = {
     accessToken,
     refreshToken,
@@ -297,7 +295,7 @@ export const getUser = async ({ cookies, fetch }: GetUserOptions): Promise<User 
   const headers = new Headers();
 
   headers.set("Authorization", `Bearer ${userTokens.accessToken}`);
-  const userDataResCurrent = await fetch(userMeUrl, { headers });
+  const userDataResCurrent = await fetch(`${USER_SERVICE_URI}/user/me`, { headers });
   if (userDataResCurrent.status !== 401) {
     logger.success("getUser successful:", `(${requestInfo}, attempt = 0)`);
     const userData = await userDataResCurrent.json();
