@@ -9,7 +9,7 @@
     href: string;
   }
 
-  const { href, children, ...rest } = $props<NavLinkProps>();
+  const { href, children, ...rest }: NavLinkProps = $props();
 
   const resolvedHref = $derived(href.startsWith("/") ? `${base}${href}` : href);
 </script>

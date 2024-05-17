@@ -75,3 +75,11 @@ export interface ToastItem {
   title: string;
   message: string;
 }
+
+export type QuickSwitch = Promise<
+  | string[]
+  | {
+      error: string;
+    }
+  | undefined
+>;

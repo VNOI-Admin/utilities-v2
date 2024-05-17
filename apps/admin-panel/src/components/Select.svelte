@@ -10,7 +10,7 @@
     initialValue?: T | null;
   }
 
-  const { id, label, values, initialValue, ...rest } = $props<SelectProps>();
+  const { id, label, values, initialValue, ...rest }: SelectProps = $props();
 </script>
 
 <div class="relative">
@@ -27,10 +27,11 @@
       "focus:border-accent-light dark:focus:border-accent-dark border border-neutral-400 focus:outline-none dark:border-neutral-700",
       "dark:bg-neutral-1000 bg-white text-black opacity-80 dark:text-white",
     )}
+    value={initialValue}
     {...rest}
   >
     {#each values as [value, name]}
-      <option selected={value === initialValue} {value}>{name}</option>
+      <option {value}>{name}</option>
     {/each}
   </select>
 </div>

@@ -9,7 +9,7 @@
     </h1>
     <h2>{$page.error?.message}</h2>
     <div class="flex flex-row items-center gap-2">
-      <enhanced:img src="$images/VNOI.png" alt="" class="min-w-8 max-w-8 min-h-8 max-h-8" />
+      <enhanced:img src="$images/VNOI.png" alt="" class="min-w-8 max-w-8 min-h-8 max-h-8"></enhanced:img>
       <h2>VCS</h2>
     </div>
     <button class="button filled" onclick={() => window.location.reload()}>Refresh</button>

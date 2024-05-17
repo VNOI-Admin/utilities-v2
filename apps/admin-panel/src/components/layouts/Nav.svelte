@@ -10,8 +10,8 @@
   import ToggleScheme from "$components/layouts/ToggleScheme.svelte";
   import Link from "$components/Link.svelte";
   import { toast } from "$lib/stores/toast.svelte";
+  import type { QuickSwitch } from "$lib/types";
 
-  import type { QuickSwitch } from "./$page.types";
   import NavLink from "./NavLink.svelte";
 
   interface NavProps {
@@ -19,7 +19,7 @@
     quickSwitch: QuickSwitch;
   }
 
-  const { isLoggedIn, quickSwitch } = $props<NavProps>();
+  const { isLoggedIn, quickSwitch }: NavProps = $props();
   let isLoggingOut = $state(false);
 
   interface AsideMenuLink {
@@ -48,7 +48,7 @@
     class="flex items-center gap-2 [&>*]:!text-[#a51a12] dark:[&>*]:!text-[#fbfb00]"
     aria-label="Go to home"
   >
-    <enhanced:img src="$images/VNOI.png" class="max-h-8 min-h-8 min-w-8 max-w-8" alt="" />
+    <enhanced:img src="$images/VNOI.png" class="max-h-8 min-h-8 min-w-8 max-w-8" alt=""></enhanced:img>
     <h2>VCS</h2>
   </Link>
   <div class="flex items-center gap-2">

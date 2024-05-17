@@ -8,7 +8,7 @@
     variant?: ButtonVariant;
   };
 
-  const { as = "button", variant = "filled", children, ...rest } = $props<ButtonProps>();
+  const { as = "button", variant = "filled", children, ...rest }: ButtonProps = $props();
 </script>
 
 <svelte:element

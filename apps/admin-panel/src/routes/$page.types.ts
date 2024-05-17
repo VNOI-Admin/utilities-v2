@@ -23,10 +23,4 @@ export type Order = (typeof VALID_ORDER_VALUES)[number];
 export type OrderBy =
   | (typeof VALID_ORDER_BY_VALUES)[number]
   | (typeof VALID_ORDER_BY_VALUES_ADMIN)[number];
-export type QuickSwitch = Promise<
-  | string[]
-  | {
-      error: string;
-    }
-  | undefined
->;
+

@@ -14,7 +14,7 @@
 		chartUsage: number;
 	}
 
-	const { chartType, chartWidth, chartHeight, chartLabel, chartUsage } = $props<CpuRamChartProps>();
+	const { chartType, chartWidth, chartHeight, chartLabel, chartUsage }: CpuRamChartProps = $props();
 
 	const initChart: Action<HTMLCanvasElement, number> = (canvas, initialData) => {
 		const ctx = canvas.transferControlToOffscreen();
@@ -86,5 +86,5 @@
 </script>
 
 <div class="h-full w-full">
-	<canvas class="block" use:initChart={chartUsage} />
+	<canvas class="block" use:initChart={chartUsage}></canvas>
 </div>

@@ -14,17 +14,21 @@
     active?: boolean;
   };
 
-  const { as, active = false, class: className, ...rest } = $props<PaginationButtonProps>();
+  const {
+    as,
+    active = false,
+    class: className,
+    children,
+    ...rest
+  }: PaginationButtonProps = $props();
 </script>
 
 <svelte:element
   this={as}
-  class={clsx(
-    "pagination-button",
-    active ? "active" : "inactive",
-    className,
-  )}
+  class={clsx("pagination-button", active ? "active" : "inactive", className)}
   {...rest}
 >
-  <slot />
+  {#if children}
+    {@render children()}
+  {/if}
 </svelte:element>

@@ -7,7 +7,7 @@
     href: string;
   }
 
-  const { href, children, ...props } = $props<LinkProps>();
+  const { href, children, ...props }: LinkProps = $props();
 </script>
 
 <a href={href.startsWith("/") ? `${base}${href}` : href} {...props}>

@@ -193,7 +193,7 @@ export interface FetchWithUserOptions extends RequestInit {
  * @returns
  */
 export const fetchWithUser = async (
-  url: URL,
+  url: URL | string,
   {
     cookies,
     fetch,
@@ -203,7 +203,7 @@ export const fetchWithUser = async (
     ...init
   }: FetchWithUserOptions,
 ): Promise<Response | undefined> => {
-  const requestInfo = `requestId = ${getRequestId()}, url = ${url.href}`;
+  const requestInfo = `requestId = ${getRequestId()}, url = ${typeof url === "string" ? url : url.href}`;
   const headers = new Headers(headersInit);
 
   logger.log("fetchWithUser initiated:", `(${requestInfo})`);

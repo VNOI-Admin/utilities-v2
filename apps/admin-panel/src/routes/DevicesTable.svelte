@@ -22,6 +22,10 @@
       ? DEVICE_KEYS
       : DEVICE_KEYS.filter((e) => !readonlyArrayIncludes(VALID_ORDER_BY_VALUES_ADMIN, e[2])),
   );
+
+  const tableHeadStyle = $derived(
+    clsx("text-left", isAdmin ? "md:w-[calc(100%/8)]" : "md:w-[calc(100%/4)]"),
+  );
 </script>
 
 <table class="absolute w-full table-auto border-separate border-spacing-4">
@@ -30,7 +34,7 @@
       class="dark:[&>th]:bg-neutral-1000 [&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:bg-white [&>th]:transition-colors [&>th]:duration-100"
     >
       {#each deviceKeys as [_, name, keyOrderBy]}
-        <th class="text-left md:w-[calc(100%/7)]">
+        <th class={tableHeadStyle}>
           <div class="flex items-center gap-3">
             <h3>{name}</h3>
             {#if !!keyOrderBy}
@@ -55,7 +59,7 @@
           </div>
         </th>
       {/each}
-      <th class="text-left md:w-[calc(100%/7)]">
+      <th class={tableHeadStyle}>
         <span class="sr-only">View user</span>
       </th>
     </tr>

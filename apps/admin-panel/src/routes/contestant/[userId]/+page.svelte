@@ -4,7 +4,7 @@
   import videojs from "video.js";
 
   import { invalidate } from "$app/navigation";
-    import noAvatar from "$images/no-avatar.webp";
+  import noAvatar from "$images/no-avatar.webp";
   import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
   import { toast } from "$lib/stores/toast.svelte";
@@ -14,13 +14,6 @@
   const { data } = $props();
 
   const ip = $derived(data.ip);
-
-  $effect(() => {
-    const interval = setInterval(() => invalidate("contestant:data:info"), 10000);
-
-    return () => clearInterval(interval);
-  });
-
   let video = $state<HTMLVideoElement | null>(null);
   let player = $state<ReturnType<typeof videojs> | null>(null);
   let offlineWarned = false;
@@ -55,6 +48,12 @@
   };
 
   $effect(reloadVideo);
+
+  $effect(() => {
+    const interval = setInterval(() => invalidate("contestant:data:info"), 10000);
+
+    return () => clearInterval(interval);
+  });
 
   $effect(() => {
     if (data.isOnline === undefined) {

@@ -4,13 +4,12 @@
   import { fly } from "svelte/transition";
 
   import { page } from "$app/stores";
+  import Nav from "$components/layouts/Nav.svelte";
   import Toast from "$components/Toast.svelte";
   import { clsx } from "$lib/clsx";
   import { isColorScheme } from "$lib/isColorScheme";
   import { colorScheme } from "$lib/stores/colorScheme";
   import { settings } from "$lib/stores/settings.svelte";
-
-  import Nav from "./Nav.svelte";
 
   const { children, data } = $props();
 
@@ -93,9 +92,9 @@
           )}
           aria-label="Toggle navbar menu"
         >
-          <span class="origin-center duration-300" />
-          <span class="duration-200 ease-out" />
-          <span class="origin-center duration-300" />
+          <span class="origin-center duration-300"></span>
+          <span class="duration-200 ease-out"></span>
+          <span class="origin-center duration-300"></span>
         </label>
       </span>
     </div>
