@@ -12,10 +12,12 @@ async function bootstrap() {
 
   // Get configService from app
   const configService = app.get(ConfigService);
+  const userEndpoint = configService.get('USER_SERVER_URL');
 
   const config = new DocumentBuilder()
-    .setTitle('User')
-    .setDescription('User API')
+    .addServer(userEndpoint)
+    .setTitle('Utilities V2 User API Docs')
+    .setDescription('Utilities V2 User API Docs')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
