@@ -1,3 +1,5 @@
+import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { RefreshTokenGuard } from '@libs/common/guards/refreshToken.guard';
 import {
   Body,
   ClassSerializerInterceptor,
@@ -16,8 +18,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { AccessTokenGuard } from '../common/guards/accessToken.guard';
-import { RefreshTokenGuard } from '../common/guards/refreshToken.guard';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dtos/auth.dto';
 import { TokensEntity } from './entities/tokens.entity';

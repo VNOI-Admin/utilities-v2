@@ -1,4 +1,4 @@
-import { Role } from "@libs/common-db/schemas/user.schema";
+import { Role } from "@libs/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 
 
@@ -12,11 +12,6 @@ export class CreateUserDto {
   @ApiProperty({ required: true })
   password: string;
 
-  @ApiProperty({ required: true, enum: ['admin', 'coach', 'user'], default: 'user' })
+  @ApiProperty({ required: true, enum: Object.values(Role), default: 'user' })
   role: Role;
-}
-
-export class CreateUserBatchDto {
-  @ApiProperty({ type: [CreateUserDto] })
-  users: CreateUserDto[];
 }

@@ -1,11 +1,8 @@
-import { Role } from "@libs/common-db/schemas/user.schema";
+import { Role } from "@libs/common/decorators";
 import { ApiProperty } from "@nestjs/swagger";
 
 
 export class UpdateUserDto {
-  @ApiProperty({ required: true })
-  username: string;
-
   @ApiProperty({ required: false })
   fullName: string;
 
@@ -15,11 +12,6 @@ export class UpdateUserDto {
   @ApiProperty({ required: false })
   usernameNew: string;
 
-  @ApiProperty({ required: false, enum: ['admin', 'coach', 'user'], default: 'user' })
+  @ApiProperty({ required: false, enum: Object.values(Role), default: 'user' })
   role: Role;
-}
-
-export class UpdateUserBatchDto {
-  @ApiProperty({ type: [UpdateUserDto] })
-  users: UpdateUserDto[];
 }

@@ -1,3 +1,4 @@
+import { Role } from '@libs/common/decorators';
 import { generateKeyPair } from '@libs/utils/keygen';
 import type { ConfigService } from '@nestjs/config';
 import { Prop, raw,Schema, SchemaFactory } from '@nestjs/mongoose';
@@ -5,15 +6,12 @@ import * as argon2 from 'argon2';
 import * as ip from 'ip';
 import { type Document, SchemaTypes, Types } from 'mongoose';
 
-
 export type UserDocument = User & Document;
 
 export type KeyPairType = {
   publicKey: string;
   privateKey: string;
 };
-
-export type Role = 'admin' | 'coach' | 'user';
 
 export type MachineUsage = {
   cpu: number;
@@ -38,7 +36,7 @@ export class User {
   @Prop()
   refreshToken: string;
 
-  @Prop({ required: true, default: 'user' })
+  @Prop({ required: true, type: String, default: Role.USER })
   role: Role;
 
   // Allow null for several documents. For non-null, unique is enforced.
