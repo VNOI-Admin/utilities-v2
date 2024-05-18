@@ -126,6 +126,9 @@
   .input:not(:placeholder-shown) + .label {
     @apply top-0.5 text-xs text-neutral-700 dark:text-gray-300;
   }
+  .text-comment {
+    @apply text-neutral-600 dark:text-neutral-400;
+  }
   html[data-theme="light"] .visible-dark,
   html[data-theme="dark"] .visible-light {
     @apply !invisible !hidden;

@@ -6,10 +6,10 @@
 
 <button class="nav-button" onclick={() => toggleColorScheme()}>
   <span class="visible-dark">
-    <MoonStars width={24} height={24} />
+    <MoonStars width={24} height={24} class="w-6 h-auto" />
   </span>
   <span class="visible-light">
-    <Sun width={24} height={24} />
+    <Sun width={24} height={24} class="w-6 h-auto" />
   </span>
   <p class="sr-only">Toggle color scheme</p>
 </button>

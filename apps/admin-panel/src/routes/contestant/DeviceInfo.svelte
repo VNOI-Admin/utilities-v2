@@ -64,4 +64,9 @@
       <button class="button filled" disabled>Not Available</button>
     {/if}
   </td>
+  {#if isAdmin}
+    <td>
+      <a class="button filled" href={`${base}/contestant/${device.username}/edit`}>Edit</a>
+    </td>
+  {/if}
 </tr>

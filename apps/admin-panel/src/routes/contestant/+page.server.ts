@@ -43,14 +43,17 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
       (isAdmin && readonlyArrayIncludes(VALID_ORDER_BY_VALUES_ADMIN, orderByQuery))
     )
   ) {
-    redirect(301, addURLSearch(url, { orderBy: "username" }));
+    redirect(301, addURLSearch(url, { orderBy: "userid" }));
   }
   if (orderQuery === null || !readonlyArrayIncludes(VALID_ORDER_VALUES, orderQuery)) {
     redirect(301, addURLSearch(url, { order: "asc" }));
   }
+  if (page === undefined || Number.isNaN(page) || page < 0) {
+    redirect(301, addURLSearch(url, { page: "0" }));
+  }
 
   const res = await fetchWithUser(
-    `${USER_SERVICE_URI}/user?q=${searchQuery}`,
+    `${USER_SERVICE_URI}/user${searchQuery ? `?q=${searchQuery}` : ""}`,
     {
       method: "GET",
       headers: {
@@ -89,12 +92,12 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, depends, local
     },
   );
 
-  const totalPages = Math.ceil(devices.length / PAGE_SIZE);
+  const totalPages = devices.length === 0 ? 1 : Math.ceil(devices.length / PAGE_SIZE);
   const onlineCount = devices.filter((device) => device.isOnline).length;
   const offlineCount = devices.length - onlineCount;
   const orderByDeviceKey = MAP_ORDER_BY_TO_DEVICE_INFO_KEY[orderByQuery];
 
-  if (page === undefined || Number.isNaN(page) || page < 0 || page > totalPages - 1) {
+  if (page > totalPages - 1) {
     redirect(301, addURLSearch(url, { page: "0" }));
   }
 

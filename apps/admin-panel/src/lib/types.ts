@@ -1,4 +1,6 @@
 import type { ChartConfiguration, ChartType, DefaultDataPoint } from "chart.js";
+import type { ComponentType, SvelteComponent } from "svelte";
+import type { SVGAttributes } from "svelte/elements";
 
 import type { COLOR_SCHEMES } from "./constants";
 
@@ -27,7 +29,7 @@ export interface UserData {
 
 export type User = {
   token: UserTokens;
-  data: UserData;
+  data: Omit<UserData, "fullName">;
 };
 
 export type ChartWorkerEvent<
@@ -83,3 +85,12 @@ export type QuickSwitch = Promise<
     }
   | undefined
 >;
+
+export interface AsideMenuLink {
+  href: string;
+  title: string;
+  icon: ComponentType<SvelteComponent<SVGAttributes<SVGElement>>>;
+  authOnly?: boolean;
+  adminOnly?: boolean;
+  unauthOnly?: boolean;
+}

@@ -1,4 +1,3 @@
-import type { LayoutServerLoad } from "./$types";
 import { error, redirect } from "@sveltejs/kit";
 
 import { base } from "$app/paths";
@@ -8,17 +7,9 @@ import * as logger from "$lib/logger";
 import type { UserData } from "$lib/types";
 import { fetchWithUser } from "$lib/users";
 
+import type { LayoutServerLoad } from "./$types";
+
 export const load: LayoutServerLoad = async ({ params, fetch, cookies, locals, depends }) => {
-  //   return {
-  //     userId: "foo",
-  //     ip: "10.0.0.1",
-  //     fullName: "bar",
-  //     isOnline: true,
-  //     cpu: 100,
-  //     ram: 100,
-  //     ping: 100,
-  //     role: "user",
-  //   };
   const requestInfo = `layout = /contestant/[userId], requestId = ${getRequestId()}, userId = ${params.userId}`;
 
   logger.log("fetching:", `(${requestInfo})...`);

@@ -4,7 +4,6 @@
   import videojs from "video.js";
 
   import { invalidate } from "$app/navigation";
-  import noAvatar from "$images/no-avatar.webp";
   import { getPingColorClass } from "$lib/getPingColorClass";
   import { getUsageColorClass } from "$lib/getUsageColorClass";
   import { toast } from "$lib/stores/toast.svelte";
@@ -77,18 +76,16 @@
 
 <div class="flex h-full w-full flex-col gap-4 p-4 md:p-10">
   <div
-    class="dark:bg-neutral-1000 flex w-full flex-row items-center gap-4 rounded-xl bg-white px-4 py-2 shadow-lg"
+    class="dark:bg-neutral-1000 flex w-full flex-row items-center gap-8 rounded-xl bg-white p-8 shadow-lg"
   >
-    <img
-      src={noAvatar}
-      class="max-h-[150px] min-h-[150px] min-w-[150px] max-w-[150px] rounded-full"
+    <enhanced:img
+      src="$images/no-avatar.webp"
+      class="h-auto w-[150px] rounded-full"
       alt=""
-      width={150}
-      height={150}
-    />
+    ></enhanced:img>
     <div>
       <h1>
-        <span class="sr-only">Contestant </span>{data.userId} - {data.fullName}
+        <span class="sr-only">Contestant </span>{data.userId} ({data.fullName})
       </h1>
       <h2>
         Online: {data.isOnline ? "✅" : "❌"}

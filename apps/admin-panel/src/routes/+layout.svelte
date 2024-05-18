@@ -13,7 +13,7 @@
 
   const { children, data } = $props();
 
-  const appName = $derived(`VCS ${data.isAdmin ? "Admin Panel" : "Coach View"}`);
+  const appName = $derived(`VCS ${data.user?.isAdmin ? "Admin Panel" : "Coach View"}`);
   const title = $derived(
     $page.data.title ? `${$page.data.title} - ${appName}` : appName,
   );
@@ -39,13 +39,13 @@
   <meta property="og:title" content={title} />
   <meta name="twitter:title" content={title} />
   <link rel="canonical" href={$page.url.href} />
-  <meta name="theme-color" content={isDark ? "#000000" : "#FFFFFF"} />
+  <meta name="theme-color" content={isDark ? "#0a0a0a" : "#f9fafb"} />
 </svelte:head>
 
 <div class="flex h-full w-full flex-row">
   <div class="sticky left-0 top-0 z-50 flex h-full max-h-dvh flex-row">
     {#snippet navbarContent()}
-      <Nav isLoggedIn={data.isLoggedIn} quickSwitch={data.quickSwitch} />
+      <Nav isLoggedIn={!!data.user} isAdmin={data.user?.isAdmin ?? false} quickSwitch={data.quickSwitch} />
     {/snippet}
     <nav
       class="hidden h-full w-[90dvw] max-w-[350px] flex-col gap-4 bg-gray-50 px-4 py-8 md:flex dark:bg-neutral-950"
@@ -54,7 +54,7 @@
     </nav>
     {#if isNavMobileMenuOpened}
       <nav
-        class="dark:bg-neutral-1000 flex h-full w-[90dvw] max-w-[350px] flex-col gap-4 bg-white px-4 py-8 shadow-lg md:hidden"
+        class="dark:bg-neutral-1000 flex h-full w-[90dvw] absolute max-w-[350px] flex-col gap-4 bg-white px-4 py-8 shadow-lg md:hidden"
         transition:fly={{
           x: "-100%",
           duration: 250,

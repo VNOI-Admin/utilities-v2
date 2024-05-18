@@ -10,6 +10,7 @@ export const VALID_ORDER_BY_VALUES = ["userid", "username"] as const;
 export const VALID_ORDER_BY_VALUES_ADMIN = ["ip", "ping", "cpu", "memory"] as const;
 export const VALID_ORDER_BY_SELECT_VALUES = [
   ["userid", "User ID"],
+  ["username", "Full name"],
   ["ip", "IP"],
   ["ping", "Ping"],
   ["cpu", "CPU"],

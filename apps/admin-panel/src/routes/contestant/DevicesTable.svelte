@@ -24,7 +24,7 @@
   );
 
   const tableHeadStyle = $derived(
-    clsx("text-left", isAdmin ? "md:w-[calc(100%/8)]" : "md:w-[calc(100%/4)]"),
+    clsx("text-left", isAdmin ? "md:w-[calc(100%/9)]" : "md:w-[calc(100%/4)]"),
   );
 </script>
 
@@ -43,7 +43,9 @@
                 href={addURLSearch($page.url, { orderBy: keyOrderBy }).toString()}
                 class={clsx(
                   "max-h-9 min-h-9 min-w-9 max-w-9 rounded p-2 transition-colors duration-100",
-                  isCurrentOrder && "bg-accent-light dark:bg-accent-dark",
+                  isCurrentOrder
+                    ? "bg-accent-light dark:bg-accent-dark"
+                    : "hover:bg-gray-200 dark:hover:bg-neutral-800",
                 )}
               >
                 <Sort
@@ -62,6 +64,11 @@
       <th class={tableHeadStyle}>
         <span class="sr-only">View user</span>
       </th>
+      {#if isAdmin}
+        <th class={tableHeadStyle}>
+          <span class="sr-only">Edit user</span>
+        </th>
+      {/if}
     </tr>
   </thead>
   <tbody>

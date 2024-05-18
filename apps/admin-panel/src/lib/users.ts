@@ -226,7 +226,10 @@ export const fetchWithUser = async (
   headers.set("Authorization", `Bearer ${user.token.accessToken}`);
   const resCurrentAccess = await fetch(url, { ...init, headers });
   if (resCurrentAccess.status !== 401) {
-    logger.success("fetchWithUser successful:", `(${requestInfo}, attempt = 0)`);
+    logger.success(
+      "fetchWithUser successful:",
+      `(${requestInfo}, status = ${resCurrentAccess.status}, attempt = 0)`,
+    );
     return resCurrentAccess;
   }
 
@@ -254,7 +257,10 @@ export const fetchWithUser = async (
   headers.set("Authorization", `Bearer ${user.token.accessToken}`);
   const resNewAccess = await fetch(url, { ...init, headers });
   if (resNewAccess.status !== 401) {
-    logger.success("fetchWithUser successful:", `(${requestInfo}, attempt = 1)`);
+    logger.success(
+      "fetchWithUser successful:",
+      `(${requestInfo}, status = ${resNewAccess.status}, attempt = 1)`,
+    );
     return resNewAccess;
   }
 
@@ -314,7 +320,7 @@ export const getUser = async ({ cookies, fetch }: GetUserOptions): Promise<User 
   }
 
   headers.set("Authorization", `Bearer ${userTokens.accessToken}`);
-  const userDataResNew = await fetch(userMeUrl, { headers });
+  const userDataResNew = await fetch(`${USER_SERVICE_URI}/user/me`, { headers });
   if (userDataResNew.status !== 401) {
     logger.success("getUser successful:", `(${requestInfo}, attempt = 1)`);
     const userData = await userDataResNew.json();

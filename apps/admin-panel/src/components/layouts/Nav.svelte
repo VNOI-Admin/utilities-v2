@@ -1,57 +1,38 @@
 <script lang="ts">
-  import type { ComponentType, SvelteComponent } from "svelte";
-  import type { SVGAttributes } from "svelte/elements";
-
   import { enhance } from "$app/forms";
   import { base } from "$app/paths";
-  import Eye from "$components/icons/Eye.svelte";
   import Logout from "$components/icons/Logout.svelte";
-  import Settings from "$components/icons/Settings.svelte";
+
   import ToggleScheme from "$components/layouts/ToggleScheme.svelte";
   import Link from "$components/Link.svelte";
   import { toast } from "$lib/stores/toast.svelte";
   import type { QuickSwitch } from "$lib/types";
 
+  import { filterAsideLinks } from "./nav-utils";
   import NavLink from "./NavLink.svelte";
 
   interface NavProps {
     isLoggedIn: boolean;
+    isAdmin: boolean;
     quickSwitch: QuickSwitch;
   }
 
-  const { isLoggedIn, quickSwitch }: NavProps = $props();
+  const { isLoggedIn, isAdmin, quickSwitch }: NavProps = $props();
   let isLoggingOut = $state(false);
-
-  interface AsideMenuLink {
-    href: string;
-    title: string;
-    icon: ComponentType<SvelteComponent<SVGAttributes<SVGElement>>>;
-  }
-
-  const ASIDE_MENU_LINKS = [
-    {
-      href: "/",
-      title: "Monitor",
-      icon: Eye,
-    },
-    {
-      href: "/settings",
-      title: "Settings",
-      icon: Settings,
-    },
-  ] satisfies AsideMenuLink[];
+  const asideMenuLinks = $derived(filterAsideLinks(isLoggedIn, isAdmin));
 </script>
 
 <div class="flex w-full flex-col justify-between gap-2">
   <Link
     href="/"
-    class="flex items-center gap-2 [&>*]:!text-[#a51a12] dark:[&>*]:!text-[#fbfb00]"
+    class="flex flex-wrap items-center gap-2 [&>*]:!text-[#a51a12] dark:[&>*]:!text-[#fbfb00]"
     aria-label="Go to home"
   >
-    <enhanced:img src="$images/VNOI.png" class="max-h-8 min-h-8 min-w-8 max-w-8" alt=""></enhanced:img>
+    <enhanced:img src="$images/VNOI.png" class="max-h-8 min-h-8 min-w-8 max-w-8" alt=""
+    ></enhanced:img>
     <h2>VCS</h2>
   </Link>
-  <div class="flex items-center gap-2">
+  <div class="flex items-center gap-2 flex-wrap">
     <ToggleScheme />
     {#if isLoggedIn}
       <form
@@ -75,7 +56,7 @@
         }}
       >
         <button type="submit" disabled={isLoggingOut} class="nav-button disabled:opacity-70">
-          <Logout width={24} height={24} />
+          <Logout width={24} height={24} class="w-6 h-auto" />
           <p class="sr-only">Logout</p>
         </button>
       </form>
@@ -83,9 +64,11 @@
   </div>
 </div>
 <ul class="flex w-full flex-col gap-2">
-  {#each ASIDE_MENU_LINKS as { href, title }}
+  {#each asideMenuLinks as { href, title, icon: Icon }}
     <li>
-      <NavLink {href}>{title}</NavLink>
+      <NavLink {href}>
+        {title}
+      </NavLink>
     </li>
   {/each}
 </ul>
