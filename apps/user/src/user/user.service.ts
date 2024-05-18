@@ -92,11 +92,6 @@ export class UserService implements OnModuleInit {
       { $match: { isActive: true } },
     ]);
 
-    // TODO: Need to fix this on client side, this is a workaround
-    if (users.length === 0) {
-      return this.getUsers({ q: '' });
-    }
-
     return plainToInstance(UserEntity, users);
   }
 
