@@ -1,8 +1,9 @@
 import { fail, redirect } from "@sveltejs/kit";
 
 import { base } from "$app/paths";
-import { USER, USER_SERVICE_URI } from "$env/static/private";
+import { USER_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
+import { httpErrors } from "$lib/httpErrors";
 import * as logger from "$lib/logger";
 import { fetchWithUser, removeUserTokens, setUserTokens } from "$lib/users";
 
@@ -69,7 +70,7 @@ export const actions: Actions = {
       };
       if (typeof data.accessToken !== "string" || typeof data.refreshToken !== "string") {
         logger.error("failed to login:", `(${requestInfo}, error = Backend data is not valid.)`);
-        return fail(500, { error: "Internal Server Error" });
+        return fail(500, { error: httpErrors.internalServerError });
       }
       logger.success("logged in successfully:", `(${requestInfo})`);
       setUserTokens({ cookies, accessToken: data.accessToken, refreshToken: data.refreshToken });
@@ -79,10 +80,10 @@ export const actions: Actions = {
           "failed to login:",
           `(${requestInfo}, error = Timeout. It took too long to get the result!)`,
         );
-        return fail(500, { error: "Server is currently under heavy load." });
+        return fail(500, { error: httpErrors.heavyLoad });
       }
       logger.error("failed to login:", `(${requestInfo}, error = ${err})`);
-      return fail(500, { error: "Internal Server Error" });
+      return fail(500, { error: httpErrors.internalServerError });
     }
   },
   async logout({ locals, fetch, cookies }) {
@@ -102,11 +103,11 @@ export const actions: Actions = {
       });
       if (res === undefined) {
         logger.error("failed to logout:", `(${requestInfo}, error = POSSIBLY_NOT_LOGGED_IN?)`);
-        return fail(500, { error: "You are not logged in!" });
+        return fail(401, { error: httpErrors.unauthenticated });
       }
       if (!res.ok) {
         logger.error("fetch failed:", `(${requestInfo}, error = ${await res.text()})`);
-        return fail(500, { error: "Failed to log out." });
+        return fail(500, { error: httpErrors.internalServerError });
       }
       logger.success("logged out successfully:", `(${requestInfo}, message = ${await res.text()})`);
       removeUserTokens({ cookies });
@@ -117,10 +118,10 @@ export const actions: Actions = {
           "failed to logout:",
           `(${requestInfo}, error = Timeout. It took too long to get the result!)`,
         );
-        return fail(500, { error: "Server is currently under heavy load." });
+        return fail(500, { error: httpErrors.heavyLoad });
       }
       logger.error("failed to logout:", `(${requestInfo}, error = ${err})`);
-      return fail(500, { error: "Internal Server Error" });
+      return fail(500, { error: httpErrors.internalServerError });
     }
   },
 };

@@ -3,6 +3,7 @@ import { fail, redirect } from "@sveltejs/kit";
 import { base } from "$app/paths";
 import { USER_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
+import { httpErrors } from "$lib/httpErrors";
 import * as logger from "$lib/logger";
 import { fetchWithUser } from "$lib/users";
 
@@ -11,6 +12,12 @@ import type { Actions, PageServerLoad } from "./$types";
 
 export const actions: Actions = {
   async default({ cookies, locals, params, request }) {
+    if (!locals.user) {
+      return fail(401, { error: httpErrors.unauthenticated });
+    }
+    if (locals.user.data.role !== "admin") {
+      return fail(403, { error: httpErrors.unauthorized });
+    }
     let newUserId: string | null = null;
     const requestInfo = `page = /contestant/[userId]/edit, requestId = ${getRequestId()}, userId = ${params.userId}`;
     try {
@@ -43,7 +50,7 @@ export const actions: Actions = {
       });
       if (res === undefined) {
         logger.error("failed to update user:", `(${requestInfo}, error = POSSIBLY_NOT_LOGGED_IN?)`);
-        return fail(500, { error: "You are not logged in!" });
+        return fail(401, { error: httpErrors.unauthenticated });
       }
       if (!res.ok) {
         const { error, message, statusCode } = (await res.json()) as {
@@ -64,16 +71,20 @@ export const actions: Actions = {
           "failed to logout:",
           `(${requestInfo}, error = Timeout. It took too long to get the result!)`,
         );
-        return fail(500, { error: "Server is currently under heavy load." });
+        return fail(500, { error: httpErrors.heavyLoad });
       }
       logger.error("failed to logout:", `(${requestInfo}, error = ${err})`);
-      return fail(500, { error: "Internal Server Error" });
+      return fail(500, { error: httpErrors.internalServerError });
     }
     redirect(307, `${base}/contestant${newUserId ? `/${newUserId}` : ""}`);
   },
 };
 
-export const load: PageServerLoad = async ({ parent }) => {
+export const load: PageServerLoad = async ({ locals, parent }) => {
+  if (locals.user?.data.role !== "admin") {
+    redirect(307, `${base}/`);
+  }
+
   const data = await parent();
 
   return {
