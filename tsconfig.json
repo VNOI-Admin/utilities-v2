@@ -19,17 +19,23 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@libs/common-db": [
-		    "libs/common-db/src"
-	    ],
-	    "@libs/common-db/*": [
-		    "libs/common-db/src/*"
-	    ],
+        "libs/common-db/src"
+      ],
+      "@libs/common-db/*": [
+        "libs/common-db/src/*"
+      ],
+      "@libs/common": [
+        "libs/common/src"
+      ],
+      "@libs/common/*": [
+        "libs/common/src/*"
+      ],
       "@libs/utils": [
-		    "libs/utils/src"
-	    ],
+        "libs/utils/src"
+      ],
       "@libs/utils/*": [
-		    "libs/utils/src/*"
-	    ]
+        "libs/utils/src/*"
+      ]
     },
   },
   "ts-node": {

@@ -12,7 +12,7 @@ async function bootstrap() {
 
   // Get configService from app
   const configService = app.get(ConfigService);
-  const userEndpoint = configService.get('USER_SERVER_URL');
+  const userEndpoint = configService.get('USER_SERVICE_ENDPOINT');
 
   const config = new DocumentBuilder()
     .addServer(userEndpoint)

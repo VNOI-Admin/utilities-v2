@@ -1,6 +1,7 @@
 
-import {Group, type GroupDocument} from '@libs/common-db/schemas/group.schema'
-import { type Role, User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { Role } from '@libs/common/decorators';
+import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import type { OnModuleInit } from '@nestjs/common';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -11,10 +12,10 @@ import { FormData } from 'formdata-node';
 import { Model } from 'mongoose';
 
 import type { CreateGroupDto } from './dtos/createGroup.dto';
-import type { CreateUserBatchDto, CreateUserDto } from './dtos/createUser.dto';
+import type { CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
-import type { UpdateUserBatchDto, UpdateUserDto } from './dtos/updateUser.dto';
+import type { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
 
@@ -76,21 +77,6 @@ export class UserService implements OnModuleInit {
     return plainToInstance(UserEntity, user.toObject());
   }
 
-  async createUserBatch(createUserDto: CreateUserBatchDto) {
-    console.log(createUserDto);
-    const users: UserEntity[] = [];
-    for (const user of createUserDto.users) {
-      try {
-        users.push(await this.createUser(user));
-      } catch (error) {
-        if (error.code !== 11000) {
-          throw error;
-        }
-      }
-    }
-    return plainToInstance(UserEntity, users);
-  }
-
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {
     const q = query.q || '';
     const users = await this.userModel.aggregate([
@@ -102,7 +88,7 @@ export class UserService implements OnModuleInit {
           ],
         },
       },
-      { $match: { role: 'user' } },
+      { $match: { role: Role.USER } },
       { $match: { isActive: true } },
     ]);
 
@@ -158,8 +144,8 @@ export class UserService implements OnModuleInit {
     return plainToInstance(GroupEntity, group.toObject());
   }
 
-  async updateUser(updateUserDto: UpdateUserDto) {
-    const user = await this.userModel.findOne({ username: updateUserDto.username });
+  async updateUser(username: string, updateUserDto: UpdateUserDto) {
+    const user = await this.userModel.findOne({ username });
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -170,20 +156,6 @@ export class UserService implements OnModuleInit {
     user.username = updateUserDto.usernameNew || user.username;
     user.save();
     return plainToInstance(UserEntity, user.toObject());
-  }
-
-  async updateUserBatch(updateUserDto: UpdateUserBatchDto) {
-    const users: UserEntity[] = [];
-    for (const user of updateUserDto.users) {
-      try {
-        users.push(await this.updateUser(user));
-      } catch (error) {
-        if (error.code !== 11000) {
-          throw error;
-        }
-      }
-    }
-    return plainToInstance(UserEntity, users);
   }
 
   async reportUsage(userId: string, usage: ReportUsageDto) {

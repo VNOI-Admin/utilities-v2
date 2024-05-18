@@ -15,7 +15,9 @@
     "lint": {},
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "interactive": true
     }
-  }
+  },
+  "experimentalUI": true
 }
