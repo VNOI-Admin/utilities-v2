@@ -44,12 +44,12 @@ export class AccessTokenGuard implements CanActivate {
       }
 
       // check if user.role is in roles from context reflector
-      const roles = this.reflector.get<string[]>('roles', context.getHandler()) || [Role.USER];
+      const roles = this.reflector.get<string[]>('roles', context.getHandler()) || [];
 
       const isAdmin = user.role === Role.ADMIN;
-      const isUserPublic = roles.includes(Role.USER);
+      const isPublic = roles.length === 0;
       const isMatchedRole = roles.includes(user.role);
-      if (!isAdmin && !isUserPublic && !isMatchedRole) {
+      if (!isAdmin && !isPublic && !isMatchedRole) {
         throw new UnauthorizedException('User not authorized to access this resource');
       }
     } catch {

@@ -12,6 +12,6 @@ export class CreateUserDto {
   @ApiProperty({ required: true })
   password: string;
 
-  @ApiProperty({ required: true, enum: Object.values(Role), default: 'user' })
+  @ApiProperty({ required: true, enum: Object.values(Role), default: Role.CONTESTANT })
   role: Role;
 }

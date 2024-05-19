@@ -61,20 +61,17 @@ export class UserService implements OnModuleInit {
   }
 
   async createUser(createUserDto: CreateUserDto) {
-    const user = await this.userModel.create({
-      username: createUserDto.username,
-      fullName: createUserDto.fullName,
-      password: createUserDto.password,
-      role: createUserDto.role,
-    });
-
-    user.save();
-
-    if (!user) {
+    try {
+      const user = await this.userModel.create({
+        username: createUserDto.username,
+        fullName: createUserDto.fullName,
+        password: createUserDto.password,
+        role: createUserDto.role,
+      });
+      return plainToInstance(UserEntity, user.toObject());
+    } catch (error) {
       throw new BadRequestException('Unable to create user');
     }
-
-    return plainToInstance(UserEntity, user.toObject());
   }
 
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {
@@ -88,7 +85,7 @@ export class UserService implements OnModuleInit {
           ],
         },
       },
-      { $match: { role: Role.USER } },
+      { $match: { role: query.role || Role.CONTESTANT } },
       { $match: { isActive: true } },
     ]);
 
@@ -96,7 +93,7 @@ export class UserService implements OnModuleInit {
   }
 
   async getUser(username: string): Promise<UserEntity> {
-    const user = await this.userModel.findOne({ username: username, role: 'user' }).lean();
+    const user = await this.userModel.findOne({ username: username }).lean();
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -130,7 +127,7 @@ export class UserService implements OnModuleInit {
       groupFullName: createGroupDto.groupFullName,
     });
 
-    group.save();
+    await group.save();
 
     if (!group) {
       throw new BadRequestException('Unable to create group');
@@ -149,7 +146,7 @@ export class UserService implements OnModuleInit {
     user.password = updateUserDto.password || user.password;
     user.role = updateUserDto.role || user.role;
     user.username = updateUserDto.usernameNew || user.username;
-    user.save();
+    await user.save();
     return plainToInstance(UserEntity, user.toObject());
   }
 
@@ -162,7 +159,7 @@ export class UserService implements OnModuleInit {
     user.machineUsage.memory = usage.memory;
     user.machineUsage.disk = usage.disk;
     user.machineUsage.lastReportedAt = new Date();
-    user.save();
+    await user.save();
   }
 
   async print(callerId: string, file: Express.Multer.File) {

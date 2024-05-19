@@ -12,6 +12,6 @@ export class UpdateUserDto {
   @ApiProperty({ required: false })
   usernameNew: string;
 
-  @ApiProperty({ required: false, enum: Object.values(Role), default: 'user' })
+  @ApiProperty({ required: false, enum: Object.values(Role), default: Role.CONTESTANT })
   role: Role;
 }

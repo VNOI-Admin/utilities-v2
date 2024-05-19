@@ -36,7 +36,7 @@ export class User {
   @Prop()
   refreshToken: string;
 
-  @Prop({ required: true, type: String, default: Role.USER })
+  @Prop({ required: true, type: String, default: Role.CONTESTANT })
   role: Role;
 
   // Allow null for several documents. For non-null, unique is enforced.
@@ -91,17 +91,17 @@ export function buildUserSchema(configService: ConfigService) {
       let vpnBaseSubnet: number;
 
       switch (this.role) {
-        case 'user':
+        case Role.CONTESTANT:
           vpnBaseSubnet = ip.toLong(
-            configService.get('WG_USER_BASE_SUBNET'),
+            configService.get('WG_CONTESTANT_BASE_SUBNET'),
           );
           break;
-        case 'coach':
+        case Role.COACH:
           vpnBaseSubnet = ip.toLong(
             configService.get('WG_COACH_BASE_SUBNET'),
           );
           break;
-        case 'admin':
+        case Role.ADMIN:
           vpnBaseSubnet = ip.toLong(
             configService.get('WG_ADMIN_BASE_SUBNET'),
           );
