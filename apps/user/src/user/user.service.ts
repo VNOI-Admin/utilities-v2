@@ -70,7 +70,7 @@ export class UserService implements OnModuleInit {
       });
       return plainToInstance(UserEntity, user.toObject());
     } catch (error) {
-      throw new BadRequestException('Unable to create user');
+      throw new BadRequestException(`Unable to create user: ${error.message}`);
     }
   }
 
