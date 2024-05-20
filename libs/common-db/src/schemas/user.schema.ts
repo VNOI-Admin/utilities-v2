@@ -1,11 +1,11 @@
-import { Role } from '@libs/common/decorators';
-import { generateKeyPair } from '@libs/utils/crypto/keygen';
-import type { ConfigService } from '@nestjs/config';
-import { Prop, raw,Schema, SchemaFactory } from '@nestjs/mongoose';
-import * as argon2 from 'argon2';
-import * as ip from 'ip';
-import type {Model} from 'mongoose';
-import { type Document, SchemaTypes, Types } from 'mongoose';
+import { Role } from "@libs/common/decorators";
+import { generateKeyPair } from "@libs/utils/crypto/keygen";
+import type { ConfigService } from "@nestjs/config";
+import { Prop, raw, Schema, SchemaFactory } from "@nestjs/mongoose";
+import * as argon2 from "argon2";
+import * as ip from "ip";
+import type { Model } from "mongoose";
+import { type Document, SchemaTypes, Types } from "mongoose";
 
 export type UserDocument = User & Document;
 
@@ -21,7 +21,7 @@ export type MachineUsage = {
   ping: number;
   isOnline: boolean;
   lastReportedAt: Date;
-}
+};
 
 @Schema()
 export class User {
@@ -55,18 +55,20 @@ export class User {
   )
   keyPair: KeyPairType;
 
-  @Prop(raw({
-    cpu: { type: Number, default: 0 },
-    memory: { type: Number, default: 0 },
-    disk: { type: Number, default: 0 },
-    ping: { type: Number, default: 0 },
-    isOnline: { type: Boolean, default: false },
-    lastReportedAt: { type: Date, default: null },
-  }))
+  @Prop(
+    raw({
+      cpu: { type: Number, default: 0 },
+      memory: { type: Number, default: 0 },
+      disk: { type: Number, default: 0 },
+      ping: { type: Number, default: 0 },
+      isOnline: { type: Boolean, default: false },
+      lastReportedAt: { type: Date, default: null },
+    }),
+  )
   machineUsage: MachineUsage;
 
   // Belong to one group
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Group' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: "Group" })
   group: Types.ObjectId;
 }
 
@@ -74,37 +76,31 @@ export const UserSchema = SchemaFactory.createForClass(User);
 
 export function buildUserSchema(configService: ConfigService) {
   const schema = UserSchema;
-  schema.pre('validate', async function (next) {
-    if (this.isModified('password')) {
+  schema.pre("validate", async function (next) {
+    if (this.isModified("password")) {
       this.password = await argon2.hash(this.password);
     }
 
     // Generate VPN IP address and key pair. Only generate for new users.
-    if ((this.isNew && !this.vpnIpAddress) || this.isModified('role')) {
-      const users = await this.model<Model<UserDocument>>(
-        User.name,
-      ).find({ role: this.role }).exec();
+    if ((this.isNew && !this.vpnIpAddress) || this.isModified("role")) {
+      const users = await this.model<Model<UserDocument>>(User.name)
+        .find({ role: this.role })
+        .exec();
 
       let vpnBaseSubnet: number;
 
       switch (this.role) {
         case Role.CONTESTANT:
-          vpnBaseSubnet = ip.toLong(
-            configService.get('WG_CONTESTANT_BASE_SUBNET'),
-          );
+          vpnBaseSubnet = ip.toLong(configService.get("WG_CONTESTANT_BASE_SUBNET"));
           break;
         case Role.COACH:
-          vpnBaseSubnet = ip.toLong(
-            configService.get('WG_COACH_BASE_SUBNET'),
-          );
+          vpnBaseSubnet = ip.toLong(configService.get("WG_COACH_BASE_SUBNET"));
           break;
         case Role.ADMIN:
-          vpnBaseSubnet = ip.toLong(
-            configService.get('WG_ADMIN_BASE_SUBNET'),
-          );
+          vpnBaseSubnet = ip.toLong(configService.get("WG_ADMIN_BASE_SUBNET"));
           break;
         default:
-          throw new Error('Invalid role');
+          throw new Error("Invalid role");
       }
 
       const ipAddresses = users.map((user) => ip.toLong(user.vpnIpAddress));

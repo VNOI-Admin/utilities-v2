@@ -1,6 +1,6 @@
-import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import type { Types } from 'mongoose';
-import { type Document, SchemaTypes } from 'mongoose';
+import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import type { Types } from "mongoose";
+import { type Document, SchemaTypes } from "mongoose";
 
 export type GroupDocument = Group & Document;
 
@@ -13,7 +13,7 @@ export class Group {
   groupFullName: string;
 
   // Many to many with User
-  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'User' }] })
+  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: "User" }] })
   members: Types.ObjectId[];
 }
 
