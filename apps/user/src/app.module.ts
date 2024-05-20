@@ -1,14 +1,14 @@
-import { DatabaseModule } from '@libs/common-db/database.module';
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
+import { DatabaseModule } from "@libs/common-db/database.module";
+import { Module } from "@nestjs/common";
+import { ConfigModule } from "@nestjs/config";
+import { JwtModule } from "@nestjs/jwt";
 
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { TaskModule } from './task/task.module';
-import { UserModule } from './user/user.module';
-import { VpnModule } from './vpn/vpn.module';
+import { AppController } from "./app.controller";
+import { AppService } from "./app.service";
+import { AuthModule } from "./auth/auth.module";
+import { TaskModule } from "./task/task.module";
+import { UserModule } from "./user/user.module";
+import { VpnModule } from "./vpn/vpn.module";
 
 @Module({
   imports: [

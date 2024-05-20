@@ -1,9 +1,10 @@
 import { Role } from '@libs/common/decorators';
-import { generateKeyPair } from '@libs/utils/keygen';
+import { generateKeyPair } from '@libs/utils/crypto/keygen';
 import type { ConfigService } from '@nestjs/config';
 import { Prop, raw,Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
+import type {Model} from 'mongoose';
 import { type Document, SchemaTypes, Types } from 'mongoose';
 
 export type UserDocument = User & Document;
@@ -79,14 +80,10 @@ export function buildUserSchema(configService: ConfigService) {
     }
 
     // Generate VPN IP address and key pair. Only generate for new users.
-    if (this.isNew && !this.vpnIpAddress) {
-      console.log('Generating VPN IP address and key pair...');
-      const sameTypeUserCount = await this.model(
+    if ((this.isNew && !this.vpnIpAddress) || this.isModified('role')) {
+      const users = await this.model<Model<UserDocument>>(
         User.name,
-      ).countDocuments({
-        role: this.role,
-        vpnIpAddress: { $ne: null },
-      });
+      ).find({ role: this.role }).exec();
 
       let vpnBaseSubnet: number;
 
@@ -110,9 +107,15 @@ export function buildUserSchema(configService: ConfigService) {
           throw new Error('Invalid role');
       }
 
-      this.vpnIpAddress = ip.fromLong(
-        vpnBaseSubnet + sameTypeUserCount + 1,
-      );
+      const ipAddresses = users.map((user) => ip.toLong(user.vpnIpAddress));
+
+      for (let i = 1; i <= users.length + 1; i++) {
+        if (!ipAddresses.includes(vpnBaseSubnet + i)) {
+          const ipAddress = ip.fromLong(vpnBaseSubnet + i);
+          this.vpnIpAddress = ipAddress;
+          break;
+        }
+      }
 
       this.keyPair = generateKeyPair();
     }

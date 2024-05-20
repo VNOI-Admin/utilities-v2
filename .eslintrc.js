@@ -8,10 +8,10 @@ module.exports = {
     extraFileExtensions: [".svelte"],
     warnOnUnsupportedTypeScriptVersion: false,
   },
-  plugins: ["@typescript-eslint", "simple-import-sort"],
+  plugins: ["@typescript-eslint/eslint-plugin", "unused-imports", "simple-import-sort"],
   extends: [
     "plugin:@typescript-eslint/recommended",
-    "prettier",
+    "plugin:prettier/recommended",
     "plugin:tailwindcss/recommended",
     "plugin:svelte/recommended",
   ],
@@ -22,7 +22,11 @@ module.exports = {
   },
   ignorePatterns: [".eslintrc.js"],
   rules: {
+    "prettier/prettier": "warn",
     "@typescript-eslint/ban-ts-comment": "off",
+    "@typescript-eslint/interface-name-prefix": "off",
+    '@typescript-eslint/no-floating-promises': 'error',
+    'unused-imports/no-unused-imports': 'error',
     "@typescript-eslint/consistent-type-imports": "error",
     "@typescript-eslint/no-unused-vars": [
       "warn",
@@ -36,6 +40,7 @@ module.exports = {
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/object-curly-spacing": ["error", "always"],
     "simple-import-sort/imports": "warn",
     "simple-import-sort/exports": "warn",
     "svelte/valid-compile": "off",

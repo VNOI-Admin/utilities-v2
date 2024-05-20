@@ -25,7 +25,7 @@ export class MachineUsageEntity {
   @Expose()
   @ApiProperty()
   lastReportedAt: Date;
-};
+}
 
 export class UserEntity {
   @Expose()

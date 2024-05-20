@@ -1,9 +1,9 @@
-import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
-import { ScheduleModule } from '@nestjs/schedule';
+import { User, UserSchema } from "@libs/common-db/schemas/user.schema";
+import { Module } from "@nestjs/common";
+import { MongooseModule } from "@nestjs/mongoose";
+import { ScheduleModule } from "@nestjs/schedule";
 
-import { TaskService } from './task.service';
+import { TaskService } from "./task.service";
 
 @Module({
   imports: [
