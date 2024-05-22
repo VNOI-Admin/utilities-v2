@@ -1,9 +1,9 @@
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { AuthModule } from "apps/auth/src/auth.module";
 
 import { AppModule } from "./app.module";
-import { AuthModule } from "./auth/auth.module";
 import { UserModule } from "./user/user.module";
 import { VpnModule } from "./vpn/vpn.module";
 

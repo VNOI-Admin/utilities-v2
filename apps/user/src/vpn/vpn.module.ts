@@ -2,9 +2,9 @@ import { User, UserSchema } from "@libs/common-db/schemas/user.schema";
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { MongooseModule } from "@nestjs/mongoose";
+import { AccessTokenStrategy } from "apps/auth/src/strategies/accessToken.strategy";
+import { RefreshTokenStrategy } from "apps/auth/src/strategies/refreshToken.strategy";
 
-import { AccessTokenStrategy } from "../auth/strategies/accessToken.strategy";
-import { RefreshTokenStrategy } from "../auth/strategies/refreshToken.strategy";
 import { VpnController } from "./vpn.controller";
 import { VpnService } from "./vpn.service";
 
