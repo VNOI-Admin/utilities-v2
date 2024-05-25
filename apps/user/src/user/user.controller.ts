@@ -1,4 +1,4 @@
-import { RequiredRoles, Role } from "@libs/common/decorators";
+import { RequiredRoles, Role } from "@libs/common/decorators/role.decorator";
 import { AccessTokenGuard } from "@libs/common/guards/accessToken.guard";
 import {
   Body,

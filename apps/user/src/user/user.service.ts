@@ -1,4 +1,4 @@
-import { Role } from "@libs/common/decorators";
+import type { Role } from "@libs/common/decorators/role.decorator";
 import { Group, type GroupDocument } from "@libs/common-db/schemas/group.schema";
 import { User, type UserDocument } from "@libs/common-db/schemas/user.schema";
 import type { OnModuleInit } from "@nestjs/common";
@@ -8,6 +8,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import * as argon2 from "argon2";
 import { plainToInstance } from "class-transformer";
 import { FormData } from "formdata-node";
+import type { PipelineStage } from "mongoose";
 import { Model } from "mongoose";
 
 import type { CreateGroupDto } from "./dtos/createGroup.dto";
@@ -75,7 +76,11 @@ export class UserService implements OnModuleInit {
 
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {
     const q = query.q || "";
-    const users = await this.userModel.aggregate([
+    const orderBy = query.orderBy || { username: 1 };
+
+    console.log("Query", query);
+
+    const pipeline: PipelineStage[] = [
       {
         $match: {
           $or: [
@@ -84,9 +89,14 @@ export class UserService implements OnModuleInit {
           ],
         },
       },
-      { $match: { role: query.role || Role.CONTESTANT } },
       { $match: { isActive: true } },
-    ]);
+    ];
+
+    if (query.role) {
+      pipeline.push({ $match: { role: query.role } });
+    }
+
+    const users = await this.userModel.aggregate([...pipeline, { $sort: orderBy }]);
 
     return plainToInstance(UserEntity, users);
   }
