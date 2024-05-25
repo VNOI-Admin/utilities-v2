@@ -1,6 +1,6 @@
 import type { Cookies } from "@sveltejs/kit";
 
-import { SECURE_COOKIES, USER_SERVICE_URI } from "$env/static/private";
+import { SECURE_COOKIES, AUTH_SERVICE_URI } from "$env/static/private";
 import * as logger from "$lib/logger";
 
 import { getRequestId } from "./getRequestId";
@@ -84,7 +84,7 @@ export const refreshUserTokens = async ({
     );
     return removeUserTokens({ cookies }), undefined;
   }
-  const res = await fetch(`${USER_SERVICE_URI}/auth/refresh`, {
+  const res = await fetch(`${AUTH_SERVICE_URI}/auth/refresh`, {
     method: "POST",
     headers: {
       Accept: "application/json",
