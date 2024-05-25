@@ -14,10 +14,7 @@
     },
     "lint": {},
     "dev": {
-      "cache": false,
-      "persistent": true,
-      "interactive": true
+      "cache": false
     }
-  },
-  "experimentalUI": true
+  }
 }
