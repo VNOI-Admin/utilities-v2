@@ -24,6 +24,7 @@ export class AccessTokenGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const token = this.extractTokenFromHeader(request);
+
     if (!token) {
       throw new UnauthorizedException("Unauthorized");
     }
@@ -32,13 +33,13 @@ export class AccessTokenGuard implements CanActivate {
         secret: this.configService.get("JWT_ACCESS_TOKEN_SECRET"),
       });
 
-      request["user"] = payload;
-
       const user = await this.userModel.findById(payload.sub);
 
       if (!user) {
         throw new UnauthorizedException("User not found");
       }
+
+      request["user"] = payload;
 
       // check if user.role is in roles from context reflector
       const roles = this.reflector.get<string[]>("roles", context.getHandler()) || [];

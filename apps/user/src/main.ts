@@ -2,7 +2,6 @@ import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { AuthModule } from "apps/auth/src/auth.module";
 
 import { AppModule } from "./app.module";
 import { UserModule } from "./user/user.module";
@@ -31,7 +30,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    include: [UserModule, AuthModule, VpnModule],
+    include: [UserModule, VpnModule],
   });
   SwaggerModule.setup("docs", app, document);
 

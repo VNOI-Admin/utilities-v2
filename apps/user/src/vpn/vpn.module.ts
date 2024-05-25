@@ -2,8 +2,6 @@ import { User, UserSchema } from "@libs/common-db/schemas/user.schema";
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { MongooseModule } from "@nestjs/mongoose";
-import { AccessTokenStrategy } from "apps/auth/src/strategies/accessToken.strategy";
-import { RefreshTokenStrategy } from "apps/auth/src/strategies/refreshToken.strategy";
 
 import { VpnController } from "./vpn.controller";
 import { VpnService } from "./vpn.service";
@@ -13,7 +11,7 @@ import { VpnService } from "./vpn.service";
     JwtModule.register({}),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
-  providers: [VpnService, AccessTokenStrategy, RefreshTokenStrategy],
+  providers: [VpnService],
   controllers: [VpnController],
 })
 export class VpnModule {}
