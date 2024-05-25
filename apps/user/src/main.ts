@@ -1,3 +1,4 @@
+import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -9,6 +10,13 @@ import { VpnModule } from "./vpn/vpn.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable validation with transform
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+    }),
+  );
 
   // Get configService from app
   const configService = app.get(ConfigService);
