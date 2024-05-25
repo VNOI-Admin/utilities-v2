@@ -1,6 +1,6 @@
 import type { Cookies } from "@sveltejs/kit";
 
-import { SECURE_COOKIES, AUTH_SERVICE_URI } from "$env/static/private";
+import { AUTH_SERVICE_URI, SECURE_COOKIES, USER_SERVICE_URI } from "$env/static/private";
 import * as logger from "$lib/logger";
 
 import { getRequestId } from "./getRequestId";
