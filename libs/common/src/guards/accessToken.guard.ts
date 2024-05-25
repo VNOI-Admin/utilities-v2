@@ -9,7 +9,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { ExtractJwt } from "passport-jwt";
 
-import { Role } from "../decorators";
+import { Role } from "../decorators/role.decorator";
 
 @Injectable()
 export class AccessTokenGuard implements CanActivate {

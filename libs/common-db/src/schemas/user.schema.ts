@@ -1,4 +1,4 @@
-import { Role } from "@libs/common/decorators";
+import { Role } from "@libs/common/decorators/role.decorator";
 import { generateKeyPair } from "@libs/utils/crypto/keygen";
 import type { ConfigService } from "@nestjs/config";
 import { Prop, raw, Schema, SchemaFactory } from "@nestjs/mongoose";

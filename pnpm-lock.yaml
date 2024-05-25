@@ -65,6 +65,9 @@ importers:
       ip:
         specifier: ^1.1.8
         version: 1.1.8
+      lodash:
+        specifier: ^4.17.21
+        version: 4.17.21
       mongoose:
         specifier: ^8.0.4
         version: 8.0.4(socks@2.7.1)
@@ -111,6 +114,9 @@ importers:
       '@types/jest':
         specifier: ^29.5.2
         version: 29.5.11
+      '@types/lodash':
+        specifier: ^4.17.4
+        version: 4.17.4
       '@types/multer':
         specifier: ^1.4.11
         version: 1.4.11
@@ -243,8 +249,6 @@ importers:
       vite:
         specifier: 5.1.4
         version: 5.1.4(@types/node@20.11.0)(terser@5.26.0)
-
-  apps/core: {}
 
   apps/user: {}
 
@@ -1334,6 +1338,9 @@ packages:
 
   '@types/jsonwebtoken@9.0.5':
     resolution: {integrity: sha512-VRLSGzik+Unrup6BsouBeHsf4d1hOEgYWTm/7Nmw1sXoN1+tRly/Gy/po3yeahnP4jfnQWWAhQAqcNfH7ngOkA==}
+
+  '@types/lodash@4.17.4':
+    resolution: {integrity: sha512-wYCP26ZLxaT3R39kiN2+HcJ4kTd3U1waI/cY7ivWYqFP6pW3ZNpvi6Wd6PHZx7T/t8z0vlkXMg3QYLa7DZ/IJQ==}
 
   '@types/luxon@3.3.8':
     resolution: {integrity: sha512-jYvz8UMLDgy3a5SkGJne8H7VA7zPV2Lwohjx0V8V31+SqAjNmurWMkk9cQhfvlcnXWudBpK9xPM1n4rljOcHYQ==}
@@ -6385,6 +6392,8 @@ snapshots:
   '@types/jsonwebtoken@9.0.5':
     dependencies:
       '@types/node': 20.11.0
+
+  '@types/lodash@4.17.4': {}
 
   '@types/luxon@3.3.8': {}
 
