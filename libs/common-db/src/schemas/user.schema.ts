@@ -1,10 +1,11 @@
-import { generateKeyPair } from '@libs/utils/keygen';
-import type { ConfigService } from '@nestjs/config';
-import { Prop, raw,Schema, SchemaFactory } from '@nestjs/mongoose';
-import * as argon2 from 'argon2';
-import * as ip from 'ip';
-import { type Document, SchemaTypes, Types } from 'mongoose';
-
+import { Role } from "@libs/common/decorators/role.decorator";
+import { generateKeyPair } from "@libs/utils/crypto/keygen";
+import type { ConfigService } from "@nestjs/config";
+import { Prop, raw, Schema, SchemaFactory } from "@nestjs/mongoose";
+import * as argon2 from "argon2";
+import * as ip from "ip";
+import type { Model } from "mongoose";
+import { type Document, SchemaTypes, Types } from "mongoose";
 
 export type UserDocument = User & Document;
 
@@ -13,8 +14,6 @@ export type KeyPairType = {
   privateKey: string;
 };
 
-export type Role = 'admin' | 'coach' | 'user';
-
 export type MachineUsage = {
   cpu: number;
   memory: number;
@@ -22,7 +21,7 @@ export type MachineUsage = {
   ping: number;
   isOnline: boolean;
   lastReportedAt: Date;
-}
+};
 
 @Schema()
 export class User {
@@ -38,7 +37,7 @@ export class User {
   @Prop()
   refreshToken: string;
 
-  @Prop({ required: true, default: 'user' })
+  @Prop({ required: true, type: String, default: Role.CONTESTANT })
   role: Role;
 
   // Allow null for several documents. For non-null, unique is enforced.
@@ -56,18 +55,20 @@ export class User {
   )
   keyPair: KeyPairType;
 
-  @Prop(raw({
-    cpu: { type: Number, default: 0 },
-    memory: { type: Number, default: 0 },
-    disk: { type: Number, default: 0 },
-    ping: { type: Number, default: 0 },
-    isOnline: { type: Boolean, default: false },
-    lastReportedAt: { type: Date, default: null },
-  }))
+  @Prop(
+    raw({
+      cpu: { type: Number, default: 0 },
+      memory: { type: Number, default: 0 },
+      disk: { type: Number, default: 0 },
+      ping: { type: Number, default: 0 },
+      isOnline: { type: Boolean, default: false },
+      lastReportedAt: { type: Date, default: null },
+    }),
+  )
   machineUsage: MachineUsage;
 
   // Belong to one group
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Group' })
+  @Prop({ type: SchemaTypes.ObjectId, ref: "Group" })
   group: Types.ObjectId;
 }
 
@@ -75,46 +76,42 @@ export const UserSchema = SchemaFactory.createForClass(User);
 
 export function buildUserSchema(configService: ConfigService) {
   const schema = UserSchema;
-  schema.pre('validate', async function (next) {
-    if (this.isModified('password')) {
+  schema.pre("validate", async function (next) {
+    if (this.isModified("password")) {
       this.password = await argon2.hash(this.password);
     }
 
     // Generate VPN IP address and key pair. Only generate for new users.
-    if (this.isNew && !this.vpnIpAddress) {
-      console.log('Generating VPN IP address and key pair...');
-      const sameTypeUserCount = await this.model(
-        User.name,
-      ).countDocuments({
-        role: this.role,
-        vpnIpAddress: { $ne: null },
-      });
+    if ((this.isNew && !this.vpnIpAddress) || this.isModified("role")) {
+      const users = await this.model<Model<UserDocument>>(User.name)
+        .find({ role: this.role })
+        .exec();
 
       let vpnBaseSubnet: number;
 
       switch (this.role) {
-        case 'user':
-          vpnBaseSubnet = ip.toLong(
-            configService.get('WG_USER_BASE_SUBNET'),
-          );
+        case Role.CONTESTANT:
+          vpnBaseSubnet = ip.toLong(configService.get("WG_CONTESTANT_BASE_SUBNET"));
           break;
-        case 'coach':
-          vpnBaseSubnet = ip.toLong(
-            configService.get('WG_COACH_BASE_SUBNET'),
-          );
+        case Role.COACH:
+          vpnBaseSubnet = ip.toLong(configService.get("WG_COACH_BASE_SUBNET"));
           break;
-        case 'admin':
-          vpnBaseSubnet = ip.toLong(
-            configService.get('WG_ADMIN_BASE_SUBNET'),
-          );
+        case Role.ADMIN:
+          vpnBaseSubnet = ip.toLong(configService.get("WG_ADMIN_BASE_SUBNET"));
           break;
         default:
-          throw new Error('Invalid role');
+          throw new Error("Invalid role");
       }
 
-      this.vpnIpAddress = ip.fromLong(
-        vpnBaseSubnet + sameTypeUserCount + 1,
-      );
+      const ipAddresses = users.map((user) => ip.toLong(user.vpnIpAddress));
+
+      for (let i = 1; i <= users.length + 1; i++) {
+        if (!ipAddresses.includes(vpnBaseSubnet + i)) {
+          const ipAddress = ip.fromLong(vpnBaseSubnet + i);
+          this.vpnIpAddress = ipAddress;
+          break;
+        }
+      }
 
       this.keyPair = generateKeyPair();
     }

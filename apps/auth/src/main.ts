@@ -4,8 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module";
-import { UserModule } from "./user/user.module";
-import { VpnModule } from "./vpn/vpn.module";
+import { AuthModule } from "./auth/auth.module";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -19,22 +18,22 @@ async function bootstrap() {
 
   // Get configService from app
   const configService = app.get(ConfigService);
-  const userEndpoint = configService.get("USER_SERVICE_ENDPOINT");
+  const authEndpoint = configService.get("AUTH_SERVICE_ENDPOINT");
 
   const config = new DocumentBuilder()
-    .addServer(userEndpoint)
-    .setTitle("Utilities V2 User API Docs")
-    .setDescription("Utilities V2 User API Docs")
+    .addServer(authEndpoint)
+    .setTitle("Utilities V2 Auth API Docs")
+    .setDescription("Utilities V2 Auth API Docs")
     .setVersion("1.0")
     .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    include: [UserModule, VpnModule],
+    include: [AuthModule],
   });
   SwaggerModule.setup("docs", app, document);
 
-  await app.listen(8001);
+  await app.listen(8002);
 }
 
 void bootstrap();

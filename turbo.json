@@ -14,8 +14,7 @@
     },
     "lint": {},
     "dev": {
-      "cache": false,
-      "persistent": true
+      "cache": false
     }
   }
 }
