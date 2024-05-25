@@ -46,8 +46,8 @@ export class AuthService {
   async refreshTokens(userId: string, refreshToken: string): Promise<TokensEntity> {
     const user = await this.userModel.findById(userId);
 
-    if (!user) {
-      throw new ForbiddenException("Access denied");
+    if (!user.refreshToken) {
+      throw new BadRequestException("Access denied");
     }
 
     const refreshTokenValid = await argon2.verify(user.refreshToken, refreshToken);
