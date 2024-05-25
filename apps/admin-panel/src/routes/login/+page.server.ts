@@ -1,7 +1,7 @@
 import { fail, redirect } from "@sveltejs/kit";
 
 import { base } from "$app/paths";
-import { USER_SERVICE_URI } from "$env/static/private";
+import { AUTH_SERVICE_URI } from "$env/static/private";
 import { getRequestId } from "$lib/getRequestId";
 import { httpErrors } from "$lib/httpErrors";
 import * as logger from "$lib/logger";
@@ -40,7 +40,7 @@ export const actions: Actions = {
         );
         return fail(400, { passwordError: "Password is not valid!" });
       }
-      const res = await fetch(`${USER_SERVICE_URI}/auth/login`, {
+      const res = await fetch(`${AUTH_SERVICE_URI}/auth/login`, {
         method: "POST",
         body: JSON.stringify({
           username,
@@ -90,7 +90,7 @@ export const actions: Actions = {
     const requestInfo = `page = /login, action = /logout, requestId = ${getRequestId()}`;
     try {
       logger.log("logging in:", `(${requestInfo})...`);
-      const res = await fetchWithUser(`${USER_SERVICE_URI}/auth/logout`, {
+      const res = await fetchWithUser(`${AUTH_SERVICE_URI}/auth/logout`, {
         method: "POST",
         headers: {
           Accept: "application/json",
