@@ -44,7 +44,9 @@
   const role = $derived($page.url.searchParams.get("role"));
   const search = $derived($page.url.searchParams.get("q"));
   const validOrderByValues = $derived(
-    showMachineInfo ? [...VALID_ORDER_BY_VALUES, ...VALID_ORDER_BY_VALUES_MACHINE] : VALID_ORDER_BY_VALUES,
+    showMachineInfo
+      ? [...VALID_ORDER_BY_VALUES, ...VALID_ORDER_BY_VALUES_MACHINE]
+      : VALID_ORDER_BY_VALUES,
   );
 
   let searchForm = $state<HTMLFormElement | null>(null);

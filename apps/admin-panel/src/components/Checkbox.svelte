@@ -44,7 +44,7 @@
         "peer-[:is(:disabled,:not(:disabled):checked:hover)]:border-transparent",
         // The checkmark at the center of the checkbox
         "after:absolute after:left-1/2 after:top-1/2 after:hidden after:-translate-x-1/2 after:-translate-y-1/2 peer-checked:after:block",
-        "after:text-base after:text-white after:content-[''] peer-checked:after:content-['✓'] after:dark:text-black",
+        "after:text-base after:text-white after:content-[''] peer-checked:after:content-['✓'] after:dark:text-black peer-checked:after:animate-checkbox-icon",
       )}
       for={id}
     >

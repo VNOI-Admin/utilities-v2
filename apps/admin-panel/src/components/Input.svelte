@@ -18,7 +18,7 @@
     <input
       {id}
       class={clsx(
-        "input block h-[44px] w-full rounded-md px-2.5 pt-2.5 text-sm shadow-md transition-opacity disabled:opacity-50",
+        "input block h-[44px] w-full rounded-md px-2.5 pt-2.5 text-sm shadow-md transition-colors-opacity duration-100 disabled:opacity-50",
         "focus:border-accent-light dark:focus:border-accent-dark border border-neutral-300 focus:outline-none dark:border-neutral-800",
         "bg-white text-black opacity-80 dark:bg-neutral-900 dark:text-white",
       )}

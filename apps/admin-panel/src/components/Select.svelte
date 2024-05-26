@@ -23,7 +23,7 @@
   <select
     {id}
     class={clsx(
-      "z-[1] block h-[44px] w-full rounded-lg px-2.5 pt-2.5 text-sm shadow-md transition-opacity disabled:opacity-50",
+      "z-[1] block h-[44px] w-full rounded-lg px-2.5 pt-2.5 text-sm shadow-md transition-colors-opacity duration-100 disabled:opacity-50",
       "focus:border-accent-light dark:focus:border-accent-dark border border-neutral-400 focus:outline-none dark:border-neutral-700",
       "dark:bg-neutral-1000 bg-white text-black opacity-80 dark:text-white",
     )}

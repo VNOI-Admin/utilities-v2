@@ -6,6 +6,22 @@ export default {
   content: ["./src/**/*.{html,js,svelte,ts}"],
   theme: {
     extend: {
+      keyframes: {
+        tick: {
+          "0%": {
+            "clip-path": "polygon(0% 0%, 0% 0%, 100% 100%, 0% 100%)",
+          },
+          "1%": {
+            "clip-path": "polygon(0% 0%, 0% 0%, 0% 100%, 0% 100%)",
+          },
+          "100%": {
+            "clip-path": "polygon(0% 0%, 100% 0%, 50% 100%, 0% 100%)",
+          },
+        },
+      },
+      animation: {
+        "checkbox-icon": "tick 0.3s",
+      },
       transitionProperty: {
         "colors-opacity": `${defaultTheme.transitionProperty.colors}, opacity`,
       },
