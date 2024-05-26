@@ -6,11 +6,12 @@
   import type { Device } from "./$page.types";
 
   interface DeviceInfoProps {
-    isAdmin: boolean;
     device: Device;
+    isAdmin: boolean;
+    showMachineInfo: boolean;
   }
 
-  const { isAdmin, device }: DeviceInfoProps = $props();
+  const { device, isAdmin, showMachineInfo }: DeviceInfoProps = $props();
 
   const pingColor = $derived(device.ping ? getPingColorClass(device.ping) : undefined);
   const cpuColor = $derived(device.cpu ? getUsageColorClass(device.cpu) : undefined);
@@ -28,7 +29,7 @@
       {device.fullName}
     </p>
   </td>
-  {#if isAdmin}
+  {#if showMachineInfo}
     <td>
       <p>
         {device.vpnIpAddress}
@@ -36,11 +37,11 @@
     </td>
   {/if}
   <td>
-    <p>
+    <p class="select-none">
       {device.isOnline ? "✅" : "❌"}
     </p>
   </td>
-  {#if isAdmin}
+  {#if showMachineInfo}
     <td class={pingColor}>
       <p>
         {device.ping || "N/A"} ms
@@ -65,7 +66,7 @@
     {/if}
   </td>
   {#if isAdmin}
-    <td>
+    <td class="[&>*]:inline-block [&>*]:w-full">
       <a class="button filled" href={`${base}/contestant/${device.username}/edit`}>Edit</a>
     </td>
   {/if}

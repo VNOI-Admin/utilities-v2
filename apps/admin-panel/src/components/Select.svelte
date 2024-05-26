@@ -1,4 +1,4 @@
-<script lang="ts" generics="T extends string">
+<script lang="ts" generics="T extends string | null">
   import type { HTMLSelectAttributes } from "svelte/elements";
 
   import { clsx } from "$lib/clsx";

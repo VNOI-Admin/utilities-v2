@@ -9,13 +9,14 @@ import { fetchWithUser } from "$lib/users";
 
 import { updateUserSchema } from "./$page.schema";
 import type { Actions, PageServerLoad } from "./$types";
+import { Role } from "@libs/common/decorators/role.decorator";
 
 export const actions: Actions = {
   async default({ cookies, locals, params, request }) {
     if (!locals.user) {
       return fail(401, { error: httpErrors.unauthenticated });
     }
-    if (locals.user.data.role !== "admin") {
+    if (locals.user.data.role !== Role.ADMIN) {
       return fail(403, { error: httpErrors.unauthorized });
     }
     let newUserId: string | null = null;
@@ -81,7 +82,7 @@ export const actions: Actions = {
 };
 
 export const load: PageServerLoad = async ({ locals, parent }) => {
-  if (locals.user?.data.role !== "admin") {
+  if (locals.user?.data.role !== Role.ADMIN) {
     redirect(307, `${base}/`);
   }
 

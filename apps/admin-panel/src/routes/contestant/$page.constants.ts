@@ -1,3 +1,5 @@
+import { Role } from "@libs/common/decorators/role.decorator";
+
 import type { DeviceInfoKeys, Order, OrderBy } from "./$page.types";
 
 export const PAGE_SIZE = 20;
@@ -7,15 +9,13 @@ export const VALID_ORDER_SELECT_VALUES = [
   ["desc", "Descending"],
 ] satisfies [Order, string][];
 export const VALID_ORDER_BY_VALUES = ["userid", "username"] as const;
-export const VALID_ORDER_BY_VALUES_ADMIN = ["ip", "ping", "cpu", "memory"] as const;
-export const VALID_ORDER_BY_SELECT_VALUES = [
-  ["userid", "User ID"],
-  ["username", "Full name"],
-  ["ip", "IP"],
-  ["ping", "Ping"],
-  ["cpu", "CPU"],
-  ["memory", "RAM"],
-] satisfies [OrderBy, string][];
+export const VALID_ORDER_BY_VALUES_MACHINE = ["ip", "ping", "cpu", "memory"] as const;
+export const VALID_ROLE_SELECT_VALUES = [
+  [null, "All"],
+  [Role.CONTESTANT, "Contestant"],
+  [Role.COACH, "Coach"],
+  [Role.ADMIN, "Admin"],
+] satisfies [Role | null, string][];
 // This should be in the same order as the one used in DeviceInfo.
 export const DEVICE_KEYS = [
   ["username", "ID", "userid"],

@@ -1,3 +1,4 @@
+import type { Role } from "@libs/common/decorators/role.decorator";
 import type { ChartConfiguration, ChartType, DefaultDataPoint } from "chart.js";
 import type { ComponentType, SvelteComponent } from "svelte";
 import type { SVGAttributes } from "svelte/elements";
@@ -15,7 +16,7 @@ export interface UserData {
   username: string;
   vpnIpAddress: string;
   fullName: string;
-  role: string;
+  role: Role;
   isActive: boolean;
   machineUsage: {
     cpu: number;

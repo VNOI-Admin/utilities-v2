@@ -21,6 +21,7 @@ const config = {
     alias: {
       $components: "./src/components",
       $images: "./src/images",
+      "@libs/common": "../../libs/common/src",
     },
     inlineStyleThreshold: 2048,
   },

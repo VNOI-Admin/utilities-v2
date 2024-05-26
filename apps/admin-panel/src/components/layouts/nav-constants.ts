@@ -17,7 +17,7 @@ export const ASIDE_MENU_LINKS: readonly AsideMenuLink[] = [
   },
   {
     href: "/contestant",
-    title: "Monitor",
+    title: "Contestants",
     icon: Eye,
     authOnly: true,
   },

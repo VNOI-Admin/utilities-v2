@@ -4,6 +4,7 @@ import { getRequestId } from "$lib/getRequestId";
 import * as logger from "$lib/logger";
 import type { UserData } from "$lib/types";
 import { fetchWithUser } from "$lib/users";
+import { Role } from "@libs/common/decorators/role.decorator";
 
 import type { LayoutServerLoad } from "./$types";
 
@@ -12,7 +13,7 @@ export const load: LayoutServerLoad = ({ cookies, locals, url }) => {
   return {
     user: locals.user && {
       username: locals.user.data.username,
-      isAdmin: locals.user.data.role === "admin",
+      isAdmin: locals.user.data.role === Role.ADMIN,
     },
     quickSwitch: (async () => {
       if (!url.pathname.startsWith(`${base}/contestant`)) {

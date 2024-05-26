@@ -2,6 +2,8 @@
   import { enhance } from "$app/forms";
   import Input from "$components/Input.svelte";
   import Select from "$components/Select.svelte";
+  
+  import { VALID_ROLE_SELECT_VALUES } from "../../$page.constants";
 
   const { data, form } = $props();
 
@@ -63,10 +65,7 @@
         id="edit-role-select"
         name="role"
         required
-        values={[
-          ["admin", "Admin"],
-          ["user", "User"],
-        ]}
+        values={VALID_ROLE_SELECT_VALUES}
         initialValue={data.role}
       />
       <span>

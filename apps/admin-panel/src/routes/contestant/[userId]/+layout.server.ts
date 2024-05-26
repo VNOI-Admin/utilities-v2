@@ -8,6 +8,7 @@ import type { UserData } from "$lib/types";
 import { fetchWithUser } from "$lib/users";
 
 import type { LayoutServerLoad } from "./$types";
+import { Role } from "@libs/common/decorators/role.decorator";
 
 export const load: LayoutServerLoad = async ({ params, fetch, cookies, locals, depends }) => {
   const requestInfo = `layout = /contestant/[userId], requestId = ${getRequestId()}, userId = ${params.userId}`;
@@ -48,7 +49,7 @@ export const load: LayoutServerLoad = async ({ params, fetch, cookies, locals, d
     ip: data.vpnIpAddress,
     fullName: data.fullName,
     isOnline: data.machineUsage.isOnline,
-    ...(locals.user?.data.role === "admin" && {
+    ...(locals.user?.data.role === Role.ADMIN && {
       cpu: data.machineUsage.cpu,
       ram: data.machineUsage.memory,
       ping: data.machineUsage.ping,

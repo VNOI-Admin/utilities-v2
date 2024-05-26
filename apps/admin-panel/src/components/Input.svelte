@@ -3,7 +3,7 @@
 
   import { clsx } from "$lib/clsx";
 
-  interface InputProps extends Omit<HTMLInputAttributes, "placeholder"> {
+  interface InputProps extends Omit<HTMLInputAttributes, "placeholder" | "class" | "aria-invalid" | "aria-describedby"> {
     label: string;
     id: string;
     errorTextId?: string;
@@ -20,7 +20,7 @@
       class={clsx(
         "input block h-[44px] w-full rounded-md px-2.5 pt-2.5 text-sm shadow-md transition-opacity disabled:opacity-50",
         "focus:border-accent-light dark:focus:border-accent-dark border border-neutral-300 focus:outline-none dark:border-neutral-800",
-        "bg-gray-100 text-black opacity-80 dark:bg-neutral-900 dark:text-white",
+        "bg-white text-black opacity-80 dark:bg-neutral-900 dark:text-white",
       )}
       aria-invalid={!!errorText}
       aria-describedby={errorTextId}

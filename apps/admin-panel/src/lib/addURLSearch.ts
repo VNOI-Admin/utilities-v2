@@ -1,5 +1,7 @@
-export const addURLSearch = (url: URL, searchParams: Record<string, string>) => {
-  return new URL(
-    `${url.origin}${url.pathname}?${new URLSearchParams({ ...Object.fromEntries(url.searchParams.entries()), ...searchParams })}`,
-  );
+export const addURLSearch = (url: URL, searchParams: [string, string][]) => {
+  const newUrl = new URL(url);
+  for (const [key, value] of searchParams) {
+    newUrl.searchParams.append(key, value);
+  }
+  return newUrl;
 };
