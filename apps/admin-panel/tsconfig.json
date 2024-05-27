@@ -17,8 +17,6 @@
     "types": ["node"],
     "paths": {
       "~/*": ["src/*"],
-      "@libs/types": ["../../libs/types/src"],
-      "@libs/types/*": ["../../libs/types/src/*"],
       "@libs/common": ["../../libs/common/src"],
       "@libs/common/*": ["../../libs/common/src/*"],
     }

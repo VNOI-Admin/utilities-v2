@@ -5,11 +5,15 @@
   "author": "hung3a8",
   "private": true,
   "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "cross-env FORCE_COLOR=1 turbo run build",
-    "dev": "cross-env FORCE_COLOR=1 turbo run dev --parallel",
-    "dev:main": "pnpm dev --filter user --filter auth --filter admin-panel",
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:main": "yarn dev --filter user --filter auth --filter admin-panel",
     "format": "prettier --write .",
     "lint": "turbo run lint",
     "start": "nest start",
@@ -107,5 +111,5 @@
       "<rootDir>/apps/"
     ]
   },
-  "packageManager": "pnpm@9.1.2"
+  "packageManager": "yarn@4.1.1"
 }
