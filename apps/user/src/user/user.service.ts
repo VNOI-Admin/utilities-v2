@@ -1,23 +1,30 @@
-import type { Role } from "@libs/common/decorators/role.decorator";
-import { Group, type GroupDocument } from "@libs/common-db/schemas/group.schema";
-import { User, type UserDocument } from "@libs/common-db/schemas/user.schema";
-import type { OnModuleInit } from "@nestjs/common";
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { InjectModel } from "@nestjs/mongoose";
-import * as argon2 from "argon2";
-import { plainToInstance } from "class-transformer";
-import { FormData } from "formdata-node";
-import type { PipelineStage } from "mongoose";
-import { Model } from "mongoose";
+import type { Role } from '@libs/common/decorators/role.decorator';
+import {
+  Group,
+  type GroupDocument,
+} from '@libs/common-db/schemas/group.schema';
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import type { OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import * as argon2 from 'argon2';
+import { plainToInstance } from 'class-transformer';
+import { FormData } from 'formdata-node';
+import type { PipelineStage } from 'mongoose';
+import { Model } from 'mongoose';
 
-import type { CreateGroupDto } from "./dtos/createGroup.dto";
-import type { CreateUserDto } from "./dtos/createUser.dto";
-import type { GetUserDto } from "./dtos/getUser.dto";
-import type { ReportUsageDto } from "./dtos/reportUsage.dto";
-import type { UpdateUserDto } from "./dtos/updateUser.dto";
-import { GroupEntity } from "./entities/Group.entity";
-import { UserEntity } from "./entities/User.entity";
+import type { CreateGroupDto } from './dtos/createGroup.dto';
+import type { CreateUserDto } from './dtos/createUser.dto';
+import type { GetUserDto } from './dtos/getUser.dto';
+import type { ReportUsageDto } from './dtos/reportUsage.dto';
+import type { UpdateUserDto } from './dtos/updateUser.dto';
+import { GroupEntity } from './entities/Group.entity';
+import { UserEntity } from './entities/User.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -29,25 +36,25 @@ export class UserService implements OnModuleInit {
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
   ) {
-    this.printUrl = this.configService.get("PRINTER_URL");
+    this.printUrl = this.configService.get('PRINTER_URL');
   }
 
   async onModuleInit() {
-    let admin = await this.userModel.findOne({ username: "admin" });
+    let admin = await this.userModel.findOne({ username: 'admin' });
     if (!admin) {
-      console.log("Initializing admin user...");
+      console.log('Initializing admin user...');
       admin = await this.userModel.create({
-        username: "admin",
-        password: "admin",
-        role: "admin",
+        username: 'admin',
+        password: 'admin',
+        role: 'admin',
         isActive: true,
         refreshToken: null,
       });
     }
-    const defaultPasswordCheck = await argon2.verify(admin.password, "admin");
+    const defaultPasswordCheck = await argon2.verify(admin.password, 'admin');
     if (defaultPasswordCheck) {
       console.warn(
-        "Password for admin user is currently set to default. Please change it as soon as possible.",
+        'Password for admin user is currently set to default. Please change it as soon as possible.',
       );
     }
   }
@@ -75,17 +82,17 @@ export class UserService implements OnModuleInit {
   }
 
   async getUsers(query: GetUserDto): Promise<UserEntity[]> {
-    const q = query.q || "";
+    const q = query.q || '';
     const orderBy = query.orderBy || { username: 1 };
 
-    console.log("Query", query);
+    console.log('Query', query);
 
     const pipeline: PipelineStage[] = [
       {
         $match: {
           $or: [
-            { username: { $regex: q, $options: "i" } },
-            { fullName: { $regex: q, $options: "i" } },
+            { username: { $regex: q, $options: 'i' } },
+            { fullName: { $regex: q, $options: 'i' } },
           ],
         },
       },
@@ -96,7 +103,10 @@ export class UserService implements OnModuleInit {
       pipeline.push({ $match: { role: query.role } });
     }
 
-    const users = await this.userModel.aggregate([...pipeline, { $sort: orderBy }]);
+    const users = await this.userModel.aggregate([
+      ...pipeline,
+      { $sort: orderBy },
+    ]);
 
     return plainToInstance(UserEntity, users);
   }
@@ -104,7 +114,7 @@ export class UserService implements OnModuleInit {
   async getUser(username: string): Promise<UserEntity> {
     const user = await this.userModel.findOne({ username: username }).lean();
     if (!user) {
-      throw new BadRequestException("User not found");
+      throw new BadRequestException('User not found');
     }
     return plainToInstance(UserEntity, user);
   }
@@ -112,15 +122,17 @@ export class UserService implements OnModuleInit {
   async getUserById(userId: string): Promise<UserEntity> {
     const user = await this.userModel.findOne({ _id: userId }).lean();
     if (!user) {
-      throw new BadRequestException("User not found");
+      throw new BadRequestException('User not found');
     }
     return plainToInstance(UserEntity, user);
   }
 
   async getUserByIp(ipAddress: string): Promise<string> {
-    const user = await this.userModel.findOne({ vpnIpAddress: ipAddress }).lean();
+    const user = await this.userModel
+      .findOne({ vpnIpAddress: ipAddress })
+      .lean();
     if (!user) {
-      throw new BadRequestException("User not found");
+      throw new BadRequestException('User not found');
     }
     return user._id.toString();
   }
@@ -139,7 +151,7 @@ export class UserService implements OnModuleInit {
     await group.save();
 
     if (!group) {
-      throw new BadRequestException("Unable to create group");
+      throw new BadRequestException('Unable to create group');
     }
 
     return plainToInstance(GroupEntity, group.toObject());
@@ -148,7 +160,7 @@ export class UserService implements OnModuleInit {
   async updateUser(username: string, updateUserDto: UpdateUserDto) {
     const user = await this.userModel.findOne({ username });
     if (!user) {
-      throw new BadRequestException("User not found");
+      throw new BadRequestException('User not found');
     }
     // user.username = updateUserDto.username;
     user.fullName = updateUserDto.fullName || user.fullName;
@@ -162,7 +174,7 @@ export class UserService implements OnModuleInit {
   async reportUsage(userId: string, usage: ReportUsageDto) {
     const user = await this.userModel.findOne({ _id: userId });
     if (!user) {
-      throw new BadRequestException("User not found");
+      throw new BadRequestException('User not found');
     }
     user.machineUsage.cpu = usage.cpu;
     user.machineUsage.memory = usage.memory;
@@ -174,7 +186,7 @@ export class UserService implements OnModuleInit {
   async print(callerId: string, file: Express.Multer.File) {
     const user = await this.userModel.findOne({ _id: callerId }).lean();
     if (!user) {
-      throw new BadRequestException("User not found");
+      throw new BadRequestException('User not found');
     }
     const username = user.username;
 
@@ -182,19 +194,19 @@ export class UserService implements OnModuleInit {
 
     const formData = new FormData();
     const fileBuffer = new Blob([file.buffer], { type: file.mimetype });
-    formData.append("file", fileBuffer, filename);
+    formData.append('file', fileBuffer, filename);
 
     // print formdata file content
     try {
       const response = await fetch(`${this.printUrl}/print`, {
-        method: "POST",
+        method: 'POST',
         body: formData,
       });
       if (!response.ok) {
-        throw new BadRequestException("Unable to print");
+        throw new BadRequestException('Unable to print');
       }
     } catch (error) {
-      throw new BadRequestException("Unable to print");
+      throw new BadRequestException('Unable to print');
     }
   }
 }
