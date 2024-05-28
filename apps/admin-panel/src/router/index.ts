@@ -1,24 +1,16 @@
-import type { RouteRecordRaw } from 'vue-router';
-import { createRouter, createWebHistory } from 'vue-router';
+/**
+ * router/index.ts
+ *
+ * Automatic routes for `./src/pages/*.vue`
+ */
 
-const routes: RouteRecordRaw[] = [
-];
+// Composables
+import { createRouter, createWebHistory } from 'vue-router/auto';
+import { setupLayouts } from 'virtual:generated-layouts';
 
 const router = createRouter({
-  history: createWebHistory(),
-  routes,
-});
-
-router.beforeEach(async (to, from, next) => {
-  // TODO: Implement authentication
-  const isAuth = true;
-
-  if (to.name !== 'Login' && !isAuth) {
-    next({ name: 'Login' });
-  } else if (to.name === 'Login' && isAuth) {
-    next({ name: 'Home' });
-  }
-  next();
+  history: createWebHistory(import.meta.env.BASE_URL),
+  extendRoutes: setupLayouts,
 });
 
 export default router;

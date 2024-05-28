@@ -1,56 +1,68 @@
-import vue from "@vitejs/plugin-vue";
-import path from "path";
-import AutoImport from "unplugin-auto-import/vite";
-import Components from "unplugin-vue-components/vite";
-import { defineConfig } from "vite";
-import tsConfigPaths from "vite-tsconfig-paths";
+// Plugins
+import AutoImport from 'unplugin-auto-import/vite';
+import Components from 'unplugin-vue-components/vite';
+import Fonts from 'unplugin-fonts/vite';
+import Layouts from 'vite-plugin-vue-layouts';
+import Vue from '@vitejs/plugin-vue';
+import VueRouter from 'unplugin-vue-router/vite';
+import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
+
+// Utilities
+import { defineConfig } from 'vite';
+import { fileURLToPath, URL } from 'node:url';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  resolve: {
-    alias: {
-      "~/": `${path.resolve(__dirname, "src")}/`,
-    },
-  },
   plugins: [
-    vue(),
-    tsConfigPaths(),
+    VueRouter({
+      dts: 'src/typed-router.d.ts',
+    }),
+    Layouts(),
     AutoImport({
       imports: [
-        "vue",
-        "vue-router",
-        "@vueuse/core",
-        { "vue-toastification": ["useToast"] },
-        { "~/hooks/usePromise": [["default", "usePromise"]] },
-        { "~/hooks/useLazyPromise": [["default", "useLazyPromise"]] },
-        { "~/hooks/useAlert": [["default", "useAlert"]] },
-        { "~/stores/network": ["useNetworkStore"] },
-        { "~/stores/icons": ["useIconStore"] },
-        { "~/stores/marketImportData": ["useImportData"] },
+        'vue',
+        {
+          'vue-router/auto': ['useRoute', 'useRouter'],
+        },
       ],
-      dts: "src/auto-imports.d.ts",
+      dts: 'src/auto-imports.d.ts',
+      eslintrc: {
+        enabled: true,
+      },
+      vueTemplate: true,
     }),
     Components({
-      dirs: ["src/components"],
-      extensions: ["vue"],
-      dts: "src/components.d.ts",
+      dts: 'src/components.d.ts',
+    }),
+    Vue({
+      template: { transformAssetUrls },
+    }),
+    // https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin#readme
+    Vuetify({
+      autoImport: true,
+      styles: {
+        configFile: 'src/styles/settings.scss',
+      },
+    }),
+    Fonts({
+      google: {
+        families: [
+          {
+            name: 'Roboto',
+            styles: 'wght@100;300;400;500;700;900',
+          },
+        ],
+      },
     }),
   ],
-  build: {
-    outDir: "dist",
-    target: ["esnext"],
-  },
-  optimizeDeps: {
-    // 👈 optimizedeps
-    esbuildOptions: {
-      target: "esnext",
-      // Node.js global to browser globalThis
-      define: {
-        global: "globalThis",
-      },
-      supported: {
-        bigint: true,
-      },
+  define: { 'process.env': {} },
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+    extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
+  },
+  server: {
+    port: 3000,
   },
 });
