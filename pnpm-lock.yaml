@@ -250,6 +250,10 @@ importers:
         specifier: 5.1.4
         version: 5.1.4(@types/node@20.11.0)(terser@5.26.0)
 
+  apps/auth: {}
+
+  apps/printing: {}
+
   apps/user: {}
 
 packages:
