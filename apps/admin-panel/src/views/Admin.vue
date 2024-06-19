@@ -38,6 +38,14 @@ const headers: HeaderProps[] = [
     title: 'StockTitle',
     type: 'rating',
   },
+
+  {
+    align: 'start',
+    key: 'progress',
+    sortable: true,
+    title: 'progressTitle',
+    type: 'progress',
+  },
 ];
 const items: object[] = [
   {
@@ -47,8 +55,9 @@ const items: object[] = [
     rating: 5,
     badge: {
       color: 'green',
-      content:'out of stock'
+      content: 'out of stock',
     },
+    progress: 40,
   },
   {
     name: 'Galaxy RTX 3080',
@@ -64,7 +73,7 @@ const items: object[] = [
     rating: 3,
     badge: {
       color: 'red',
-      content:'in stock'
+      content: 'in stock',
     },
   },
   {
@@ -83,7 +92,7 @@ const items: object[] = [
   },
 ];
 
-const items2 = [...items, ...items,...items]
+const items2 = [...items, ...items, ...items];
 const title = 'Title Table';
 const pagination = true;
 </script>

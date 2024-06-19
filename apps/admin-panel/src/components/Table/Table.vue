@@ -4,7 +4,7 @@ export type HeaderProps = {
   key: string;
   sortable: boolean;
   title: string;
-  type: 'content' | 'image' | 'rating' | 'badge';
+  type: 'content' | 'image' | 'rating' | 'badge' | 'progress';
 };
 
 const props = defineProps<{
@@ -72,6 +72,14 @@ const search = ref('');
             size="small"
             label
           ></v-chip>
+        </div>
+      </template>
+
+      <template v-slot:[`item.progress`]="{ item }">
+        <div class="text">
+          <v-progress-linear
+            :model-value="item.progress"
+          ></v-progress-linear>
         </div>
       </template>
     </v-data-table>
