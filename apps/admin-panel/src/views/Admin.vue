@@ -105,4 +105,3 @@ const pagination = true;
     :pagination="pagination"
   />
 </template>
-

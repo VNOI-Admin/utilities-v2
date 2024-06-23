@@ -77,9 +77,7 @@ const search = ref('');
 
       <template v-slot:[`item.progress`]="{ item }">
         <div class="text">
-          <v-progress-linear
-            :model-value="item.progress"
-          ></v-progress-linear>
+          <v-progress-linear :model-value="item.progress"></v-progress-linear>
         </div>
       </template>
     </v-data-table>

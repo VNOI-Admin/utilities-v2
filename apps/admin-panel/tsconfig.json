@@ -3,28 +3,26 @@
     "baseUrl": ".",
     "module": "ESNext",
     "target": "ESNext",
-    "lib": ["DOM", "ESNext"],
-    "jsx": "preserve",
-    "esModuleInterop": true,
-    "moduleResolution": "Node",
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "types": [
-      "node",
-      // "vite/client",
-      // "vite-plugin-vue-layouts/client",
-    ],
-    "paths": {
-      "~/*": ["src/*"]
-    },
-    "allowJs": true,
+    "lib": ["ESNext", "DOM"],
     "strict": true,
-    "strictNullChecks": true,
+    "esModuleInterop": true,
+    "jsx": "preserve",
+    "skipLibCheck": true,
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
     "noUnusedLocals": true,
+    "strictNullChecks": true,
+    "allowJs": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
+    "types": ["node"],
+    "paths": {
+      "~/*": ["src/*"],
+    }
   },
-  "include": ["./src/typed-router.d.ts"],
-  "exclude": ["dist", "node_modules", "cypress"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "server.cjs"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
