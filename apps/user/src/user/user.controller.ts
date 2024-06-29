@@ -31,7 +31,7 @@ import { GetUserDto } from './dtos/getUser.dto';
 import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from './entities/User.entity';
+import { MachineUsageEntity, UserEntity } from './entities/User.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')
@@ -112,6 +112,23 @@ export class UserController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return await this.userService.updateUser(username, updateUserDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.COACH, Role.ADMIN)
+  @ApiOperation({ summary: 'Get machine usage of user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return machine usage',
+    type: MachineUsageEntity,
+  })
+  @Get('/:username/machine')
+  async getMachineUsage(
+    @Param('username') username: string,
+    @Request() req: any,
+  ) {
+    return await this.userService.getMachineUsage(username);
   }
 
   @ApiBearerAuth()
