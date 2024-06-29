@@ -25,6 +25,7 @@ import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import type { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { MachineUsageEntity, UserEntity } from './entities/User.entity';
+import { StatusEntity } from './entities/Status.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -169,6 +170,28 @@ export class UserService implements OnModuleInit {
     user.username = updateUserDto.usernameNew || user.username;
     await user.save();
     return plainToInstance(UserEntity, user.toObject());
+  }
+
+  async deleteUser(username: string) {
+    try {
+      const user = await this.userModel.findOne({ username });
+      if (!user) {
+        return plainToInstance(StatusEntity, {
+          success: false,
+          message: 'User not found',
+        });
+      }
+      await user.deleteOne();
+      return plainToInstance(StatusEntity, {
+        success: true,
+        message: 'User deleted',
+      });
+    } catch (error) {
+      return plainToInstance(StatusEntity, {
+        success: false,
+        message: error.message,
+      });
+    }
   }
 
   async getMachineUsage(username: string): Promise<MachineUsageEntity> {

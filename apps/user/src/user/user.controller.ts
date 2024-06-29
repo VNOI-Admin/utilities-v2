@@ -4,6 +4,7 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Delete,
   Get,
   MaxFileSizeValidator,
   Param,
@@ -32,6 +33,7 @@ import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { MachineUsageEntity, UserEntity } from './entities/User.entity';
+import { StatusEntity } from './entities/Status.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')
@@ -112,6 +114,20 @@ export class UserController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return await this.userService.updateUser(username, updateUserDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Delete user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return user',
+    type: StatusEntity,
+  })
+  @Delete('/:username')
+  async deleteUser(@Param('username') username: string, @Request() req: any) {
+    return await this.userService.deleteUser(username);
   }
 
   @ApiBearerAuth()
