@@ -111,7 +111,7 @@ export class UserService implements OnModuleInit {
     return plainToInstance(UserEntity, users);
   }
 
-  async getUser(username: string): Promise<UserEntity> {
+  async getUserByUsername(username: string): Promise<UserEntity> {
     const user = await this.userModel.findOne({ username: username }).lean();
     if (!user) {
       throw new BadRequestException('User not found');

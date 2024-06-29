@@ -80,7 +80,7 @@ export class UserController {
   })
   @Get('/:username')
   async getUser(@Param('username') username: string) {
-    return await this.userService.getUser(username);
+    return await this.userService.getUserByUsername(username);
   }
 
   @ApiBearerAuth()
