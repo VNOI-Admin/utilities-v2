@@ -67,6 +67,31 @@ export class GroupService implements OnModuleInit {
     return plainToInstance(GroupEntity, group.toObject());
   }
 
+  async deleteGroup(groupCodeName: string) {
+    try {
+      const group = await this.groupModel.findOne({ groupCodeName });
+      if (!group) {
+        return {
+          success: false,
+          message: 'Group not found',
+        };
+      }
+      await this.userModel
+        .updateMany({ group: group._id }, { $unset: { group: 1 } })
+        .exec();
+      await group.deleteOne();
+      return {
+        success: true,
+        message: 'Group deleted',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+  }
+
   async getUsersInGroup(groupCodeName: string) {
     const group = await this.groupModel
       .findOne({ groupCodeName })

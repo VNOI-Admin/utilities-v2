@@ -4,6 +4,7 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -77,6 +78,23 @@ export class GroupController {
     @Body() updateGroupDto: UpdateGroupDto,
   ) {
     return await this.groupService.updateGroup(groupCodeName, updateGroupDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Delete group' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return status',
+    // type: GroupEntity,
+  })
+  @Delete('/:groupCodeName')
+  async deleteGroup(
+    @Param('groupCodeName') groupCodeName: string,
+    @Request() req: any,
+  ) {
+    return await this.groupService.deleteGroup(groupCodeName);
   }
 
   @ApiBearerAuth()
