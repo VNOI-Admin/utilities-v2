@@ -18,12 +18,10 @@ import { FormData } from 'formdata-node';
 import type { PipelineStage } from 'mongoose';
 import { Model } from 'mongoose';
 
-import type { CreateGroupDto } from './dtos/createGroup.dto';
 import type { CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import type { UpdateUserDto } from './dtos/updateUser.dto';
-import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from './entities/User.entity';
 
 @Injectable()
@@ -135,26 +133,6 @@ export class UserService implements OnModuleInit {
       throw new BadRequestException('User not found');
     }
     return user._id.toString();
-  }
-
-  async getGroups(): Promise<GroupEntity[]> {
-    const groups = await this.groupModel.find().lean();
-    return plainToInstance(GroupEntity, groups);
-  }
-
-  async createGroup(createGroupDto: CreateGroupDto) {
-    const group = await this.groupModel.create({
-      groupCodeName: createGroupDto.groupCodeName,
-      groupFullName: createGroupDto.groupFullName,
-    });
-
-    await group.save();
-
-    if (!group) {
-      throw new BadRequestException('Unable to create group');
-    }
-
-    return plainToInstance(GroupEntity, group.toObject());
   }
 
   async updateUser(username: string, updateUserDto: UpdateUserDto) {
