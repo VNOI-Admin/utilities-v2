@@ -104,13 +104,29 @@ export class UserService implements OnModuleInit {
     const users = await this.userModel.aggregate([
       ...pipeline,
       { $sort: orderBy },
+      {
+        $lookup: {
+          from: 'groups',
+          localField: 'group',
+          foreignField: '_id',
+          as: 'group',
+        },
+      },
+      {
+        $set: {
+          group: { $first: '$group' },
+        },
+      },
     ]);
 
     return plainToInstance(UserEntity, users);
   }
 
   async getUser(username: string): Promise<UserEntity> {
-    const user = await this.userModel.findOne({ username: username }).lean();
+    const user = await this.userModel
+      .findOne({ username: username })
+      .populate('group')
+      .lean();
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -118,7 +134,10 @@ export class UserService implements OnModuleInit {
   }
 
   async getUserById(userId: string): Promise<UserEntity> {
-    const user = await this.userModel.findOne({ _id: userId }).lean();
+    const user = await this.userModel
+      .findOne({ _id: userId })
+      .populate('group')
+      .lean();
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -140,13 +159,46 @@ export class UserService implements OnModuleInit {
     if (!user) {
       throw new BadRequestException('User not found');
     }
-    // user.username = updateUserDto.username;
+
+    if ('group' in updateUserDto) {
+      // Find new group document
+      let newGroup = undefined;
+      if (updateUserDto.group !== '') {
+        newGroup = await this.groupModel.findOne({
+          groupCodeName: updateUserDto.group,
+        });
+        if (!newGroup) throw new BadRequestException('Group not found');
+      }
+
+      // Update if there's a change
+      if (newGroup?._id != user.group?._id) {
+        // Remove user from old group
+        if (user.group) {
+          const oldGroup = await this.groupModel.findOne({ _id: user.group });
+          if (oldGroup)
+            await oldGroup
+              .updateOne({
+                $pull: { members: user._id },
+              })
+              .exec();
+        }
+
+        // Add user to new group
+        if (newGroup)
+          await newGroup.updateOne({ $addToSet: { members: user._id } }).exec();
+        // Set user's new group
+        user.group = newGroup?._id;
+      }
+    }
+
     user.fullName = updateUserDto.fullName || user.fullName;
     user.password = updateUserDto.password || user.password;
     user.role = updateUserDto.role || user.role;
     user.username = updateUserDto.usernameNew || user.username;
+
     await user.save();
-    return plainToInstance(UserEntity, user.toObject());
+    const updatedUser = await user.populate('group');
+    return plainToInstance(UserEntity, updatedUser.toObject());
   }
 
   async reportUsage(userId: string, usage: ReportUsageDto) {
