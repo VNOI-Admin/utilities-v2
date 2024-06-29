@@ -78,4 +78,18 @@ export class GroupController {
   ) {
     return await this.groupService.updateGroup(groupCodeName, updateGroupDto);
   }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get users in group' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return users',
+    type: [UserEntity],
+  })
+  @Get('/:groupCodeName/users')
+  async getUsers(@Param('groupCodeName') groupCodeName: string) {
+    return await this.groupService.getUsersInGroup(groupCodeName);
+  }
 }

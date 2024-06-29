@@ -18,6 +18,7 @@ import { Model } from 'mongoose';
 import type { CreateGroupDto } from './dtos/createGroup.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UpdateGroupDto } from './dtos/updateGroup.dto';
+import { UserEntity } from '../user/entities/User.entity';
 
 @Injectable()
 export class GroupService implements OnModuleInit {
@@ -64,5 +65,17 @@ export class GroupService implements OnModuleInit {
     group.groupFullName = updateGroupDto.groupFullName || group.groupFullName;
     await group.save();
     return plainToInstance(GroupEntity, group.toObject());
+  }
+
+  async getUsersInGroup(groupCodeName: string) {
+    const group = await this.groupModel
+      .findOne({ groupCodeName })
+      .populate('members');
+    if (!group) {
+      throw new BadRequestException('Group not found');
+    }
+
+    const users = group.toObject().members;
+    return plainToInstance(UserEntity, users);
   }
 }
