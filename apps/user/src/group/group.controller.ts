@@ -25,13 +25,14 @@ import { CreateGroupDto } from './dtos/createGroup.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { UserEntity } from '../user/entities/User.entity';
 import { GroupService } from './group.service';
+import { UpdateGroupDto } from './dtos/updateGroup.dto';
 
 @ApiTags('Group')
 @Controller('group')
 @UseInterceptors(ClassSerializerInterceptor)
 @SerializeOptions({ excludeExtraneousValues: true })
 export class GroupController {
-  constructor(private readonly userService: GroupService) {}
+  constructor(private readonly groupService: GroupService) {}
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
@@ -44,7 +45,7 @@ export class GroupController {
   })
   @Get('/')
   async getGroups() {
-    return await this.userService.getGroups();
+    return await this.groupService.getGroups();
   }
 
   @ApiBearerAuth()
@@ -58,6 +59,23 @@ export class GroupController {
   })
   @Post('/new')
   async createGroup(@Body() createGroupDto: CreateGroupDto) {
-    return await this.userService.createGroup(createGroupDto);
+    return await this.groupService.createGroup(createGroupDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update group' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return group',
+    type: GroupEntity,
+  })
+  @Patch('/:groupCodeName')
+  async updateGroup(
+    @Param('groupCodeName') groupCodeName: string,
+    @Body() updateGroupDto: UpdateGroupDto,
+  ) {
+    return await this.groupService.updateGroup(groupCodeName, updateGroupDto);
   }
 }
