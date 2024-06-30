@@ -71,10 +71,7 @@ export class GroupService implements OnModuleInit {
     try {
       const group = await this.groupModel.findOne({ groupCodeName });
       if (!group) {
-        return {
-          success: false,
-          message: 'Group not found',
-        };
+        throw new BadRequestException('Group not found');
       }
       await this.userModel
         .updateMany({ group: group._id }, { $unset: { group: 1 } })
@@ -82,13 +79,9 @@ export class GroupService implements OnModuleInit {
       await group.deleteOne();
       return {
         success: true,
-        message: 'Group deleted',
       };
     } catch (error) {
-      return {
-        success: false,
-        message: error.message,
-      };
+      throw new BadRequestException(error.message);
     }
   }
 

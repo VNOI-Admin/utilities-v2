@@ -87,7 +87,7 @@ export class GroupController {
   @ApiResponse({
     status: 200,
     description: 'Return status',
-    // type: GroupEntity,
+    schema: { properties: { success: { type: 'boolean' } } },
   })
   @Delete('/:groupCodeName')
   async deleteGroup(
