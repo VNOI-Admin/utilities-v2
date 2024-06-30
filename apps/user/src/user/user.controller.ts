@@ -33,7 +33,6 @@ import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
 import { MachineUsageEntity, UserEntity } from './entities/User.entity';
-import { StatusEntity } from './entities/Status.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')
@@ -123,7 +122,9 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'Return user',
-    type: StatusEntity,
+    schema: {
+      properties: { success: { type: 'boolean' } },
+    },
   })
   @Delete('/:username')
   async deleteUser(@Param('username') username: string, @Request() req: any) {
