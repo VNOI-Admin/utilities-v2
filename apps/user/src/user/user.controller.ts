@@ -4,6 +4,7 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Delete,
   Get,
   MaxFileSizeValidator,
   Param,
@@ -29,7 +30,7 @@ import { CreateUserDto } from './dtos/createUser.dto';
 import { GetUserDto } from './dtos/getUser.dto';
 import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
-import { UserEntity } from './entities/User.entity';
+import { MachineUsageEntity, UserEntity } from './entities/User.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')
@@ -78,7 +79,7 @@ export class UserController {
   })
   @Get('/:username')
   async getUser(@Param('username') username: string) {
-    return await this.userService.getUser(username);
+    return await this.userService.getUserByUsername(username);
   }
 
   @ApiBearerAuth()
@@ -110,6 +111,39 @@ export class UserController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     return await this.userService.updateUser(username, updateUserDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Delete user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return user',
+    schema: {
+      properties: { success: { type: 'boolean' } },
+    },
+  })
+  @Delete('/:username')
+  async deleteUser(@Param('username') username: string, @Request() req: any) {
+    return await this.userService.deleteUser(username);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.COACH, Role.ADMIN)
+  @ApiOperation({ summary: 'Get machine usage of user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return machine usage',
+    type: MachineUsageEntity,
+  })
+  @Get('/:username/machine')
+  async getMachineUsage(
+    @Param('username') username: string,
+    @Request() req: any,
+  ) {
+    return await this.userService.getMachineUsage(username);
   }
 
   @ApiOperation({
