@@ -24,7 +24,7 @@ import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import type { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from './entities/User.entity';
+import { MachineUsageEntity, UserEntity } from './entities/User.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -111,7 +111,7 @@ export class UserService implements OnModuleInit {
     return plainToInstance(UserEntity, users);
   }
 
-  async getUser(username: string): Promise<UserEntity> {
+  async getUserByUsername(username: string): Promise<UserEntity> {
     const user = await this.userModel.findOne({ username: username }).lean();
     if (!user) {
       throw new BadRequestException('User not found');
@@ -169,6 +169,29 @@ export class UserService implements OnModuleInit {
     user.username = updateUserDto.usernameNew || user.username;
     await user.save();
     return plainToInstance(UserEntity, user.toObject());
+  }
+
+  async deleteUser(username: string) {
+    try {
+      const user = await this.userModel.findOne({ username });
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+      await user.deleteOne();
+      return {
+        success: true,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async getMachineUsage(username: string): Promise<MachineUsageEntity> {
+    const user = await this.userModel.findOne({ username: username }).lean();
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    return plainToInstance(MachineUsageEntity, user.machineUsage);
   }
 
   async reportUsage(userId: string, usage: ReportUsageDto) {
