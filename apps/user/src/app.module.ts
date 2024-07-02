@@ -8,11 +8,13 @@ import { AppService } from './app.service';
 import { TaskModule } from './task/task.module';
 import { UserModule } from './user/user.module';
 import { VpnModule } from './vpn/vpn.module';
+import { GroupModule } from './group/group.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     UserModule,
+    GroupModule,
     DatabaseModule,
     VpnModule,
     TaskModule,

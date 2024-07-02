@@ -26,4 +26,9 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   role: Role;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  group: string;
 }

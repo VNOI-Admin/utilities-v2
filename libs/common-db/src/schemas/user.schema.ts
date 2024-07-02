@@ -1,11 +1,12 @@
-import { Role } from "@libs/common/decorators/role.decorator";
-import { generateKeyPair } from "@libs/utils/crypto/keygen";
-import type { ConfigService } from "@nestjs/config";
-import { Prop, raw, Schema, SchemaFactory } from "@nestjs/mongoose";
-import * as argon2 from "argon2";
-import * as ip from "ip";
-import type { Model } from "mongoose";
-import { type Document, SchemaTypes, Types } from "mongoose";
+import { Role } from '@libs/common/decorators/role.decorator';
+import { generateKeyPair } from '@libs/utils/crypto/keygen';
+import type { ConfigService } from '@nestjs/config';
+import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
+import * as argon2 from 'argon2';
+import * as ip from 'ip';
+import type { Model } from 'mongoose';
+import { type Document, SchemaTypes, Types } from 'mongoose';
+import { GroupDocument } from './group.schema';
 
 export type UserDocument = User & Document;
 
@@ -68,21 +69,21 @@ export class User {
   machineUsage: MachineUsage;
 
   // Belong to one group
-  @Prop({ type: SchemaTypes.ObjectId, ref: "Group" })
-  group: Types.ObjectId;
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'Group' })
+  group: GroupDocument;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
 export function buildUserSchema(configService: ConfigService) {
   const schema = UserSchema;
-  schema.pre("validate", async function (next) {
-    if (this.isModified("password")) {
+  schema.pre('validate', async function (next) {
+    if (this.isModified('password')) {
       this.password = await argon2.hash(this.password);
     }
 
     // Generate VPN IP address and key pair. Only generate for new users.
-    if ((this.isNew && !this.vpnIpAddress) || this.isModified("role")) {
+    if ((this.isNew && !this.vpnIpAddress) || this.isModified('role')) {
       const users = await this.model<Model<UserDocument>>(User.name)
         .find({ role: this.role })
         .exec();
@@ -91,16 +92,18 @@ export function buildUserSchema(configService: ConfigService) {
 
       switch (this.role) {
         case Role.CONTESTANT:
-          vpnBaseSubnet = ip.toLong(configService.get("WG_CONTESTANT_BASE_SUBNET"));
+          vpnBaseSubnet = ip.toLong(
+            configService.get('WG_CONTESTANT_BASE_SUBNET'),
+          );
           break;
         case Role.COACH:
-          vpnBaseSubnet = ip.toLong(configService.get("WG_COACH_BASE_SUBNET"));
+          vpnBaseSubnet = ip.toLong(configService.get('WG_COACH_BASE_SUBNET'));
           break;
         case Role.ADMIN:
-          vpnBaseSubnet = ip.toLong(configService.get("WG_ADMIN_BASE_SUBNET"));
+          vpnBaseSubnet = ip.toLong(configService.get('WG_ADMIN_BASE_SUBNET'));
           break;
         default:
-          throw new Error("Invalid role");
+          throw new Error('Invalid role');
       }
 
       const ipAddresses = users.map((user) => ip.toLong(user.vpnIpAddress));

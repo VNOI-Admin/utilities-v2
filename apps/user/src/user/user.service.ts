@@ -18,12 +18,10 @@ import { FormData } from 'formdata-node';
 import type { PipelineStage } from 'mongoose';
 import { Model } from 'mongoose';
 
-import type { CreateGroupDto } from './dtos/createGroup.dto';
 import type { CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import type { UpdateUserDto } from './dtos/updateUser.dto';
-import { GroupEntity } from './entities/Group.entity';
 import { MachineUsageEntity, UserEntity } from './entities/User.entity';
 
 @Injectable()
@@ -106,13 +104,29 @@ export class UserService implements OnModuleInit {
     const users = await this.userModel.aggregate([
       ...pipeline,
       { $sort: orderBy },
+      {
+        $lookup: {
+          from: 'groups',
+          localField: 'group',
+          foreignField: '_id',
+          as: 'group',
+        },
+      },
+      {
+        $set: {
+          group: { $first: '$group' },
+        },
+      },
     ]);
 
     return plainToInstance(UserEntity, users);
   }
 
   async getUserByUsername(username: string): Promise<UserEntity> {
-    const user = await this.userModel.findOne({ username: username }).lean();
+    const user = await this.userModel
+      .findOne({ username: username })
+      .populate('group')
+      .lean();
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -120,7 +134,10 @@ export class UserService implements OnModuleInit {
   }
 
   async getUserById(userId: string): Promise<UserEntity> {
-    const user = await this.userModel.findOne({ _id: userId }).lean();
+    const user = await this.userModel
+      .findOne({ _id: userId })
+      .populate('group')
+      .lean();
     if (!user) {
       throw new BadRequestException('User not found');
     }
@@ -137,38 +154,51 @@ export class UserService implements OnModuleInit {
     return user._id.toString();
   }
 
-  async getGroups(): Promise<GroupEntity[]> {
-    const groups = await this.groupModel.find().lean();
-    return plainToInstance(GroupEntity, groups);
-  }
-
-  async createGroup(createGroupDto: CreateGroupDto) {
-    const group = await this.groupModel.create({
-      groupCodeName: createGroupDto.groupCodeName,
-      groupFullName: createGroupDto.groupFullName,
-    });
-
-    await group.save();
-
-    if (!group) {
-      throw new BadRequestException('Unable to create group');
-    }
-
-    return plainToInstance(GroupEntity, group.toObject());
-  }
-
   async updateUser(username: string, updateUserDto: UpdateUserDto) {
     const user = await this.userModel.findOne({ username });
     if (!user) {
       throw new BadRequestException('User not found');
     }
-    // user.username = updateUserDto.username;
+
+    if ('group' in updateUserDto) {
+      // Find new group document
+      let newGroup = undefined;
+      if (updateUserDto.group !== '') {
+        newGroup = await this.groupModel.findOne({
+          groupCodeName: updateUserDto.group,
+        });
+        if (!newGroup) throw new BadRequestException('Group not found');
+      }
+
+      // Update if there's a change
+      if (newGroup?._id != user.group?._id) {
+        // Remove user from old group
+        if (user.group) {
+          const oldGroup = await this.groupModel.findOne({ _id: user.group });
+          if (oldGroup)
+            await oldGroup
+              .updateOne({
+                $pull: { members: user._id },
+              })
+              .exec();
+        }
+
+        // Add user to new group
+        if (newGroup)
+          await newGroup.updateOne({ $addToSet: { members: user._id } }).exec();
+        // Set user's new group
+        user.group = newGroup?._id;
+      }
+    }
+
     user.fullName = updateUserDto.fullName || user.fullName;
     user.password = updateUserDto.password || user.password;
     user.role = updateUserDto.role || user.role;
     user.username = updateUserDto.usernameNew || user.username;
+
     await user.save();
-    return plainToInstance(UserEntity, user.toObject());
+    const updatedUser = await user.populate('group');
+    return plainToInstance(UserEntity, updatedUser.toObject());
   }
 
   async deleteUser(username: string) {
