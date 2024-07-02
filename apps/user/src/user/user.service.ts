@@ -141,7 +141,7 @@ export class UserService implements OnModuleInit {
     return plainToInstance(GetUsersEntity, result);
   }
 
-  async getUser(username: string): Promise<UserEntity> {
+  async getUserByUsername(username: string): Promise<UserEntity> {
     const user = await this.userModel.findOne({ username: username }).lean();
     if (!user) {
       throw new BadRequestException('User not found');
@@ -199,6 +199,29 @@ export class UserService implements OnModuleInit {
     user.username = updateUserDto.usernameNew || user.username;
     await user.save();
     return plainToInstance(UserEntity, user.toObject());
+  }
+
+  async deleteUser(username: string) {
+    try {
+      const user = await this.userModel.findOne({ username });
+      if (!user) {
+        throw new BadRequestException('User not found');
+      }
+      await user.deleteOne();
+      return {
+        success: true,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async getMachineUsage(username: string): Promise<MachineUsageEntity> {
+    const user = await this.userModel.findOne({ username: username }).lean();
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+    return plainToInstance(MachineUsageEntity, user.machineUsage);
   }
 
   async reportUsage(userId: string, usage: ReportUsageDto) {
