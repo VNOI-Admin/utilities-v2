@@ -1,7 +1,7 @@
 import { Role } from '@libs/common/decorators/role.decorator';
 import { SortDto } from '@libs/common/dtos/sort.dto';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class GetUserDto extends SortDto {
   @ApiProperty({ required: false })
@@ -14,4 +14,14 @@ export class GetUserDto extends SortDto {
   @IsEnum(Role)
   @IsString()
   role?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  skip: number;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  limit: number;
 }

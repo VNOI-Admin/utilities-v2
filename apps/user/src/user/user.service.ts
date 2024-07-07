@@ -24,7 +24,7 @@ import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import type { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from './entities/User.entity';
+import { GetUsersEntity, UserEntity } from './entities/User.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -81,13 +81,13 @@ export class UserService implements OnModuleInit {
     }
   }
 
-  async getUsers(query: GetUserDto): Promise<UserEntity[]> {
+  async getUsers(query: GetUserDto): Promise<GetUsersEntity> {
     const q = query.q || '';
     const orderBy = query.orderBy || { username: 1 };
 
     console.log('Query', query);
 
-    const pipeline: PipelineStage[] = [
+    const pipeline: PipelineStage.FacetPipelineStage[] = [
       {
         $match: {
           $or: [
@@ -103,12 +103,31 @@ export class UserService implements OnModuleInit {
       pipeline.push({ $match: { role: query.role } });
     }
 
-    const users = await this.userModel.aggregate([
-      ...pipeline,
-      { $sort: orderBy },
-    ]);
+    const result = await this.userModel
+      .aggregate([
+        {
+          $facet: {
+            total: [
+              {
+                $count: 'total',
+              },
+            ],
+            results: [...pipeline, { $sort: orderBy }],
+          },
+        },
+        {
+          $addFields: {
+            total: {
+              $arrayElemAt: ['$total.total', 0],
+            },
+          },
+        },
+      ])
+      .then((results) => results[0]);
 
-    return plainToInstance(UserEntity, users);
+    console.dir(result);
+
+    return plainToInstance(GetUsersEntity, result);
   }
 
   async getUser(username: string): Promise<UserEntity> {

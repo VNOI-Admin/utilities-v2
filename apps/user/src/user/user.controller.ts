@@ -31,7 +31,7 @@ import { GetUserDto } from './dtos/getUser.dto';
 import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from './entities/User.entity';
+import { GetUsersEntity, UserEntity } from './entities/User.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')
@@ -48,7 +48,7 @@ export class UserController {
   @ApiResponse({
     status: 200,
     description: 'Return all users',
-    type: [UserEntity],
+    type: [GetUsersEntity],
   })
   @Get('/')
   async getUsers(@Query() query: GetUserDto) {

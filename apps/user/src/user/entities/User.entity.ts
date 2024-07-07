@@ -53,3 +53,14 @@ export class UserEntity {
   @ApiProperty({ type: MachineUsageEntity })
   machineUsage: MachineUsageEntity;
 }
+
+export class GetUsersEntity {
+  @Expose()
+  @ApiProperty()
+  total: number;
+
+  @Expose()
+  @Type(() => UserEntity)
+  @ApiProperty()
+  results: UserEntity[];
+}
