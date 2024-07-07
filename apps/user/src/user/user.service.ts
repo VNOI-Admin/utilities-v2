@@ -103,6 +103,14 @@ export class UserService implements OnModuleInit {
       pipeline.push({ $match: { role: query.role } });
     }
 
+    if (query.skip) {
+      pipeline.push({ $skip: query.skip });
+    }
+
+    if (query.limit) {
+      pipeline.push({ $limit: query.limit });
+    }
+
     const result = await this.userModel
       .aggregate([
         {
@@ -124,8 +132,6 @@ export class UserService implements OnModuleInit {
         },
       ])
       .then((results) => results[0]);
-
-    console.dir(result);
 
     return plainToInstance(GetUsersEntity, result);
   }
