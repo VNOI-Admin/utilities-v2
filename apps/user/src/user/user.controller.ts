@@ -125,7 +125,7 @@ export class UserController {
     },
   })
   @Delete('/:username')
-  async deleteUser(@Param('username') username: string, @Request() req: any) {
+  async deleteUser(@Param('username') username: string) {
     return await this.userService.deleteUser(username);
   }
 
@@ -139,10 +139,7 @@ export class UserController {
     type: MachineUsageEntity,
   })
   @Get('/:username/machine')
-  async getMachineUsage(
-    @Param('username') username: string,
-    @Request() req: any,
-  ) {
+  async getMachineUsage(@Param('username') username: string) {
     return await this.userService.getMachineUsage(username);
   }
 

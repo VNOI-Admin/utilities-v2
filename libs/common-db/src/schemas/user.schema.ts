@@ -5,7 +5,7 @@ import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
 import type { Model } from 'mongoose';
-import { type Document, SchemaTypes, Types } from 'mongoose';
+import { type Document, SchemaTypes } from 'mongoose';
 import { GroupDocument } from './group.schema';
 
 export type UserDocument = User & Document;

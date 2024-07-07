@@ -9,8 +9,6 @@ import {
   Param,
   Patch,
   Post,
-  Query,
-  Request,
   SerializeOptions,
   UseGuards,
   UseInterceptors,
@@ -90,10 +88,7 @@ export class GroupController {
     schema: { properties: { success: { type: 'boolean' } } },
   })
   @Delete('/:groupCodeName')
-  async deleteGroup(
-    @Param('groupCodeName') groupCodeName: string,
-    @Request() req: any,
-  ) {
+  async deleteGroup(@Param('groupCodeName') groupCodeName: string) {
     return await this.groupService.deleteGroup(groupCodeName);
   }
 
