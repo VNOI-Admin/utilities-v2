@@ -15,7 +15,7 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: [".eslintrc.js"],
+  ignorePatterns: [".eslintrc.js", "dist/"],
   rules: {
     'prettier/prettier': 'warn',
     '@typescript-eslint/ban-ts-comment': 'off',
