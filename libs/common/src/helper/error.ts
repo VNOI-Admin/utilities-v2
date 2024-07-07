@@ -1,4 +1,4 @@
-import { isAxiosError } from "axios";
+import { isAxiosError } from 'axios';
 
 /**
  * This function is used to get the error message from the error object

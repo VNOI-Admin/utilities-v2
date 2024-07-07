@@ -26,7 +26,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { CreateGroupDto } from './dtos/createGroup.dto';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { GetUserDto } from './dtos/getUser.dto';
 import { ReportUsageDto } from './dtos/reportUsage.dto';
@@ -127,7 +126,7 @@ export class UserController {
     },
   })
   @Delete('/:username')
-  async deleteUser(@Param('username') username: string, @Request() req: any) {
+  async deleteUser(@Param('username') username: string) {
     return await this.userService.deleteUser(username);
   }
 
@@ -141,39 +140,8 @@ export class UserController {
     type: MachineUsageEntity,
   })
   @Get('/:username/machine')
-  async getMachineUsage(
-    @Param('username') username: string,
-    @Request() req: any,
-  ) {
+  async getMachineUsage(@Param('username') username: string) {
     return await this.userService.getMachineUsage(username);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get all groups' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return all groups',
-    type: [GroupEntity],
-  })
-  @Get('/group')
-  async getGroups() {
-    return await this.userService.getGroups();
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create new group' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return group',
-    type: GroupEntity,
-  })
-  @Post('/group/new')
-  async createGroup(@Body() createGroupDto: CreateGroupDto) {
-    return await this.userService.createGroup(createGroupDto);
   }
 
   @ApiOperation({
