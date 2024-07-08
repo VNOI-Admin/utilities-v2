@@ -5,11 +5,15 @@
   "author": "hung3a8",
   "private": true,
   "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "cross-env FORCE_COLOR=1 turbo run build",
-    "dev": "cross-env FORCE_COLOR=1 turbo run dev --parallel",
-    "dev:main": "pnpm dev --filter user --filter auth --filter admin-panel",
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "dev:main": "yarn dev --filter user --filter auth --filter admin-panel",
     "format": "prettier --write .",
     "lint": "turbo run lint",
     "start": "nest start",
@@ -20,7 +24,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/core/test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/core/test/jest-e2e.json",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -33,30 +38,27 @@
     "@nestjs/platform-express": "^10.3.0",
     "@nestjs/schedule": "^4.0.0",
     "@nestjs/swagger": "^7.2.0",
-    "argon2": "^0.31.2",
+    "argon2": "^0.40.1",
     "axios": "^1.6.8",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cron": "^3.1.3",
-    "eslint-plugin-prettier": "^5.1.3",
-    "eslint-plugin-unused-imports": "^3.2.0",
     "formdata-node": "^6.0.3",
     "ip": "^1.1.8",
     "lodash": "^4.17.21",
     "mongoose": "^8.0.4",
-    "mysql2": "^3.7.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "ping": "^0.4.4",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.19",
     "video.js": "^8.10.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
+    "@types/eslint": "^8",
     "@types/express": "^4.17.21",
     "@types/ip": "^1.1.3",
     "@types/jest": "^29.5.2",
@@ -67,16 +69,24 @@
     "@types/ping": "^0.4.4",
     "@types/supertest": "^6.0.0",
     "@types/video.js": "^7.3.56",
-    "@typescript-eslint/eslint-plugin": "6.18.1",
-    "@typescript-eslint/parser": "6.18.1",
+    "@typescript-eslint/eslint-plugin": "^7.10.0",
+    "@typescript-eslint/parser": "^7.10.0",
+    "@vue/eslint-config-typescript": "^13.0.0",
     "cross-env": "7.0.3",
-    "eslint-config-prettier": "9.1.0",
-    "eslint-plugin-simple-import-sort": "10.0.0",
-    "eslint-plugin-svelte": "2.36.0-next.4",
-    "eslint-plugin-tailwindcss": "3.14.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^8.10.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-simple-import-sort": "12.1.0",
+    "eslint-plugin-unused-imports": "^3.0.0",
+    "eslint-plugin-vue": "^9.22.0",
+    "husky": "^8",
     "jest": "^29.5.0",
+    "lint-staged": "^15.2.5",
     "prettier": "^3.0.0",
-    "prettier-plugin-svelte": "3.1.2",
     "prettier-plugin-tailwindcss": "0.5.11",
     "source-map-support": "^0.5.21",
     "supertest": "^6.3.3",
@@ -85,7 +95,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "turbo": "^1.13.3",
-    "typescript": "^5.1.3"
+    "typescript": "^5.4.0"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -107,5 +117,11 @@
       "<rootDir>/apps/"
     ]
   },
-  "packageManager": "pnpm@9.1.1"
+  "lint-staged": {
+    "{apps,libs,scripts}/**/*.ts": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  },
+  "packageManager": "yarn@4.1.1"
 }
