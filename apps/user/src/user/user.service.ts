@@ -103,16 +103,21 @@ export class UserService implements OnModuleInit {
       pipeline.push({ $match: { role: query.role } });
     }
 
+    pipeline.push({ $sort: orderBy });
+
+    const paginationPipeline: PipelineStage.FacetPipelineStage[] = [];
+
     if (query.skip) {
-      pipeline.push({ $skip: query.skip });
+      paginationPipeline.push({ $skip: query.skip });
     }
 
     if (query.limit) {
-      pipeline.push({ $limit: query.limit });
+      paginationPipeline.push({ $limit: query.limit });
     }
 
     const result = await this.userModel
       .aggregate([
+        ...pipeline,
         {
           $facet: {
             total: [
@@ -120,7 +125,7 @@ export class UserService implements OnModuleInit {
                 $count: 'total',
               },
             ],
-            results: [...pipeline, { $sort: orderBy }],
+            results: [...paginationPipeline],
           },
         },
         {
