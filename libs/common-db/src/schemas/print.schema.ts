@@ -1,18 +1,18 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import type { Types } from "mongoose";
-import { type Document, SchemaTypes } from "mongoose";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import type { Types } from 'mongoose';
+import { type Document, SchemaTypes } from 'mongoose';
 
 export enum PrintStatus {
-  QUEUED = "queued",
-  PRINTING = "printing",
-  DONE = "done",
+  QUEUED = 'queued',
+  PRINTING = 'printing',
+  DONE = 'done',
 }
 
 export type PrintDocument = Print & Document;
 
 @Schema()
 export class Print {
-  @Prop({ type: SchemaTypes.ObjectId, ref: "User" })
+  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   user: Types.ObjectId;
 
   @Prop({ required: true })

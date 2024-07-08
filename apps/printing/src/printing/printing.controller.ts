@@ -1,4 +1,4 @@
-import { IPAddressGuard } from "@libs/common/guards/IPAddress.guard";
+import { IPAddressGuard } from '@libs/common/guards/IPAddress.guard';
 import {
   Controller,
   Get,
@@ -9,11 +9,11 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-} from "@nestjs/common";
-import { FileInterceptor } from "@nestjs/platform-express";
-import { ApiOperation, ApiResponse } from "@nestjs/swagger";
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-import { PrintingService } from "./printing.service";
+import { PrintingService } from './printing.service';
 
 @Controller()
 export class PrintingController {
@@ -25,20 +25,23 @@ export class PrintingController {
   }
 
   @UseGuards(IPAddressGuard)
-  @ApiOperation({ summary: "Send print job" })
+  @ApiOperation({ summary: 'Send print job' })
   @ApiResponse({
     status: 200,
-    description: "Receive print job",
+    description: 'Receive print job',
   })
-  @UseInterceptors(FileInterceptor("file"))
-  @Post("/print")
+  @UseInterceptors(FileInterceptor('file'))
+  @Post('/print')
   async print(
     @Request() req: any,
     @UploadedFile(
-      new ParseFilePipe({ validators: [new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 })] }),
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 })],
+      }),
     )
     file: Express.Multer.File,
   ) {
-    console.log(req.userId);
+    // TODO: Implement printing logic
+    console.log(req.userId, file);
   }
 }
