@@ -22,8 +22,11 @@ import type { CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import type { UpdateUserDto } from './dtos/updateUser.dto';
-import { GroupEntity } from './entities/Group.entity';
-import { GetUsersEntity, UserEntity } from './entities/User.entity';
+import {
+  GetUsersEntity,
+  MachineUsageEntity,
+  UserEntity,
+} from './entities/User.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {
