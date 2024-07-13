@@ -15,6 +15,7 @@ const props = defineProps<{
 }>();
 
 const search = ref('');
+
 </script>
 
 <template>
@@ -46,7 +47,7 @@ const search = ref('');
       <template v-slot:[`item.image`]="{ item }">
         <v-card class="my-2" elevation="2" rounded>
           <v-img
-            :src="`https://cdn.vuetifyjs.com/docs/images/graphics/gpus/${item.image}`"
+            :src="`${item.image}`"
             height="64"
             cover
           ></v-img>

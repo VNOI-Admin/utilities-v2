@@ -1,15 +1,9 @@
 <script setup lang="ts">
-import { Component } from "vue";
 
 const listBars = ref([
   {
-    title: 'My Files',
-    value: 'my-files',
-    icon: 'mdi-folder',
-  },
-  {
-    title: 'Shared with me',
-    value: 'shared',
+    title: 'Users',
+    value: 'users',
     icon: 'mdi-account-multiple',
   },
   {
@@ -19,10 +13,7 @@ const listBars = ref([
   },
 ]);
 const props = defineProps<{
-  adminInfo: { avatar: string; gmail: number; name: string };
-}>();
-const contentProps = defineProps<{
-  content: Component;
+  adminInfo: { avatar: string; gmail: string; name: string };
 }>();
 </script>
 
@@ -33,9 +24,9 @@ const contentProps = defineProps<{
       <v-navigation-drawer expand-on-hover rail>
         <v-list>
           <v-list-item
-            :prepend-avatar="adminInfo.avatar"
-            :subtitle="adminInfo.gmail"
-            :title="adminInfo.name"
+            :prepend-avatar="props.adminInfo.avatar"
+            :subtitle="props.adminInfo.gmail"
+            :title="props.adminInfo.name"
           ></v-list-item>
         </v-list>
 
@@ -53,7 +44,7 @@ const contentProps = defineProps<{
         </v-list>
       </v-navigation-drawer>
 
-      <v-main style=""><content /></v-main>
+      <v-main style=""><slot name="tableContent"></slot></v-main>
     </v-card>
   </v-container>
 </template>
