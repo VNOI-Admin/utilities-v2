@@ -60,6 +60,13 @@ const headers: HeaderProps[] = [
     title: 'Online',
     type: 'badge',
   },
+  {
+    align: 'start',
+    key: 'action',
+    sortable: false,
+    title: 'Action',
+    type: 'action',
+  },
 ];
 
 const title = 'User Table';
@@ -68,7 +75,7 @@ const pagination = true;
 let users = ref([]);
 
 onMounted(async () => {
-  const url = `http://localhost:8001/user`;
+  const url = `${import.meta.env.VITE_USER_SERVICE_URI}/user`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Response status: ${response.status}`);
@@ -77,13 +84,32 @@ onMounted(async () => {
   const json = await response.json();
   users.value = await json.map((item: any) => {
     const itemFlat = flat(item, {});
-    itemFlat.cpu = itemFlat.cpu + '%';
-    itemFlat.memory = itemFlat.memory + '%';
-    itemFlat.disk = itemFlat.disk + '%';
+    itemFlat.action = [
+      {
+        actionName: 'edit',
+        onClick: (itemFlat: any) => {
+          console.log("id edit", itemFlat)
+        },
+      },
+      {
+        actionName: 'delete',
+        onClick: async (itemFlat: any) => {
+          const url = `${import.meta.env.VITE_USER_SERVICE_URI}/${itemFlat.username}`;
+          const response = await fetch(url, {
+            method: "DELETE",
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Response status: ${response.status}`);
+          }
 
+        },
+      }
+    ]
     return itemFlat;
   });
 });
+
 
 const flat = (obj: { [x: string]: any }, out: { [x: string]: any }) => {
   Object.keys(obj).forEach((key) => {
@@ -102,11 +128,6 @@ const flat = (obj: { [x: string]: any }, out: { [x: string]: any }) => {
 
 <template>
   <div>
-    <Table
-      :headers="headers"
-      :items="users"
-      :title="title"
-      :pagination="pagination"
-    />
+    <Table :headers="headers" :items="users" :title="title" :pagination="pagination" :itemsPerPage="10" />
   </div>
 </template>

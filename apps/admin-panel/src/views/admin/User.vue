@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import TableUsers from './component/TableUsers.vue';
+import TableUsers from './component/User/UsersTable.vue';
+import CreateUser from './component/User/UserCreate.vue';
 //
 const adminInfo = {
   avatar: 'https://randomuser.me/api/portraits/women/85.jpg',
@@ -13,9 +14,7 @@ const adminInfo = {
     <SideBar :adminInfo="adminInfo">
       <template v-slot:tableContent>
         <div class="mx-auto py-3 flex justify-end">
-            <v-btn class="text-none text-subtitle-1" color="#5865f2" size="small" variant="flat">
-              Create User
-            </v-btn>
+            <CreateUser />
         </div>
         <TableUsers />
       </template>
