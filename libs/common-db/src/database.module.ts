@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { MongooseModule } from '@nestjs/mongoose';
+import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
+import { MongooseModule } from "@nestjs/mongoose";
 
-import { DatabaseService } from './database.service';
+import { DatabaseService } from "./database.service";
 
 @Module({
   imports: [
@@ -10,7 +10,7 @@ import { DatabaseService } from './database.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get('COMMON_DB_URI'),
+        uri: configService.get("USER_DB_URI"),
       }),
     }),
   ],

@@ -1,5 +1,5 @@
-import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
-import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { RequiredRoles, Role } from "@libs/common/decorators/role.decorator";
+import { AccessTokenGuard } from "@libs/common/guards/accessToken.guard";
 import {
   Body,
   ClassSerializerInterceptor,
@@ -12,22 +12,22 @@ import {
   SerializeOptions,
   UseGuards,
   UseInterceptors,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiResponse,
   ApiTags,
-} from '@nestjs/swagger';
+} from "@nestjs/swagger";
 
-import { CreateGroupDto } from './dtos/createGroup.dto';
-import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from '../user/entities/User.entity';
-import { GroupService } from './group.service';
-import { UpdateGroupDto } from './dtos/updateGroup.dto';
+import { CreateGroupDto } from "./dtos/createGroup.dto";
+import { GroupEntity } from "./entities/Group.entity";
+import { UserEntity } from "../user/entities/User.entity";
+import { GroupService } from "./group.service";
+import { UpdateGroupDto } from "./dtos/updateGroup.dto";
 
-@ApiTags('Group')
-@Controller('group')
+@ApiTags("Group")
+@Controller("group")
 @UseInterceptors(ClassSerializerInterceptor)
 @SerializeOptions({ excludeExtraneousValues: true })
 export class GroupController {
@@ -36,13 +36,13 @@ export class GroupController {
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get all groups' })
+  @ApiOperation({ summary: "Get all groups" })
   @ApiResponse({
     status: 200,
-    description: 'Return all groups',
+    description: "Return all groups",
     type: [GroupEntity],
   })
-  @Get('/')
+  @Get("/")
   async getGroups() {
     return await this.groupService.getGroups();
   }
@@ -50,13 +50,13 @@ export class GroupController {
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create new group' })
+  @ApiOperation({ summary: "Create new group" })
   @ApiResponse({
     status: 200,
-    description: 'Return group',
+    description: "Return group",
     type: GroupEntity,
   })
-  @Post('/new')
+  @Post("/new")
   async createGroup(@Body() createGroupDto: CreateGroupDto) {
     return await this.groupService.createGroup(createGroupDto);
   }
@@ -64,15 +64,15 @@ export class GroupController {
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Update group' })
+  @ApiOperation({ summary: "Update group" })
   @ApiResponse({
     status: 200,
-    description: 'Return group',
+    description: "Return group",
     type: GroupEntity,
   })
-  @Patch('/:groupCodeName')
+  @Patch("/:groupCodeName")
   async updateGroup(
-    @Param('groupCodeName') groupCodeName: string,
+    @Param("groupCodeName") groupCodeName: string,
     @Body() updateGroupDto: UpdateGroupDto,
   ) {
     return await this.groupService.updateGroup(groupCodeName, updateGroupDto);
@@ -81,28 +81,28 @@ export class GroupController {
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Delete group' })
+  @ApiOperation({ summary: "Delete group" })
   @ApiResponse({
     status: 200,
-    description: 'Return status',
-    schema: { properties: { success: { type: 'boolean' } } },
+    description: "Return status",
+    schema: { properties: { success: { type: "boolean" } } },
   })
-  @Delete('/:groupCodeName')
-  async deleteGroup(@Param('groupCodeName') groupCodeName: string) {
+  @Delete("/:groupCodeName")
+  async deleteGroup(@Param("groupCodeName") groupCodeName: string) {
     return await this.groupService.deleteGroup(groupCodeName);
   }
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Get users in group' })
+  @ApiOperation({ summary: "Get users in group" })
   @ApiResponse({
     status: 200,
-    description: 'Return users',
+    description: "Return users",
     type: [UserEntity],
   })
-  @Get('/:groupCodeName/users')
-  async getUsers(@Param('groupCodeName') groupCodeName: string) {
+  @Get("/:groupCodeName/users")
+  async getUsers(@Param("groupCodeName") groupCodeName: string) {
     return await this.groupService.getUsersInGroup(groupCodeName);
   }
 }

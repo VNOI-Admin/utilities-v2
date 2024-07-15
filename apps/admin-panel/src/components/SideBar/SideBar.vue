@@ -1,22 +1,20 @@
 <script setup lang="ts">
-
 const listBars = ref([
   {
-    title: 'Users',
-    value: 'users',
-    icon: 'mdi-account-multiple',
+    title: "Users",
+    value: "users",
+    icon: "mdi-account-multiple",
   },
   {
-    title: 'Starred',
-    value: 'starred',
-    icon: 'mdi-star',
+    title: "Starred",
+    value: "starred",
+    icon: "mdi-star",
   },
 ]);
 const props = defineProps<{
   adminInfo: { avatar: string; gmail: string; name: string };
 }>();
 </script>
-
 
 <template>
   <v-container fluid style="height: 100vh">
@@ -48,4 +46,3 @@ const props = defineProps<{
     </v-card>
   </v-container>
 </template>
-

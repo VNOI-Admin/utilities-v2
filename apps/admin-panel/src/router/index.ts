@@ -5,18 +5,18 @@
  */
 
 // Composables
-import { RouteRecordRaw, createRouter, createWebHistory } from 'vue-router';
+import { RouteRecordRaw, createRouter, createWebHistory } from "vue-router";
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/',
-    name: 'Home',
-    component: () => import('../views/Index.vue'),
+    path: "/",
+    name: "Home",
+    component: () => import("../views/Index.vue"),
   },
   {
-    path: '/admin/users',
-    name: 'Users Page',
-    component: () => import('../views/admin/User.vue'),
+    path: "/admin/users",
+    name: "Users Page",
+    component: () => import("../views/admin/User.vue"),
   },
 ];
 

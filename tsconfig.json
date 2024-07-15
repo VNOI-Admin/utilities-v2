@@ -45,6 +45,7 @@
   },
   "include": [
     "./apps",
-    "./libs"
+    "./libs",
+    "./scripts",
   ]
 }

@@ -1,9 +1,8 @@
 <script lang="ts">
-
 export enum Role {
-  CONTESTANT = 'contestant',
-  COACH = 'coach',
-  ADMIN = 'admin',
+  CONTESTANT = "contestant",
+  COACH = "coach",
+  ADMIN = "admin",
 }
 
 export type CreateUserPayload = {
@@ -34,6 +33,5 @@ export interface UserResponse {
     isOnline: boolean;
     lastReportedAt: Date | null;
   };
-};
-
+}
 </script>
