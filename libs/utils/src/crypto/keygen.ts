@@ -2,7 +2,7 @@
  * https://git.zx2c4.com/wireguard-tools/tree/contrib/keygen-html/wireguard.js
  */
 
-import { getRandomValues } from "crypto";
+import { getRandomValues } from 'crypto';
 
 function gf(init?) {
   const r = new Float64Array(16);

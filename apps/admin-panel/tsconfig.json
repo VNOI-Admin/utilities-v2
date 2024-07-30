@@ -10,7 +10,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "types": [
-      "node",
+      "node"
       // "vite/client",
       // "vite-plugin-vue-layouts/client",
     ],
@@ -22,7 +22,7 @@
     "strictNullChecks": true,
     "noUnusedLocals": true,
     "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
+    "isolatedModules": true
   },
   "include": ["./src/typed-router.d.ts"],
   "exclude": ["dist", "node_modules", "cypress"],

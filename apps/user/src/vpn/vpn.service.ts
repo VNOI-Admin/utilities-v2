@@ -1,16 +1,16 @@
-import { User, type UserDocument } from "@libs/common-db/schemas/user.schema";
-import type { OnModuleInit } from "@nestjs/common";
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import type { OnModuleInit } from '@nestjs/common';
 import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-} from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { InjectModel } from "@nestjs/mongoose";
-import { plainToInstance } from "class-transformer";
-import { Model } from "mongoose";
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectModel } from '@nestjs/mongoose';
+import { plainToInstance } from 'class-transformer';
+import { Model } from 'mongoose';
 
-import { VpnConfig } from "./entities/vpnConfig.entity";
+import { VpnConfig } from './entities/vpnConfig.entity';
 
 @Injectable()
 export class VpnService implements OnModuleInit {
@@ -36,10 +36,10 @@ export class VpnService implements OnModuleInit {
     }
 
     if (!reqCaller || !user) {
-      throw new BadRequestException("User not found");
+      throw new BadRequestException('User not found');
     }
 
-    if (reqCaller.role !== "admin" && reqCaller._id !== user._id) {
+    if (reqCaller.role !== 'admin' && reqCaller._id !== user._id) {
       throw new ForbiddenException(
         "You are not authorized to generate this user's WireGuard configuration",
       );
@@ -60,17 +60,17 @@ export class VpnService implements OnModuleInit {
   }
 
   async generateWireGuardUserConfig(user: UserDocument): Promise<string> {
-    const coreEndpoint = `${this.configService.get("WG_CORE_PUBLIC_IP")}:${this.configService.get("WG_LISTEN_PORT")}`;
+    const coreEndpoint = `${this.configService.get('WG_CORE_PUBLIC_IP')}:${this.configService.get('WG_LISTEN_PORT')}`;
 
     const wireGuardConfig = `[Interface]
 PrivateKey = ${user.keyPair.privateKey}
 Address = ${user.vpnIpAddress}/32
-ListenPort = ${this.configService.get("WG_LISTEN_PORT")}
+ListenPort = ${this.configService.get('WG_LISTEN_PORT')}
 
 # Core
 [Peer]
-PublicKey = ${this.configService.get("WG_CORE_PUBLIC_KEY")}
-AllowedIPs = ${this.configService.get("WG_CORE_ALLOWED_IPS")}
+PublicKey = ${this.configService.get('WG_CORE_PUBLIC_KEY')}
+AllowedIPs = ${this.configService.get('WG_CORE_ALLOWED_IPS')}
 Endpoint = ${coreEndpoint}
 PersistentKeepalive = 25
 `;

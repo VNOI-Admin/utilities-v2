@@ -1,3 +1,3 @@
-import { generateKeyPair } from "@libs/utils/crypto/keygen";
+import { generateKeyPair } from '@libs/utils/crypto/keygen';
 
 console.log(generateKeyPair());

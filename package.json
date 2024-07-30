@@ -57,6 +57,7 @@
     "video.js": "^8.10.0"
   },
   "devDependencies": {
+    "@darraghor/eslint-plugin-nestjs-typed": "^5.0.16",
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
@@ -92,6 +93,7 @@
     "prettier-plugin-tailwindcss": "0.5.11",
     "source-map-support": "^0.5.21",
     "supertest": "^6.3.3",
+    "swagger-typescript-api": "^13.0.14",
     "ts-jest": "^29.1.0",
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.2",
@@ -117,8 +119,12 @@
     "coverageDirectory": "./coverage",
     "testEnvironment": "node",
     "roots": [
-      "<rootDir>/apps/"
-    ]
+      "<rootDir>/apps/",
+      "<rootDir>/libs/"
+    ],
+    "moduleNameMapper": {
+      "^@app/api(|/.*)$": "<rootDir>/libs/api/src/$1"
+    }
   },
   "lint-staged": {
     "{apps,libs,scripts}/**/*.ts": [

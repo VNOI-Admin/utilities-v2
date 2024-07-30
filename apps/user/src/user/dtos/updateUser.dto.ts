@@ -1,6 +1,6 @@
-import { Role } from "@libs/common/decorators/role.decorator";
-import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString } from "class-validator";
+import { Role } from '@libs/common/decorators/role.decorator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserDto {
   @ApiProperty({ required: false })

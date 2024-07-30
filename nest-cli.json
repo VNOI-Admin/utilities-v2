@@ -27,6 +27,24 @@
       "compilerOptions": {
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
+    },
+    "internal": {
+      "type": "application",
+      "root": "apps/internal",
+      "entryFile": "main",
+      "sourceRoot": "apps/internal/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/internal/tsconfig.app.json"
+      }
+    },
+    "api": {
+      "type": "library",
+      "root": "libs/api",
+      "entryFile": "index",
+      "sourceRoot": "libs/api/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/api/tsconfig.lib.json"
+      }
     }
   }
 }
