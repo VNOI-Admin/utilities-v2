@@ -1,5 +1,5 @@
-import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { RefreshTokenGuard } from '@libs/common/guards/refreshToken.guard';
+import { AccessTokenGuard } from "@libs/common/guards/accessToken.guard";
+import { RefreshTokenGuard } from "@libs/common/guards/refreshToken.guard";
 import {
   Body,
   ClassSerializerInterceptor,
@@ -9,43 +9,43 @@ import {
   SerializeOptions,
   UseGuards,
   UseInterceptors,
-} from '@nestjs/common';
+} from "@nestjs/common";
 import {
   ApiBearerAuth,
   ApiExcludeEndpoint,
   ApiOperation,
   ApiResponse,
   ApiTags,
-} from '@nestjs/swagger';
+} from "@nestjs/swagger";
 
-import { AuthService } from './auth.service';
-import { AuthDto } from './dtos/auth.dto';
-import { TokensEntity } from './entities/tokens.entity';
+import { AuthService } from "./auth.service";
+import { AuthDto } from "./dtos/auth.dto";
+import { TokensEntity } from "./entities/tokens.entity";
 
-@ApiTags('Auth')
-@Controller('auth')
+@ApiTags("Auth")
+@Controller("auth")
 @UseInterceptors(ClassSerializerInterceptor)
 @SerializeOptions({ excludeExtraneousValues: true })
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @ApiOperation({ summary: 'Login using credentials' })
+  @ApiOperation({ summary: "Login using credentials" })
   @ApiResponse({
     status: 200,
-    description: 'Login successful',
+    description: "Login successful",
     type: TokensEntity,
   })
-  @Post('login')
+  @Post("login")
   async login(@Body() data: AuthDto): Promise<TokensEntity> {
     return this.authService.login(data);
   }
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @ApiOperation({ summary: 'Logout' })
-  @Post('logout')
+  @ApiOperation({ summary: "Logout" })
+  @Post("logout")
   async logout(@Request() req: any) {
-    const userId = req.user['sub'];
+    const userId = req.user["sub"];
     return this.authService.logout(userId);
   }
 
@@ -54,26 +54,26 @@ export class AuthController {
   @ApiOperation({ summary: "Refresh user's access token" })
   @ApiResponse({
     status: 200,
-    description: 'Refresh successful',
+    description: "Refresh successful",
     type: TokensEntity,
   })
-  @Post('refresh')
+  @Post("refresh")
   async refresh(@Request() req: any): Promise<TokensEntity> {
-    const userId = req.user['sub'];
-    const refreshToken = req.user['refreshToken'];
+    const userId = req.user["sub"];
+    const refreshToken = req.user["refreshToken"];
     return this.authService.refreshTokens(userId, refreshToken);
   }
 
   @ApiBearerAuth()
   @ApiExcludeEndpoint()
   @UseGuards(AccessTokenGuard)
-  @ApiOperation({ summary: 'Test protected endpoint' })
+  @ApiOperation({ summary: "Test protected endpoint" })
   @ApiResponse({
     status: 200,
-    description: 'Test successful',
+    description: "Test successful",
   })
-  @Post('protected')
+  @Post("protected")
   async protected(@Request() req: any): Promise<any> {
-    return { message: 'This is a protected endpoint', ...req.user };
+    return { message: "This is a protected endpoint", ...req.user };
   }
 }

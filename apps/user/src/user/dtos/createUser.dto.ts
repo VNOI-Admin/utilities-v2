@@ -1,6 +1,6 @@
-import { Role } from '@libs/common/decorators/role.decorator';
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { Role } from "@libs/common/decorators/role.decorator";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsEnum, IsString } from "class-validator";
 
 export class CreateUserDto {
   @ApiProperty({ required: true })
