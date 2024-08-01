@@ -28,7 +28,7 @@ export class OverlayService {
       throw new Error('User not found');
     }
 
-    const livestreamProxy = this.configService.get('LIVESTREAM_PROXY');
+    const livestreamProxy = this.configService.get('LIVESTREAM_PROXY_URL');
     const streamUrl = `${livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
     const webcamUrl = `${livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
 

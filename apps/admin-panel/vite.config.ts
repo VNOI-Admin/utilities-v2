@@ -23,7 +23,12 @@ export default defineConfig({
     Layouts(),
     tsConfigPaths(),
     AutoImport({
-      imports: ['vue', 'vue-router', '@vueuse/core'],
+      imports: [
+        'vue',
+        'vue-router',
+        '@vueuse/core',
+        { 'vue-toastification': ['useToast'] },
+      ],
       dts: 'src/auto-imports.d.ts',
       eslintrc: {
         enabled: true,

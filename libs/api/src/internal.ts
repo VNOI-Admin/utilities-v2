@@ -19,6 +19,10 @@ export interface MultiUserStreamDto {
   usernames: string[];
 }
 
+export interface SingleUserStreamDto {
+  username: string;
+}
+
 import type {
   AxiosInstance,
   AxiosRequestConfig,
@@ -212,11 +216,11 @@ export class InternalApi<
      * @tags Overlay
      * @name GetMultiUserStream
      * @summary Get multiple users to user stream display
-     * @request GET:/overlay/user-stream
+     * @request GET:/overlay/user-stream/multi
      */
     getMultiUserStream: (params: RequestParams = {}) =>
       this.request<UserStream[], any>({
-        path: `/overlay/user-stream`,
+        path: `/overlay/user-stream/multi`,
         method: 'GET',
         format: 'json',
         ...params,
@@ -228,14 +232,14 @@ export class InternalApi<
      * @tags Overlay
      * @name SetMultiUserStream
      * @summary Set multiple users to user stream display
-     * @request POST:/overlay/user-stream
+     * @request POST:/overlay/user-stream/multi
      */
     setMultiUserStream: (
       data: MultiUserStreamDto,
       params: RequestParams = {},
     ) =>
       this.request<UserStream[], any>({
-        path: `/overlay/user-stream`,
+        path: `/overlay/user-stream/multi`,
         method: 'POST',
         body: data,
         type: ContentType.Json,
@@ -249,11 +253,11 @@ export class InternalApi<
      * @tags Overlay
      * @name GetUserStream
      * @summary Get current user stream display
-     * @request GET:/overlay/user-stream/{username}
+     * @request GET:/overlay/user-stream/single
      */
-    getUserStream: (username: string, params: RequestParams = {}) =>
+    getUserStream: (params: RequestParams = {}) =>
       this.request<UserStream, any>({
-        path: `/overlay/user-stream/${username}`,
+        path: `/overlay/user-stream/single`,
         method: 'GET',
         format: 'json',
         ...params,
@@ -265,12 +269,14 @@ export class InternalApi<
      * @tags Overlay
      * @name SetUserStream
      * @summary Set current user to user stream display
-     * @request POST:/overlay/user-stream/{username}
+     * @request POST:/overlay/user-stream/single
      */
-    setUserStream: (username: string, params: RequestParams = {}) =>
+    setUserStream: (data: SingleUserStreamDto, params: RequestParams = {}) =>
       this.request<UserStream, any>({
-        path: `/overlay/user-stream/${username}`,
+        path: `/overlay/user-stream/single`,
         method: 'POST',
+        body: data,
+        type: ContentType.Json,
         format: 'json',
         ...params,
       }),

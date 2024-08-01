@@ -4,6 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,9 +12,16 @@ async function bootstrap() {
   // Enable validation with transform
   app.useGlobalPipes(
     new ValidationPipe({
+      whitelist: true,
       transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  app.use(json());
+  app.use(urlencoded({ extended: true }));
+
+  app.enableCors({ credentials: true, origin: true });
 
   // Get configService from app
   const configService = app.get(ConfigService);

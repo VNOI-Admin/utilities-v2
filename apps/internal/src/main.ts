@@ -17,6 +17,8 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const internalEndpoint = configService.get('INTERNAL_SERVICE_ENDPOINT');
 
+  app.enableCors({ credentials: true, origin: true });
+
   const config = new DocumentBuilder()
     .addServer(internalEndpoint)
     .setTitle('Utilities V2 Internal API Docs')

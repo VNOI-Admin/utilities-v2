@@ -1,47 +1,86 @@
 <script setup lang="ts">
 import { OVERLAY_KEYS, OverlayKey } from "@libs/common/types/overlay";
+import useLazyPromise from "~/hooks/useLazyPromise";
+import { internalApi } from "~/services/api";
+import { userApi } from "~/services/api";
 
-const overlay = ref<OverlayKey | undefined>(undefined);
+const toast = useToast();
+
+const tab = ref<OverlayKey | undefined>(undefined);
+const usernameOptions = ref<string[]>([]);
+
+const username = ref<string>('');
+
+const multiUsernames = ref<string[]>([]);
+
+const [fetchUsers, { result: users }] = useLazyPromise(() => userApi.user.getUsers({
+  role: 'contestant',
+}) || []);
+
+async function saveSingleUserStream() {
+  try {
+    await internalApi.overlay.setUserStream({
+      username: username.value,
+    });
+    await toast.success("Successfully saved user stream");
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function saveMultiUserStream() {
+  console.log("saveMultiUserStream");
+}
+
+watch(users, () => {
+  if (users.value) {
+    usernameOptions.value = users.value.map((user) => user.username);
+  } else {
+    usernameOptions.value = [];
+  }
+});
+
+onMounted(() => {
+  fetchUsers();
+});
 </script>
 
 <template>
-<!-- create a div with two cards, each card is a mode with keys of OVERLAY_KEYS using v-btn transparent, width for each one is 50% of vw -->
-  <div class="flex flex-col items-center justify-center h-full">
-    <div class="flex w-full">
-      <v-btn
-        v-for="key in Object.keys(OVERLAY_KEYS)"
-        :key="key"
-        @click="overlay = OVERLAY_KEYS[key]"
-        class="w-1/2"
-        text
-      >
+  <v-card>
+    <v-tabs
+      v-model="tab"
+      bg-color="primary"
+    >
+      <v-tab v-for="key in Object.values(OVERLAY_KEYS)" :key="key" :value="key">
         {{ key }}
-      </v-btn>
-    </div>
-    <div class="flex w-full">
-      <v-overlay
-        v-if="overlay === OVERLAY_KEYS.USER_STREAM"
-        :value="true"
-        color="white"
-        opacity="0.5"
-      >
-        <v-progress-circular
-          indeterminate
-          color="primary"
-        />
-      </v-overlay>
-      <v-overlay
-        v-else-if="overlay === OVERLAY_KEYS.MULTI_USER_STREAM"
-        :value="true"
-        color="red"
-        opacity="0.5"
-      >
-        <v-icon
-          color="white"
-        >
-          mdi-alert-circle
-        </v-icon>
-      </v-overlay>
-    </div>
-  </div>
+      </v-tab>
+    </v-tabs>
+
+    <v-card-text>
+      <v-tabs-window v-model="tab">
+        <v-tabs-window-item :value="OVERLAY_KEYS.USER_STREAM">
+          <v-select
+            v-model="username"
+            :items="usernameOptions"
+            label="Username"
+          ></v-select>
+          <v-btn
+            color="primary"
+            @click="saveSingleUserStream"
+          >
+            Save
+          </v-btn>
+        </v-tabs-window-item>
+
+        <v-tabs-window-item :value="OVERLAY_KEYS.MULTI_USER_STREAM">
+          <v-btn
+            color="primary"
+            @click="saveMultiUserStream"
+          >
+            Save
+          </v-btn>
+        </v-tabs-window-item>
+      </v-tabs-window>
+    </v-card-text>
+  </v-card>
 </template>

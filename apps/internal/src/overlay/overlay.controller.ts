@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { OverlayService } from './overlay.service';
 import { UserStream } from './layouts/user-stream';
 import { MultiUserStreamDto } from './dtos/multi-user-stream.dto';
+import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
 
 @ApiTags('Overlay')
 @Controller('overlay')
@@ -17,7 +18,7 @@ export class OverlayController {
     description: 'User stream display retrieved successfully',
     type: [UserStream],
   })
-  @Get('/user-stream')
+  @Get('/user-stream/multi')
   getMultiUserStream() {
     return this.overlayService.getMultiUserStream();
   }
@@ -33,7 +34,7 @@ export class OverlayController {
     description: 'User stream display set successfully',
     type: [UserStream],
   })
-  @Post('/user-stream')
+  @Post('/user-stream/multi')
   setMultiUserStream(@Body() body: MultiUserStreamDto) {
     return this.overlayService.setMultiUserStream(body.usernames);
   }
@@ -46,7 +47,7 @@ export class OverlayController {
     description: 'User stream display retrieved successfully',
     type: UserStream,
   })
-  @Get('/user-stream/:username')
+  @Get('/user-stream/single')
   getUserStream() {
     return this.overlayService.getUserStream();
   }
@@ -54,13 +55,16 @@ export class OverlayController {
   @ApiOperation({
     summary: 'Set current user to user stream display',
   })
+  @ApiBody({
+    type: SingleUserStreamDto,
+  })
   @ApiResponse({
     status: 200,
     description: 'User stream display set successfully',
     type: UserStream,
   })
-  @Post('/user-stream/:username')
-  async setUserStream(@Param('username') username: string) {
-    return await this.overlayService.setUserStream(username);
+  @Post('/user-stream/single')
+  async setUserStream(@Body() body: SingleUserStreamDto) {
+    return await this.overlayService.setUserStream(body.username);
   }
 }
