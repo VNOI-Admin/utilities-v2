@@ -28,6 +28,7 @@ export default defineConfig({
         'vue-router',
         '@vueuse/core',
         { 'vue-toastification': ['useToast'] },
+        { '~/hooks/useLazyPromise': [['default', 'useLazyPromise']] },
       ],
       dts: 'src/auto-imports.d.ts',
       eslintrc: {

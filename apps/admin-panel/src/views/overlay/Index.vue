@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { OVERLAY_KEYS, OverlayKey } from "@libs/common/types/overlay";
-import useLazyPromise from "~/hooks/useLazyPromise";
-import { internalApi } from "~/services/api";
-import { userApi } from "~/services/api";
+import { OVERLAY_KEYS, OverlayKey } from '@libs/common/types/overlay';
+import useLazyPromise from '~/hooks/useLazyPromise';
+import { internalApi } from '~/services/api';
+import { userApi } from '~/services/api';
 
 const toast = useToast();
 
@@ -13,23 +13,26 @@ const username = ref<string>('');
 
 const multiUsernames = ref<string[]>([]);
 
-const [fetchUsers, { result: users }] = useLazyPromise(() => userApi.user.getUsers({
-  role: 'contestant',
-}) || []);
+const [fetchUsers, { result: users }] = useLazyPromise(
+  () =>
+    userApi.user.getUsers({
+      role: 'contestant',
+    }) || [],
+);
 
 async function saveSingleUserStream() {
   try {
     await internalApi.overlay.setUserStream({
       username: username.value,
     });
-    await toast.success("Successfully saved user stream");
+    await toast.success('Successfully saved user stream');
   } catch (error) {
     console.error(error);
   }
 }
 
 async function saveMultiUserStream() {
-  console.log("saveMultiUserStream", multiUsernames.value);
+  console.log('saveMultiUserStream', multiUsernames.value);
 }
 
 watch(users, () => {
@@ -47,10 +50,7 @@ onMounted(() => {
 
 <template>
   <v-card>
-    <v-tabs
-      v-model="tab"
-      bg-color="primary"
-    >
+    <v-tabs v-model="tab" bg-color="primary">
       <v-tab v-for="key in Object.values(OVERLAY_KEYS)" :key="key" :value="key">
         {{ key }}
       </v-tab>
@@ -64,21 +64,11 @@ onMounted(() => {
             :items="usernameOptions"
             label="Username"
           ></v-select>
-          <v-btn
-            color="primary"
-            @click="saveSingleUserStream"
-          >
-            Save
-          </v-btn>
+          <v-btn color="primary" @click="saveSingleUserStream"> Save </v-btn>
         </v-tabs-window-item>
 
         <v-tabs-window-item :value="OVERLAY_KEYS.MULTI_USER_STREAM">
-          <v-btn
-            color="primary"
-            @click="saveMultiUserStream"
-          >
-            Save
-          </v-btn>
+          <v-btn color="primary" @click="saveMultiUserStream"> Save </v-btn>
         </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>

@@ -261,6 +261,19 @@
     "watchTriggerable": true,
     "watchWithFilter": true,
     "whenever": true,
-    "useToast": true
+    "useToast": true,
+    "L": true,
+    "P": true,
+    "a": true,
+    "e": true,
+    "i": true,
+    "m": true,
+    "o": true,
+    "r": true,
+    "s": true,
+    "u": true,
+    "y": true,
+    "z": true,
+    "useLazyPromise": true
   }
 }

@@ -20,7 +20,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/single',
-    name: 'Overlay Controller',
+    name: 'Overlay Single Display',
     component: () => import('../views/overlay/DisplaySingle.vue'),
   },
 ];
