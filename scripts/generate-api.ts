@@ -7,6 +7,7 @@ dotenv.config();
 const SERVICE_NAME_TO_ENDPOINT_MAPPING = {
   user: process.env.USER_SERVICE_ENDPOINT,
   auth: process.env.AUTH_SERVICE_ENDPOINT,
+  internal: process.env.INTERNAL_SERVICE_ENDPOINT,
 };
 
 async function bootstrap() {

@@ -256,6 +256,19 @@ export class HttpClient<SecurityDataType = unknown> {
 export class UserApi<
   SecurityDataType extends unknown,
 > extends HttpClient<SecurityDataType> {
+  /**
+   * No description
+   *
+   * @name GetStatus
+   * @request GET:/
+   */
+  getStatus = (params: RequestParams = {}) =>
+    this.request<any, any>({
+      path: `/`,
+      method: 'GET',
+      ...params,
+    });
+
   user = {
     /**
      * No description
