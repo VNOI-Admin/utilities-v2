@@ -29,7 +29,7 @@ async function saveSingleUserStream() {
 }
 
 async function saveMultiUserStream() {
-  console.log("saveMultiUserStream");
+  console.log("saveMultiUserStream", multiUsernames.value);
 }
 
 watch(users, () => {
