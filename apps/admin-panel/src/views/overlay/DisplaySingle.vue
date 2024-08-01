@@ -72,12 +72,12 @@ onMounted(async () => {
 }
 
 .stream-wrapper {
-  width: 70%;
+  width: 80%;
   height: 100%;
 }
 
 .webcam-wrapper {
-  width: 30%;
+  width: 20%;
   height: 100%;
 }
 </style>
