@@ -41,6 +41,22 @@ async function bootstrap() {
       unwrapResponseData: true,
       // TODO: Should remove in the future by adding the correct response type to all endpoints
       defaultResponseType: 'any',
+      moduleNameFirstTag: true,
+
+      // setup hook that for operation id of format somethingController_method, the name will be method
+      hooks: {
+        onCreateRouteName(routeNameInfo) {
+          routeNameInfo.usage = routeNameInfo.usage.split('Controller')[1];
+          routeNameInfo.original =
+            routeNameInfo.original.split('Controller')[1];
+          routeNameInfo.usage =
+            routeNameInfo.usage.charAt(0).toLowerCase() +
+            routeNameInfo.usage.slice(1);
+          routeNameInfo.original =
+            routeNameInfo.original.charAt(0).toLowerCase() +
+            routeNameInfo.original.slice(1);
+        },
+      },
     });
   }
 

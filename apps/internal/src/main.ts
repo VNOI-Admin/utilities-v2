@@ -1,28 +1,26 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // Enable validation with transform
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
     }),
   );
 
-  // Get configService from app
   const configService = app.get(ConfigService);
-  const userEndpoint = configService.get('USER_SERVICE_ENDPOINT');
+  const internalEndpoint = configService.get('INTERNAL_SERVICE_ENDPOINT');
 
   const config = new DocumentBuilder()
-    .addServer(userEndpoint)
-    .setTitle('Utilities V2 User API Docs')
-    .setDescription('Utilities V2 User API Docs')
+    .addServer(internalEndpoint)
+    .setTitle('Utilities V2 Internal API Docs')
+    .setDescription('Utilities V2 Internal API Docs')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -30,7 +28,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(8001);
+  await app.listen(8003);
 }
 
 void bootstrap();

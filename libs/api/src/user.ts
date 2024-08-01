@@ -261,12 +261,12 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerGetUsers
+     * @name GetUsers
      * @summary Get all users
      * @request GET:/user
      * @secure
      */
-    userControllerGetUsers: (
+    getUsers: (
       query?: {
         /** Sort by field, 1 for ascending, -1 for descending. Example: key1:1,key2:-1 */
         orderBy?: string;
@@ -288,12 +288,12 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerGetCurrentUser
+     * @name GetCurrentUser
      * @summary Get current user
      * @request GET:/user/me
      * @secure
      */
-    userControllerGetCurrentUser: (params: RequestParams = {}) =>
+    getCurrentUser: (params: RequestParams = {}) =>
       this.request<UserEntity, any>({
         path: `/user/me`,
         method: 'GET',
@@ -306,12 +306,12 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerGetUser
+     * @name GetUser
      * @summary Get user by username
      * @request GET:/user/{username}
      * @secure
      */
-    userControllerGetUser: (username: string, params: RequestParams = {}) =>
+    getUser: (username: string, params: RequestParams = {}) =>
       this.request<UserEntity, any>({
         path: `/user/${username}`,
         method: 'GET',
@@ -324,12 +324,12 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerUpdateUser
+     * @name UpdateUser
      * @summary Update user
      * @request PATCH:/user/{username}
      * @secure
      */
-    userControllerUpdateUser: (
+    updateUser: (
       username: string,
       data: UpdateUserDto,
       params: RequestParams = {},
@@ -348,12 +348,12 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerDeleteUser
+     * @name DeleteUser
      * @summary Delete user
      * @request DELETE:/user/{username}
      * @secure
      */
-    userControllerDeleteUser: (username: string, params: RequestParams = {}) =>
+    deleteUser: (username: string, params: RequestParams = {}) =>
       this.request<
         {
           success?: boolean;
@@ -371,15 +371,12 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerCreateUser
+     * @name CreateUser
      * @summary Create new user
      * @request POST:/user/new
      * @secure
      */
-    userControllerCreateUser: (
-      data: CreateUserDto,
-      params: RequestParams = {},
-    ) =>
+    createUser: (data: CreateUserDto, params: RequestParams = {}) =>
       this.request<UserEntity, any>({
         path: `/user/new`,
         method: 'POST',
@@ -394,15 +391,12 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerGetMachineUsage
+     * @name GetMachineUsage
      * @summary Get machine usage of user
      * @request GET:/user/{username}/machine
      * @secure
      */
-    userControllerGetMachineUsage: (
-      username: string,
-      params: RequestParams = {},
-    ) =>
+    getMachineUsage: (username: string, params: RequestParams = {}) =>
       this.request<MachineUsageEntity, any>({
         path: `/user/${username}/machine`,
         method: 'GET',
@@ -415,11 +409,11 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerReport
+     * @name Report
      * @summary Receive machine status report from contestant. Verified by IP.
      * @request POST:/user/report
      */
-    userControllerReport: (data: ReportUsageDto, params: RequestParams = {}) =>
+    report: (data: ReportUsageDto, params: RequestParams = {}) =>
       this.request<any, any>({
         path: `/user/report`,
         method: 'POST',
@@ -432,11 +426,11 @@ export class UserApi<
      * No description
      *
      * @tags User
-     * @name UserControllerPrint
+     * @name Print
      * @summary Send print job
      * @request POST:/user/print
      */
-    userControllerPrint: (params: RequestParams = {}) =>
+    print: (params: RequestParams = {}) =>
       this.request<any, any>({
         path: `/user/print`,
         method: 'POST',
@@ -448,12 +442,12 @@ export class UserApi<
      * No description
      *
      * @tags Group
-     * @name GroupControllerGetGroups
+     * @name GetGroups
      * @summary Get all groups
      * @request GET:/group
      * @secure
      */
-    groupControllerGetGroups: (params: RequestParams = {}) =>
+    getGroups: (params: RequestParams = {}) =>
       this.request<GroupEntity[], any>({
         path: `/group`,
         method: 'GET',
@@ -466,15 +460,12 @@ export class UserApi<
      * No description
      *
      * @tags Group
-     * @name GroupControllerCreateGroup
+     * @name CreateGroup
      * @summary Create new group
      * @request POST:/group/new
      * @secure
      */
-    groupControllerCreateGroup: (
-      data: CreateGroupDto,
-      params: RequestParams = {},
-    ) =>
+    createGroup: (data: CreateGroupDto, params: RequestParams = {}) =>
       this.request<GroupEntity, any>({
         path: `/group/new`,
         method: 'POST',
@@ -489,12 +480,12 @@ export class UserApi<
      * No description
      *
      * @tags Group
-     * @name GroupControllerUpdateGroup
+     * @name UpdateGroup
      * @summary Update group
      * @request PATCH:/group/{groupCodeName}
      * @secure
      */
-    groupControllerUpdateGroup: (
+    updateGroup: (
       groupCodeName: string,
       data: UpdateGroupDto,
       params: RequestParams = {},
@@ -513,15 +504,12 @@ export class UserApi<
      * No description
      *
      * @tags Group
-     * @name GroupControllerDeleteGroup
+     * @name DeleteGroup
      * @summary Delete group
      * @request DELETE:/group/{groupCodeName}
      * @secure
      */
-    groupControllerDeleteGroup: (
-      groupCodeName: string,
-      params: RequestParams = {},
-    ) =>
+    deleteGroup: (groupCodeName: string, params: RequestParams = {}) =>
       this.request<
         {
           success?: boolean;
@@ -539,15 +527,12 @@ export class UserApi<
      * No description
      *
      * @tags Group
-     * @name GroupControllerGetUsers
+     * @name GetUsers
      * @summary Get users in group
      * @request GET:/group/{groupCodeName}/users
      * @secure
      */
-    groupControllerGetUsers: (
-      groupCodeName: string,
-      params: RequestParams = {},
-    ) =>
+    getUsers: (groupCodeName: string, params: RequestParams = {}) =>
       this.request<UserEntity[], any>({
         path: `/group/${groupCodeName}/users`,
         method: 'GET',
@@ -561,12 +546,12 @@ export class UserApi<
      * No description
      *
      * @tags VPN
-     * @name VpnControllerGetWireGuardConfig
+     * @name GetWireGuardConfig
      * @summary Get WireGuard configuration
      * @request GET:/vpn/config
      * @secure
      */
-    vpnControllerGetWireGuardConfig: (params: RequestParams = {}) =>
+    getWireGuardConfig: (params: RequestParams = {}) =>
       this.request<VpnConfig, any>({
         path: `/vpn/config`,
         method: 'GET',
@@ -579,12 +564,12 @@ export class UserApi<
      * No description
      *
      * @tags VPN
-     * @name VpnControllerGetWireGuardConfigByUsername
+     * @name GetWireGuardConfigByUsername
      * @summary Get WireGuard configuration
      * @request GET:/vpn/config/{username}
      * @secure
      */
-    vpnControllerGetWireGuardConfigByUsername: (
+    getWireGuardConfigByUsername: (
       username: string,
       params: RequestParams = {},
     ) =>

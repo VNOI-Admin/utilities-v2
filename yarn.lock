@@ -2492,6 +2492,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@videojs/http-streaming@npm:3.13.1":
+  version: 3.13.1
+  resolution: "@videojs/http-streaming@npm:3.13.1"
+  dependencies:
+    "@babel/runtime": "npm:^7.12.5"
+    "@videojs/vhs-utils": "npm:4.0.0"
+    aes-decrypter: "npm:4.0.1"
+    global: "npm:^4.4.0"
+    m3u8-parser: "npm:^7.1.0"
+    mpd-parser: "npm:^1.3.0"
+    mux.js: "npm:7.0.3"
+    video.js: "npm:^7 || ^8"
+  peerDependencies:
+    video.js: ^8.14.0
+  checksum: 10c0/fed4d95dc02582f054c3ca3998d60f08c1d8545b8564a23cd9dca8e027e32e159da1d29577bc342da39a52c0a58e81602aaac9dc37a94416345548e235ec3979
+  languageName: node
+  linkType: hard
+
 "@videojs/vhs-utils@npm:4.0.0":
   version: 4.0.0
   resolution: "@videojs/vhs-utils@npm:4.0.0"
@@ -2533,6 +2551,17 @@ __metadata:
     global: "npm:~4.4.0"
     is-function: "npm:^1.0.1"
   checksum: 10c0/ee285b27b962287e6961bf6b00bf83d44d6ece6a0787ba70237da9db429e5889096b50f4ce9abb9bc47ac0552c56a483435cb27cc2d726b6c0e01e6fcdc272c4
+  languageName: node
+  linkType: hard
+
+"@videojs/xhr@npm:2.7.0":
+  version: 2.7.0
+  resolution: "@videojs/xhr@npm:2.7.0"
+  dependencies:
+    "@babel/runtime": "npm:^7.5.5"
+    global: "npm:~4.4.0"
+    is-function: "npm:^1.0.1"
+  checksum: 10c0/5dc0dd97bd8e4d5ef05bfd46ced6a9e26cad93335d3e4804ad1d8621d521c943712ad47ebc1968ed153b8cfad6702eafe400e659e724b8c1d005a5ad5f601d8a
   languageName: node
   linkType: hard
 
@@ -6600,6 +6629,12 @@ __metadata:
   languageName: node
   linkType: hard
 
+"internal@workspace:apps/internal":
+  version: 0.0.0-use.local
+  resolution: "internal@workspace:apps/internal"
+  languageName: unknown
+  linkType: soft
+
 "interpret@npm:^1.0.0":
   version: 1.4.0
   resolution: "interpret@npm:1.4.0"
@@ -10269,10 +10304,14 @@ __metadata:
   resolution: "stream-overlay@workspace:apps/stream-overlay"
   dependencies:
     "@babel/types": "npm:^7.24.7"
+    "@fortawesome/fontawesome-svg-core": "npm:^6.5.2"
+    "@fortawesome/free-solid-svg-icons": "npm:^6.5.2"
+    "@fortawesome/vue-fontawesome": "npm:^3.0.3"
     "@mdi/font": "npm:7.4.47"
     "@types/node": "npm:^20.14.10"
     "@vitejs/plugin-vue": "npm:^5.0.5"
     "@vue/eslint-config-typescript": "npm:^13.0.0"
+    "@vueuse/core": "npm:^8.9.3"
     core-js: "npm:^3.37.1"
     eslint: "npm:^8.57.0"
     eslint-config-standard: "npm:^17.1.0"
@@ -10284,10 +10323,13 @@ __metadata:
     roboto-fontface: "npm:*"
     sass: "npm:1.77.6"
     typescript: "npm:^5.4.2"
+    unplugin-auto-import: "npm:^0.17.5"
     unplugin-fonts: "npm:^1.1.1"
     unplugin-vue-components: "npm:^0.27.2"
     unplugin-vue-router: "npm:^0.10.0"
+    video.js: "npm:8.17.1"
     vite: "npm:^5.3.3"
+    vite-plugin-vue-layouts: "npm:^0.11.0"
     vite-plugin-vuetify: "npm:^2.0.3"
     vue: "npm:^3.4.31"
     vue-router: "npm:^4.4.0"
@@ -11579,6 +11621,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"video.js@npm:8.17.1":
+  version: 8.17.1
+  resolution: "video.js@npm:8.17.1"
+  dependencies:
+    "@babel/runtime": "npm:^7.12.5"
+    "@videojs/http-streaming": "npm:3.13.1"
+    "@videojs/vhs-utils": "npm:^4.0.0"
+    "@videojs/xhr": "npm:2.7.0"
+    aes-decrypter: "npm:^4.0.1"
+    global: "npm:4.4.0"
+    m3u8-parser: "npm:^7.1.0"
+    mpd-parser: "npm:^1.2.2"
+    mux.js: "npm:^7.0.1"
+    safe-json-parse: "npm:4.0.0"
+    videojs-contrib-quality-levels: "npm:4.1.0"
+    videojs-font: "npm:4.2.0"
+    videojs-vtt.js: "npm:0.15.5"
+  checksum: 10c0/e00ad665519706362846d842408b3ed74b5d7f237e566d2b103ad9b9a0b51559663adca13fa9ead03c6800f580330a4357c20ba8208b4f0ae068c0d0610106fd
+  languageName: node
+  linkType: hard
+
 "video.js@npm:^7 || ^8, video.js@npm:^8.10.0":
   version: 8.14.0
   resolution: "video.js@npm:8.14.0"
@@ -11616,6 +11679,13 @@ __metadata:
   version: 4.1.0
   resolution: "videojs-font@npm:4.1.0"
   checksum: 10c0/c1e6a7bf831138c89d08d0e148b951ab86ca070efe04683444ef7d958249b11a8b1d2465ffe51952a05ae40a566413174997ac98a377767b4866cb36e8da8571
+  languageName: node
+  linkType: hard
+
+"videojs-font@npm:4.2.0":
+  version: 4.2.0
+  resolution: "videojs-font@npm:4.2.0"
+  checksum: 10c0/c7960e13e70bd2dbf6940fa00ccd49547537bd0f56aed420d8049bcb908a4f0fabcb0d4693c43068c163b9ed09bfb641f205313ec3fec3143dffcff8c6d3ac6c
   languageName: node
   linkType: hard
 

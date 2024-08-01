@@ -10,7 +10,7 @@ import { DatabaseService } from './database.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        uri: configService.get('USER_DB_URI'),
+        uri: configService.get('COMMON_DB_URI'),
       }),
     }),
   ],

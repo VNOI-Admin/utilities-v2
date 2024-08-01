@@ -1,18 +1,37 @@
 // Plugins
+import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
+import Fonts from 'unplugin-fonts/vite';
+import Layouts from 'vite-plugin-vue-layouts';
 import Vue from '@vitejs/plugin-vue';
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
-import ViteFonts from 'unplugin-fonts/vite';
-import VueRouter from 'unplugin-vue-router/vite';
 
 // Utilities
 import { defineConfig } from 'vite';
-import { fileURLToPath, URL } from 'node:url';
+import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      '~/': `${path.resolve(__dirname, 'src')}/`,
+    },
+    // extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
+  },
   plugins: [
-    VueRouter(),
+    Layouts(),
+    AutoImport({
+      imports: ['vue', 'vue-router', '@vueuse/core'],
+      dts: 'src/auto-imports.d.ts',
+      eslintrc: {
+        enabled: true,
+      },
+    }),
+    Components({
+      dirs: ['src/components'],
+      extensions: ['vue'],
+      dts: 'src/components.d.ts',
+    }),
     Vue({
       template: { transformAssetUrls },
     }),
@@ -23,8 +42,7 @@ export default defineConfig({
         configFile: 'src/styles/settings.scss',
       },
     }),
-    Components(),
-    ViteFonts({
+    Fonts({
       google: {
         families: [
           {
@@ -35,14 +53,25 @@ export default defineConfig({
       },
     }),
   ],
-  define: { 'process.env': {} },
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+  build: {
+    outDir: 'dist',
+    target: ['esnext'],
+  },
+  optimizeDeps: {
+    // 👈 optimizedeps
+    esbuildOptions: {
+      target: 'esnext',
+      // Node.js global to browser globalThis
+      define: {
+        global: 'globalThis',
+      },
+      supported: {
+        bigint: true,
+      },
     },
-    extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
   },
   server: {
     port: 3000,
   },
+  clearScreen: false,
 });

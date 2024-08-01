@@ -210,11 +210,11 @@ export class AuthApi<
      * No description
      *
      * @tags Auth
-     * @name AuthControllerLogin
+     * @name Login
      * @summary Login using credentials
      * @request POST:/auth/login
      */
-    authControllerLogin: (data: AuthDto, params: RequestParams = {}) =>
+    login: (data: AuthDto, params: RequestParams = {}) =>
       this.request<TokensEntity, any>({
         path: `/auth/login`,
         method: 'POST',
@@ -228,12 +228,12 @@ export class AuthApi<
      * No description
      *
      * @tags Auth
-     * @name AuthControllerLogout
+     * @name Logout
      * @summary Logout
      * @request POST:/auth/logout
      * @secure
      */
-    authControllerLogout: (params: RequestParams = {}) =>
+    logout: (params: RequestParams = {}) =>
       this.request<any, any>({
         path: `/auth/logout`,
         method: 'POST',
@@ -245,12 +245,12 @@ export class AuthApi<
      * No description
      *
      * @tags Auth
-     * @name AuthControllerRefresh
+     * @name Refresh
      * @summary Refresh user's access token
      * @request POST:/auth/refresh
      * @secure
      */
-    authControllerRefresh: (params: RequestParams = {}) =>
+    refresh: (params: RequestParams = {}) =>
       this.request<TokensEntity, any>({
         path: `/auth/refresh`,
         method: 'POST',
