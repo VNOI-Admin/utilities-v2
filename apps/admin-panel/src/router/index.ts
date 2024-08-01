@@ -18,6 +18,11 @@ const routes: RouteRecordRaw[] = [
     name: 'Overlay Controller',
     component: () => import('../views/overlay/Index.vue'),
   },
+  {
+    path: '/single',
+    name: 'Overlay Controller',
+    component: () => import('../views/overlay/DisplaySingle.vue'),
+  },
 ];
 
 const router = createRouter({
