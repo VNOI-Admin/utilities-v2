@@ -49,6 +49,7 @@ onMounted(async () => {
     </div>
     <div class="webcam-wrapper">
       <video-player
+        class="webcam"
         :src="webcamurl"
         :controls="false"
         autoplay="any"
@@ -63,27 +64,20 @@ onMounted(async () => {
 
 <style>
 .container {
-  width: 100dvw;
-  height: 100dvh;
+  width: 1920px;
+  height: 1080px;
   background: transparent;
-  overflow: hidden;
   display: flex;
   flex-direction: row;
 }
 
 .stream-wrapper {
-  position: absolute;
-  width: 100%;
+  width: 70%;
   height: 100%;
 }
 
 .webcam-wrapper {
-  position: absolute;
   width: 30%;
   height: 100%;
-  padding-bottom: 20%;
-  bottom: -15%;
-  right: 5%;
-  z-index: 999;
 }
 </style>
