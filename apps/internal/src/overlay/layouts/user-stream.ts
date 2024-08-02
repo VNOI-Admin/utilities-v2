@@ -1,6 +1,6 @@
 import { Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsUrl } from 'class-validator';
+import { IsOptional, IsString, IsUrl } from 'class-validator';
 import { ConstructorType } from '@libs/common/serializers/type';
 import { OverlayLayout } from './generic';
 
@@ -13,14 +13,16 @@ export class UserStream implements OverlayLayout {
   username: string;
 
   @Expose()
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsUrl()
-  streamUrl: string;
+  streamUrl?: string;
 
   @Expose()
-  @ApiProperty()
+  @ApiProperty({ required: false })
+  @IsOptional()
   @IsUrl()
-  webcamUrl: string;
+  webcamUrl?: string;
 
   constructor(data: ConstructorType<UserStream>) {
     this.username = data.username;

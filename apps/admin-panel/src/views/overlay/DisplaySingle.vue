@@ -7,27 +7,21 @@ const [fetchUserStream, { result: userStream }] = useLazyPromise(() =>
   internalApi.overlay.getUserStream(),
 );
 
-useIntervalFn(fetchUserStream, 1000);
-
-const streamUrl = ref('');
-const webcamurl = ref('');
-
-watch(userStream, () => {
-  if (
-    userStream.value?.streamUrl &&
-    userStream.value.streamUrl !== streamUrl.value
-  ) {
-    console.log('stream url', userStream.value.streamUrl);
-    streamUrl.value = userStream.value.streamUrl;
+useIntervalFn(async () => {
+  await fetchUserStream();
+  if (userStream.value?.streamUrl !== streamUrl.value) {
+    streamUrl.value = userStream.value?.streamUrl || null;
   }
-  if (
-    userStream.value?.webcamUrl &&
-    userStream.value.webcamUrl !== webcamurl.value
-  ) {
-    console.log('webcam url', userStream.value.webcamUrl);
-    webcamurl.value = userStream.value.webcamUrl;
+  if (userStream.value?.webcamUrl !== webcamUrl.value) {
+    webcamUrl.value = userStream.value?.webcamUrl || null;
   }
-});
+}, 1000);
+
+const streamUrl = ref<string | null>('');
+const webcamUrl = ref<string | null>('');
+
+const streamOnly = computed(() => !webcamUrl.value && streamUrl.value);
+const webcamOnly = computed(() => !streamUrl.value && webcamUrl.value);
 
 onMounted(async () => {
   fetchUserStream();
@@ -36,9 +30,15 @@ onMounted(async () => {
 
 <template>
   <div class="container">
-    <div class="stream-wrapper">
+    <div
+      class="stream-wrapper"
+      :class="[
+        `${!streamUrl ? 'hidden' : ''}`,
+        `${streamOnly ? 'full-wrapper' : ''}`,
+      ]"
+    >
       <video-player
-        :src="streamUrl"
+        :src="streamUrl || ''"
         :controls="false"
         autoplay="any"
         preload="auto"
@@ -47,10 +47,16 @@ onMounted(async () => {
         :volume="0.6"
       />
     </div>
-    <div class="webcam-wrapper">
+    <div
+      class="webcam-wrapper"
+      :class="[
+        `${!webcamUrl ? 'hidden' : ''}`,
+        `${webcamOnly ? 'full-wrapper' : ''}`,
+      ]"
+    >
       <video-player
         class="webcam"
-        :src="webcamurl"
+        :src="webcamUrl || ''"
         :controls="false"
         autoplay="any"
         preload="auto"
@@ -67,6 +73,7 @@ onMounted(async () => {
   width: 1920px;
   height: 1080px;
   background: transparent;
+  /* display inline */
   display: flex;
   flex-direction: row;
 }
@@ -79,5 +86,14 @@ onMounted(async () => {
 .webcam-wrapper {
   width: 20%;
   height: 100%;
+}
+
+.full-wrapper {
+  width: 100% !important;
+  height: 100%;
+}
+
+.hidden {
+  display: none;
 }
 </style>

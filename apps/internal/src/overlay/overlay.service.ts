@@ -9,6 +9,7 @@ import {
   OverlayLayoutDocument,
 } from '@libs/common-db/schemas/overlay.schema';
 import { MultiUserStream } from './layouts/multi-user-stream';
+import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
 
 @Injectable()
 export class OverlayService {
@@ -21,19 +22,25 @@ export class OverlayService {
     private readonly configService: ConfigService,
   ) {}
 
-  async setUserStream(username: string) {
-    const user = await this.userModel.findOne({ username });
+  async setUserStream(body: SingleUserStreamDto) {
+    const user = await this.userModel.findOne({ username: body.username });
 
     if (!user) {
       throw new Error('User not found');
     }
 
     const livestreamProxy = this.configService.get('LIVESTREAM_PROXY_URL');
-    const streamUrl = `${livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
-    const webcamUrl = `${livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
+    const streamUrl =
+      !body.stream && body.webcam
+        ? undefined
+        : `${livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
+    const webcamUrl =
+      !body.webcam && body.stream
+        ? undefined
+        : `${livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
 
     const userStream = new UserStream({
-      username,
+      username: body.username,
       streamUrl,
       webcamUrl,
     });

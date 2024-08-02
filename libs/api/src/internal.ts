@@ -11,8 +11,8 @@
 
 export interface UserStream {
   username: string;
-  streamUrl: string;
-  webcamUrl: string;
+  streamUrl?: string;
+  webcamUrl?: string;
 }
 
 export interface MultiUserStreamDto {
@@ -21,6 +21,8 @@ export interface MultiUserStreamDto {
 
 export interface SingleUserStreamDto {
   username: string;
+  stream?: boolean;
+  webcam?: boolean;
 }
 
 import type {

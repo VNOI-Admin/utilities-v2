@@ -20,12 +20,14 @@ const [fetchUsers, { result: users }] = useLazyPromise(
     }) || [],
 );
 
-async function saveSingleUserStream() {
+async function saveSingleUserStream(stream?: boolean, webcam?: boolean) {
   try {
     await internalApi.overlay.setUserStream({
       username: username.value,
+      stream,
+      webcam,
     });
-    await toast.success('Successfully saved user stream');
+    toast.success('Successfully saved user stream');
   } catch (error) {
     console.error(error);
   }
@@ -64,7 +66,24 @@ onMounted(() => {
             :items="usernameOptions"
             label="Username"
           ></v-select>
-          <v-btn color="primary" @click="saveSingleUserStream"> Save </v-btn>
+          <v-btn
+            color="primary"
+            @click="() => saveSingleUserStream(true, true)"
+          >
+            Stream & Webcam
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="() => saveSingleUserStream(true, false)"
+          >
+            Stream
+          </v-btn>
+          <v-btn
+            color="primary"
+            @click="() => saveSingleUserStream(false, true)"
+          >
+            Webcam
+          </v-btn>
         </v-tabs-window-item>
 
         <v-tabs-window-item :value="OVERLAY_KEYS.MULTI_USER_STREAM">

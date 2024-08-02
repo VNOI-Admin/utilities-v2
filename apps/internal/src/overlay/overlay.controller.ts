@@ -65,6 +65,6 @@ export class OverlayController {
   })
   @Post('/user-stream/single')
   async setUserStream(@Body() body: SingleUserStreamDto) {
-    return await this.overlayService.setUserStream(body.username);
+    return await this.overlayService.setUserStream(body);
   }
 }
