@@ -1,6 +1,6 @@
-import dotenv from "dotenv";
-import { writeFileSync } from "fs";
-import { MongoClient } from "mongodb";
+import dotenv from 'dotenv';
+import { writeFileSync } from 'fs';
+import { MongoClient } from 'mongodb';
 
 dotenv.config();
 
@@ -11,7 +11,7 @@ async function run() {
   const destinationClient = await MongoClient.connect(DESTINATION_DB_URI);
   const userDb = destinationClient.db(DESTINATION_DB_NAME);
 
-  const usersCollection = userDb.collection("users");
+  const usersCollection = userDb.collection('users');
 
   // Get all users
   const users = await usersCollection
@@ -40,10 +40,10 @@ PersistentKeepalive = 25
   }
 
   // write wireGuardConfig to file
-  writeFileSync("wg0.conf", wireGuardConfig);
+  writeFileSync('wg0.conf', wireGuardConfig);
 
-  console.log("WireGuard configuration written to wg0.conf");
-  console.log("Use root-vpn.sh with root privileges to finish the setup.");
+  console.log('WireGuard configuration written to wg0.conf');
+  console.log('Use root-vpn.sh with root privileges to finish the setup.');
 
   await destinationClient.close();
 }

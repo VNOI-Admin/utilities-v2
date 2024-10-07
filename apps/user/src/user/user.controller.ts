@@ -41,8 +41,8 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.COACH, Role.ADMIN)
+  // @UseGuards(AccessTokenGuard)
+  // @RequiredRoles(Role.COACH, Role.ADMIN)
   @ApiOperation({ summary: 'Get all users' })
   @ApiResponse({
     status: 200,

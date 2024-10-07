@@ -35,8 +35,14 @@
       ],
       "@libs/utils/*": [
         "libs/utils/src/*"
+      ],
+      "@app/api": [
+        "libs/api/src"
+      ],
+      "@app/api/*": [
+        "libs/api/src/*"
       ]
-    },
+    }
   },
   "ts-node": {
     "require": [
@@ -46,6 +52,6 @@
   "include": [
     "./apps",
     "./libs",
-    "./scripts",
+    "./scripts"
   ]
 }

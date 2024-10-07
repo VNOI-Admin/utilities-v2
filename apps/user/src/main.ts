@@ -4,9 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
-import { UserModule } from './user/user.module';
-import { VpnModule } from './vpn/vpn.module';
-import { GroupModule } from './group/group.module';
+import { json, urlencoded } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,9 +12,16 @@ async function bootstrap() {
   // Enable validation with transform
   app.useGlobalPipes(
     new ValidationPipe({
+      whitelist: true,
       transform: true,
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  app.use(json());
+  app.use(urlencoded({ extended: true }));
+
+  app.enableCors({ credentials: true, origin: true });
 
   // Get configService from app
   const configService = app.get(ConfigService);
@@ -30,9 +35,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config, {
-    include: [UserModule, GroupModule, VpnModule],
-  });
+  const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
   await app.listen(8001);

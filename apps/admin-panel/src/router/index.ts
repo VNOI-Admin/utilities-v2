@@ -13,6 +13,16 @@ const routes: RouteRecordRaw[] = [
     name: 'Home',
     component: () => import('../views/Index.vue'),
   },
+  {
+    path: '/overlay',
+    name: 'Overlay Controller',
+    component: () => import('../views/overlay/Index.vue'),
+  },
+  {
+    path: '/single',
+    name: 'Overlay Single Display',
+    component: () => import('../views/overlay/DisplaySingle.vue'),
+  },
 ];
 
 const router = createRouter({
