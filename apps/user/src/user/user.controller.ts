@@ -6,19 +6,15 @@ import {
   Controller,
   Delete,
   Get,
-  MaxFileSizeValidator,
   Param,
-  ParseFilePipe,
   Patch,
   Post,
   Query,
   Request,
   SerializeOptions,
-  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -157,27 +153,5 @@ export class UserController {
       req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const callerId = await this.userService.getUserByIp(callerIp);
     return await this.userService.reportUsage(callerId, report);
-  }
-
-  @ApiOperation({ summary: 'Send print job' })
-  @ApiResponse({
-    status: 200,
-    description: 'Receive print job',
-  })
-  @UseInterceptors(FileInterceptor('file'))
-  @Post('/print')
-  async print(
-    @Request() req: any,
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [new MaxFileSizeValidator({ maxSize: 1024 * 1024 * 10 })],
-      }),
-    )
-    file: Express.Multer.File,
-  ) {
-    const callerIp =
-      req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const callerId = await this.userService.getUserByIp(callerIp);
-    return await this.userService.print(callerId, file);
   }
 }

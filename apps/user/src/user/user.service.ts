@@ -14,7 +14,6 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import { plainToInstance } from 'class-transformer';
-import { FormData } from 'formdata-node';
 import type { PipelineStage } from 'mongoose';
 import { Model } from 'mongoose';
 
@@ -26,16 +25,13 @@ import { MachineUsageEntity, UserEntity } from './entities/User.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {
-  private printUrl: string;
   constructor(
     private readonly configService: ConfigService,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
-  ) {
-    this.printUrl = this.configService.get('PRINTER_URL');
-  }
+  ) {}
 
   async onModuleInit() {
     let admin = await this.userModel.findOne({ username: 'admin' });
@@ -234,32 +230,5 @@ export class UserService implements OnModuleInit {
     user.machineUsage.disk = usage.disk;
     user.machineUsage.lastReportedAt = new Date();
     await user.save();
-  }
-
-  async print(callerId: string, file: Express.Multer.File) {
-    const user = await this.userModel.findOne({ _id: callerId }).lean();
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-    const username = user.username;
-
-    const filename = `${username}-${file.originalname}`;
-
-    const formData = new FormData();
-    const fileBuffer = new Blob([file.buffer], { type: file.mimetype });
-    formData.append('file', fileBuffer, filename);
-
-    // print formdata file content
-    try {
-      const response = await fetch(`${this.printUrl}/print`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) {
-        throw new BadRequestException('Unable to print');
-      }
-    } catch (error) {
-      throw new BadRequestException('Unable to print');
-    }
   }
 }

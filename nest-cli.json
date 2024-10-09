@@ -27,6 +27,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
+    },
+    "printing": {
+      "type": "application",
+      "root": "apps/printing",
+      "entryFile": "main",
+      "sourceRoot": "apps/printing/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/printing/tsconfig.app.json"
+      }
     }
   }
 }
