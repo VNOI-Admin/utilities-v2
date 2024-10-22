@@ -21,11 +21,17 @@
       "@libs/api": ["../../libs/api/src"],
       "@libs/api/*": ["../../libs/api/src/*"],
       "@libs/common": ["../../libs/common/src"],
-      "@libs/common/*": ["../../libs/common/src/*"],
+      "@libs/common/*": ["../../libs/common/src/*"]
     },
     "isolatedModules": true
   },
-  "include": ["./src/typed-router.d.ts", "./src/**/*.ts", "./src/**/*.vue", "./src/auto-imports.d.ts", "./src/components.d.ts"],
+  "include": [
+    "./src/typed-router.d.ts",
+    "./src/**/*.ts",
+    "./src/**/*.vue",
+    "./src/auto-imports.d.ts",
+    "./src/components.d.ts"
+  ],
   "exclude": ["dist", "node_modules", "cypress"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

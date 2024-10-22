@@ -18,40 +18,18 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "@libs/common-db": [
-        "libs/common-db/src"
-      ],
-      "@libs/common-db/*": [
-        "libs/common-db/src/*"
-      ],
-      "@libs/common": [
-        "libs/common/src"
-      ],
-      "@libs/common/*": [
-        "libs/common/src/*"
-      ],
-      "@libs/utils": [
-        "libs/utils/src"
-      ],
-      "@libs/utils/*": [
-        "libs/utils/src/*"
-      ],
-      "@app/api": [
-        "libs/api/src"
-      ],
-      "@app/api/*": [
-        "libs/api/src/*"
-      ]
+      "@libs/common-db": ["libs/common-db/src"],
+      "@libs/common-db/*": ["libs/common-db/src/*"],
+      "@libs/common": ["libs/common/src"],
+      "@libs/common/*": ["libs/common/src/*"],
+      "@libs/utils": ["libs/utils/src"],
+      "@libs/utils/*": ["libs/utils/src/*"],
+      "@app/api": ["libs/api/src"],
+      "@app/api/*": ["libs/api/src/*"]
     }
   },
   "ts-node": {
-    "require": [
-      "tsconfig-paths/register"
-    ]
+    "require": ["tsconfig-paths/register"]
   },
-  "include": [
-    "./apps",
-    "./libs",
-    "./scripts"
-  ]
+  "include": ["./apps", "./libs", "./scripts"]
 }
