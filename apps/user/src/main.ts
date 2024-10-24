@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { AppModule } from './app.module';
 import { json, urlencoded } from 'express';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,7 @@ async function bootstrap() {
 
   app.use(json());
   app.use(urlencoded({ extended: true }));
+  app.use(cookieParser());
 
   app.enableCors({ credentials: true, origin: true });
 
