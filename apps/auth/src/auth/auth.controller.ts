@@ -6,6 +6,7 @@ import {
   Controller,
   Post,
   Request,
+  Res,
   SerializeOptions,
   UseGuards,
   UseInterceptors,
@@ -21,6 +22,7 @@ import {
 import { AuthService } from './auth.service';
 import { AuthDto } from './dtos/auth.dto';
 import { TokensEntity } from './entities/tokens.entity';
+import { Response } from 'express';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -36,8 +38,22 @@ export class AuthController {
     type: TokensEntity,
   })
   @Post('login')
-  async login(@Body() data: AuthDto): Promise<TokensEntity> {
-    return this.authService.login(data);
+  async login(
+    @Body() data: AuthDto,
+    @Res() response: Response,
+  ): Promise<TokensEntity> {
+    const tokens = await this.authService.login(data);
+    response.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    response.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+    });
+    return tokens;
   }
 
   @ApiBearerAuth()
