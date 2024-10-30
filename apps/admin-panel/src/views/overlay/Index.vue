@@ -13,6 +13,9 @@ const username = ref<string>('');
 
 const multiUsernames = ref<string[]>([]);
 
+const showWebcam = ref<boolean | undefined>(true);
+const showStream = ref<boolean | undefined>(true);
+
 const [fetchUsers, { result: users }] = useLazyPromise(
   () =>
     userApi.user.getUsers({
@@ -21,6 +24,9 @@ const [fetchUsers, { result: users }] = useLazyPromise(
 );
 
 async function saveSingleUserStream(stream?: boolean, webcam?: boolean) {
+  console.log('stream | webcam', stream, webcam);
+  showWebcam.value = webcam;
+  showStream.value = stream;
   try {
     await internalApi.overlay.setUserStream({
       username: username.value,
@@ -31,6 +37,9 @@ async function saveSingleUserStream(stream?: boolean, webcam?: boolean) {
   } catch (error) {
     console.error(error);
   }
+
+  console.log('showWebcam', showWebcam.value);
+  console.log('showStream', showStream.value);
 }
 
 async function saveMultiUserStream() {
@@ -39,7 +48,9 @@ async function saveMultiUserStream() {
 
 watch(users, () => {
   if (users.value) {
-    usernameOptions.value = users.value.map((user) => user.username);
+    usernameOptions.value = users.value.map(
+      (user: { username: any }) => user.username,
+    );
   } else {
     usernameOptions.value = [];
   }
@@ -84,8 +95,29 @@ onMounted(() => {
           >
             Webcam
           </v-btn>
+          <v-card class="card-display">
+            <div :class="[`${!showStream ? 'hidden' : ''}`]">
+              Stream
+              <video-player
+                src="/video-sample.mp4"
+                :controls="true"
+                :autoplay="true"
+                :loop="true"
+                :volume="1.0"
+              ></video-player>
+            </div>
+            <div :class="[`${!showWebcam ? 'hidden' : ''}`]">
+              Webcam
+              <video-player
+                src="/video-sample.mp4"
+                :controls="false"
+                :autoplay="false"
+                :loop="true"
+                :volume="1.0"
+              ></video-player>
+            </div>
+          </v-card>
         </v-tabs-window-item>
-
         <v-tabs-window-item :value="OVERLAY_KEYS.MULTI_USER_STREAM">
           <v-btn color="primary" @click="saveMultiUserStream"> Save </v-btn>
         </v-tabs-window-item>
@@ -93,3 +125,17 @@ onMounted(() => {
     </v-card-text>
   </v-card>
 </template>
+
+<style scoped>
+.card-display {
+  display: flex;
+  gap: 16px;
+  justify-content: center; /* Centers the videos */
+  align-items: center;
+  margin-top: 20px;
+}
+
+.hidden {
+  display: none;
+}
+</style>
