@@ -6,11 +6,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrintingModule } from './printing/printing.module';
+import { TaskModule } from 'apps/printing/src/task/task.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
     PrintingModule,
+    TaskModule,
     JwtModule.register({ global: true }),
   ],
   controllers: [AppController],
