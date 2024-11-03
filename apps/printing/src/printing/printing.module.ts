@@ -8,12 +8,17 @@ import {
   PrintJob,
   PrintJobSchema,
 } from '@libs/common-db/schemas/printJob.schema';
+import {
+  PrintClient,
+  PrintClientSchema,
+} from '@libs/common-db/schemas/printClient.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: PrintJob.name, schema: PrintJobSchema },
+      { name: PrintClient.name, schema: PrintClientSchema },
     ]),
   ],
   controllers: [PrintingController],

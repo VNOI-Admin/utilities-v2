@@ -16,11 +16,14 @@ export class PrintJob {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   user: UserDocument;
 
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'PrintClient' })
-  client: Types.ObjectId;
+  @Prop()
+  clientId: string;
 
   @Prop({ required: true, enum: PrintStatus, default: PrintStatus.QUEUED })
   status: PrintStatus;
+
+  @Prop({ required: true, default: 0 })
+  priority: number;
 
   @Prop({ required: true })
   requestedAt: Date;

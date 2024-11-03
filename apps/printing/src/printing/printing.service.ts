@@ -8,6 +8,7 @@ import {
   Injectable,
   OnModuleInit,
   StreamableFile,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -15,6 +16,14 @@ import { Model } from 'mongoose';
 import { PrintJobEntity } from './entities/PrintJob.entity';
 import { plainToInstance } from 'class-transformer';
 import { UpdatePrintJobDto } from './dtos/updatePrintJob.dto';
+import { CreatePrintClientDto } from './dtos/createPrintClient.dto';
+import {
+  PrintClient,
+  PrintClientDocument,
+} from '@libs/common-db/schemas/printClient.schema';
+import { PrintClientEntity } from './entities/PrintClient.entity';
+import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
+import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
 
 @Injectable()
 export class PrintingService implements OnModuleInit {
@@ -24,6 +33,8 @@ export class PrintingService implements OnModuleInit {
     private userModel: Model<UserDocument>,
     @InjectModel(PrintJob.name)
     private printJobModel: Model<PrintJobDocument>,
+    @InjectModel(PrintClient.name)
+    private printClientModel: Model<PrintClientDocument>,
   ) {}
 
   async onModuleInit() {}
@@ -81,7 +92,7 @@ export class PrintingService implements OnModuleInit {
         throw new BadRequestException('Print job not found');
       }
 
-      if ('username' in updatePrintJobDto) {
+      if (updatePrintJobDto.username) {
         // Find new user document
         const newUser = await this.userModel.findOne({
           username: updatePrintJobDto.username,
@@ -91,7 +102,8 @@ export class PrintingService implements OnModuleInit {
       }
 
       printJob.status = updatePrintJobDto.status || printJob.status;
-      printJob.filename = updatePrintJobDto.filename || printJob.filename;
+      printJob.clientId = updatePrintJobDto.clientId || printJob.clientId;
+      printJob.priority = updatePrintJobDto.priority ?? printJob.priority;
 
       await printJob.save();
       const updatedPrintJob = await printJob.populate('user');
@@ -116,19 +128,152 @@ export class PrintingService implements OnModuleInit {
     }
   }
 
-  async getPrintJobFile(id: string): Promise<StreamableFile> {
+  async getPrintJobFile(
+    jobId: string,
+    clientId?: string,
+  ): Promise<StreamableFile> {
     try {
       const printJob = await this.printJobModel.findOne({
-        _id: id,
+        _id: jobId,
       });
 
       if (!printJob) {
         throw new BadRequestException('Print job not found');
       }
 
+      if (clientId && printJob.clientId !== clientId) {
+        throw new UnauthorizedException('Unauthorized');
+      }
+
       return new StreamableFile(printJob.content, {
         disposition: `attachment; filename="${printJob.filename}"`,
       });
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async createPrintClient(createPrintClientDto: CreatePrintClientDto) {
+    try {
+      const printClient = await this.printClientModel.create({
+        ...createPrintClientDto,
+      });
+
+      await printClient.save();
+
+      if (!printClient) {
+        throw new BadRequestException('Unable to create print client');
+      }
+
+      return plainToInstance(PrintClientEntity, printClient.toObject());
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async getPrintClients(): Promise<PrintClientEntity[]> {
+    const printClients = await this.printClientModel.find().lean();
+    return plainToInstance(PrintClientEntity, printClients);
+  }
+
+  async getPrintClient(clientId: string): Promise<PrintClientEntity> {
+    try {
+      const printClient = await this.printClientModel
+        .findOne({ clientId })
+        .lean();
+
+      if (!printClient) {
+        throw new BadRequestException('Print client not found');
+      }
+
+      return plainToInstance(PrintClientEntity, printClient);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async updatePrintClient(
+    clientId: string,
+    updatePrintClientDto: UpdatePrintClientDto,
+  ) {
+    try {
+      const printClient = await this.printClientModel.findOne({ clientId });
+      if (!printClient) {
+        throw new BadRequestException('Print client not found');
+      }
+
+      printClient.clientId =
+        updatePrintClientDto.clientId || printClient.clientId;
+      printClient.authKey = updatePrintClientDto.authKey ?? printClient.authKey;
+      printClient.isActive =
+        updatePrintClientDto.isActive ?? printClient.isActive;
+
+      await printClient.save();
+      return plainToInstance(PrintClientEntity, printClient.toObject());
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async checkPrintClientAuth(
+    clientId: string,
+    authKey: string,
+  ): Promise<boolean> {
+    const printClient = await this.printClientModel.findOne({ clientId });
+    if (!printClient) {
+      throw new BadRequestException('Print client not found');
+    }
+    return printClient.isActive && printClient.authKey === authKey;
+  }
+
+  async getPrintClientQueue(clientId: string): Promise<PrintJobEntity[]> {
+    try {
+      const printJobs = await this.printJobModel
+        .find({ clientId, status: 'queued' })
+        .sort({ priority: -1, requestedAt: 1 })
+        .lean()
+        .populate('user');
+
+      return plainToInstance(PrintJobEntity, printJobs);
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async updatePrintJobStatus(
+    jobId: string,
+    clientId: string,
+    updatePrintJobDto: UpdatePrintJobStatusDto,
+  ) {
+    try {
+      const printJob = await this.printJobModel.findOne({ _id: jobId });
+      if (!printJob) {
+        throw new BadRequestException('Print job not found');
+      }
+
+      if (printJob.clientId !== clientId) {
+        throw new UnauthorizedException('Unauthorized');
+      }
+
+      printJob.status = updatePrintJobDto.status || printJob.status;
+
+      await printJob.save();
+      return { success: true };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  async pingPrintClient(clientId: string, date: Date) {
+    try {
+      const printClient = await this.printClientModel.findOne({ clientId });
+      if (!printClient) {
+        throw new BadRequestException('Print client not found');
+      }
+
+      printClient.lastReportedAt = date;
+
+      await printClient.save();
     } catch (error) {
       throw new BadRequestException(error.message);
     }

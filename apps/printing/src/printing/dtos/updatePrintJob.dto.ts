@@ -1,14 +1,14 @@
 import { PrintStatus } from '@libs/common-db/schemas/printJob.schema';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class UpdatePrintJobDto {
   @ApiProperty({
     required: false,
     enum: Object.values(PrintStatus),
-    default: PrintStatus.QUEUED,
   })
   @IsOptional()
+  @IsEnum(PrintStatus)
   status: PrintStatus;
 
   @ApiProperty({ required: false })
@@ -19,5 +19,10 @@ export class UpdatePrintJobDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  filename: string;
+  clientId: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsNumber()
+  priority: number;
 }

@@ -27,6 +27,14 @@ export class PrintJobEntity {
 
   @Expose()
   @ApiProperty()
+  clientId: string;
+
+  @Expose()
+  @ApiProperty()
+  priority: number;
+
+  @Expose()
+  @ApiProperty()
   status: PrintStatus;
 
   @Expose()
