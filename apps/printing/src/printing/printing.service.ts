@@ -24,6 +24,7 @@ import {
 import { PrintClientEntity } from './entities/PrintClient.entity';
 import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
 import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
+import { GetPrintJobDto } from './dtos/getPrintJob.dto';
 
 @Injectable()
 export class PrintingService implements OnModuleInit {
@@ -102,8 +103,19 @@ export class PrintingService implements OnModuleInit {
     }
   }
 
-  async getPrintJobs(): Promise<PrintJobEntity[]> {
-    const printJobs = await this.printJobModel.find().lean().populate('user');
+  async getPrintJobs(
+    getPrintJobDto: GetPrintJobDto,
+  ): Promise<PrintJobEntity[]> {
+    const query = Object.fromEntries(
+      Object.entries(getPrintJobDto).filter(
+        ([_, value]) => value !== undefined,
+      ),
+    );
+
+    const printJobs = await this.printJobModel
+      .find(query)
+      .lean()
+      .populate('user');
     return plainToInstance(PrintJobEntity, printJobs);
   }
 

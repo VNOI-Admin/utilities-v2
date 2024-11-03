@@ -39,6 +39,7 @@ import { CreatePrintClientDto } from './dtos/createPrintClient.dto';
 import { PrintClientEntity } from './entities/PrintClient.entity';
 import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
 import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
+import { GetPrintJobDto } from './dtos/getPrintJob.dto';
 
 @ApiTags('Printing')
 @Controller('printing')
@@ -81,8 +82,8 @@ export class PrintingController {
     type: [PrintJobEntity],
   })
   @Get('/jobs')
-  async getPrintJobs() {
-    return await this.printingService.getPrintJobs();
+  async getPrintJobs(@Query() getPrintJobDto: GetPrintJobDto) {
+    return await this.printingService.getPrintJobs(getPrintJobDto);
   }
 
   @ApiBearerAuth()
