@@ -233,6 +233,28 @@ export class PrintingController {
     return await this.printingService.getPrintClientQueue(clientId);
   }
 
+  @ApiOperation({ summary: 'Print client heartbeat' })
+  @ApiResponse({
+    status: 200,
+    schema: { properties: { success: { type: 'boolean' } } },
+  })
+  @Post('/client/:clientId/heartbeat')
+  async printClientHeartbeat(
+    @Param('clientId') clientId: string,
+    @Query('authKey') authKey: string,
+  ) {
+    if (
+      !authKey ||
+      !(await this.printingService.checkPrintClientAuth(clientId, authKey))
+    ) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+
+    await this.printingService.pingPrintClient(clientId, new Date());
+
+    return { success: true };
+  }
+
   @ApiOperation({ summary: 'Get print job file' })
   @ApiResponse({
     status: 200,
@@ -262,7 +284,6 @@ export class PrintingController {
   @ApiOperation({ summary: 'Update print job status' })
   @ApiResponse({
     status: 200,
-    description: 'Return print job file',
     schema: { properties: { success: { type: 'boolean' } } },
   })
   @Patch('/client/:clientId/job/:jobId/status')
