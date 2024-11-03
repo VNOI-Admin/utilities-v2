@@ -46,11 +46,52 @@ export class PrintingService implements OnModuleInit {
     }
 
     try {
+      const availablePrintClients = await this.printClientModel.aggregate([
+        {
+          $match: {
+            isActive: true,
+            isOnline: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'printjobs',
+            localField: 'clientId',
+            foreignField: 'clientId',
+            as: 'printJobs',
+            pipeline: [
+              {
+                $match: {
+                  status: 'queued',
+                },
+              },
+            ],
+          },
+        },
+        {
+          $project: {
+            clientId: 1,
+            printJobs: 1,
+            printJobsCount: { $size: '$printJobs' },
+          },
+        },
+        {
+          $sort: {
+            printJobsCount: 1,
+          },
+        },
+      ]);
+
+      let clientId = null;
+      if (availablePrintClients.length > 0)
+        clientId = availablePrintClients[0].clientId;
+
       const printJob = await this.printJobModel.create({
         user: user._id,
         requestedAt: new Date(),
         filename: file.originalname,
         content: file.buffer,
+        clientId: clientId,
       });
 
       await printJob.save();

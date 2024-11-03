@@ -227,7 +227,7 @@ export class PrintingController {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    this.printingService.pingPrintClient(clientId, new Date());
+    // this.printingService.pingPrintClient(clientId, new Date());
 
     return await this.printingService.getPrintClientQueue(clientId);
   }
