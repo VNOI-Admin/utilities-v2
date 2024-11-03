@@ -39,7 +39,6 @@ import { CreatePrintClientDto } from './dtos/createPrintClient.dto';
 import { PrintClientEntity } from './entities/PrintClient.entity';
 import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
 import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
-import { plainToInstance } from 'class-transformer';
 
 @ApiTags('Printing')
 @Controller('printing')
@@ -59,7 +58,7 @@ export class PrintingController {
   })
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
-  @Post('/job')
+  @Post('/jobs')
   async createPrintJob(
     @Request() req: any,
     @UploadedFile(
@@ -95,7 +94,7 @@ export class PrintingController {
     description: 'Return one print job',
     type: PrintJobEntity,
   })
-  @Get('/job/:id')
+  @Get('/jobs/:id')
   async getPrintJob(@Param('id') id: string) {
     return await this.printingService.getPrintJob(id);
   }
@@ -109,7 +108,7 @@ export class PrintingController {
     description: 'Return one print job',
     type: PrintJobEntity,
   })
-  @Patch('/job/:id')
+  @Patch('/jobs/:id')
   async updatePrintJob(
     @Param('id') id: string,
     @Body() updatePrintJobDto: UpdatePrintJobDto,
@@ -125,7 +124,7 @@ export class PrintingController {
     status: 200,
     description: 'Delete one print job',
   })
-  @Delete('/job/:id')
+  @Delete('/jobs/:id')
   async deletePrintJob(@Param('id') id: string) {
     return await this.printingService.deletePrintJob(id);
   }
@@ -143,7 +142,7 @@ export class PrintingController {
     },
   })
   @ApiProduces('application/octet-stream')
-  @Get('/job/:id/file')
+  @Get('/jobs/:id/file')
   async getPrintJobFile(@Param('id') id: string) {
     return await this.printingService.getPrintJobFile(id);
   }
@@ -185,7 +184,7 @@ export class PrintingController {
     description: 'Return one print client',
     type: PrintClientEntity,
   })
-  @Get('/client/:clientId')
+  @Get('/clients/:clientId')
   async getPrintClient(@Param('clientId') clientId: string) {
     return await this.printingService.getPrintClient(clientId);
   }
@@ -199,7 +198,7 @@ export class PrintingController {
     description: 'Return one print client',
     type: PrintClientEntity,
   })
-  @Patch('/client/:clientId')
+  @Patch('/clients/:clientId')
   async updatePrintClient(
     @Param('clientId') clientId: string,
     @Body() updatePrintClientDto: UpdatePrintClientDto,
@@ -216,7 +215,7 @@ export class PrintingController {
     description: 'Return print jobs',
     type: [PrintJobEntity],
   })
-  @Get('/client/:clientId/queue')
+  @Get('/clients/:clientId/queue')
   async getPrintClientQueue(
     @Param('clientId') clientId: string,
     @Query('authKey') authKey: string,
@@ -238,7 +237,7 @@ export class PrintingController {
     status: 200,
     schema: { properties: { success: { type: 'boolean' } } },
   })
-  @Post('/client/:clientId/heartbeat')
+  @Post('/clients/:clientId/heartbeat')
   async printClientHeartbeat(
     @Param('clientId') clientId: string,
     @Query('authKey') authKey: string,
@@ -265,7 +264,7 @@ export class PrintingController {
     },
   })
   @ApiProduces('application/octet-stream')
-  @Get('/client/:clientId/job/:jobId/file')
+  @Get('/clients/:clientId/jobs/:jobId/file')
   async getClientPrintJobFile(
     @Param('clientId') clientId: string,
     @Param('jobId') jobId: string,
@@ -286,7 +285,7 @@ export class PrintingController {
     status: 200,
     schema: { properties: { success: { type: 'boolean' } } },
   })
-  @Patch('/client/:clientId/job/:jobId/status')
+  @Patch('/clients/:clientId/jobs/:jobId/status')
   async updatePrintJobStatus(
     @Param('clientId') clientId: string,
     @Param('jobId') jobId: string,
