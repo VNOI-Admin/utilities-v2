@@ -32,7 +32,7 @@ export class PrintJob {
   filename: string;
 
   @Prop({ required: true })
-  content: Buffer;
+  content: string;
 }
 
 export const PrintJobSchema = SchemaFactory.createForClass(PrintJob);

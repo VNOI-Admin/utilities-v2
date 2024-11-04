@@ -91,7 +91,7 @@ export class PrintingService implements OnModuleInit {
         user: user._id,
         requestedAt: new Date(),
         filename: file.originalname,
-        content: file.buffer,
+        content: file.buffer.toString('base64'),
         clientId: clientId,
       });
 
@@ -198,7 +198,7 @@ export class PrintingService implements OnModuleInit {
         throw new UnauthorizedException('Unauthorized');
       }
 
-      return new StreamableFile(printJob.content, {
+      return new StreamableFile(Buffer.from(printJob.content, 'base64'), {
         disposition: `attachment; filename="${printJob.filename}"`,
       });
     } catch (error) {
