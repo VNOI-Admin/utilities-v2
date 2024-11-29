@@ -5,6 +5,7 @@ import Fonts from 'unplugin-fonts/vite';
 import Layouts from 'vite-plugin-vue-layouts';
 import Vue from '@vitejs/plugin-vue';
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
+import tsConfigPaths from 'vite-tsconfig-paths';
 
 // Utilities
 import { defineConfig } from 'vite';
@@ -20,8 +21,15 @@ export default defineConfig({
   },
   plugins: [
     Layouts(),
+    tsConfigPaths(),
     AutoImport({
-      imports: ['vue', 'vue-router', '@vueuse/core'],
+      imports: [
+        'vue',
+        'vue-router',
+        '@vueuse/core',
+        { 'vue-toastification': ['useToast'] },
+        { '~/hooks/useLazyPromise': [['default', 'useLazyPromise']] },
+      ],
       dts: 'src/auto-imports.d.ts',
       eslintrc: {
         enabled: true,
@@ -73,4 +81,5 @@ export default defineConfig({
   server: {
     port: 3000,
   },
+  clearScreen: false,
 });

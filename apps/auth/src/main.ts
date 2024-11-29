@@ -20,6 +20,8 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const authEndpoint = configService.get('AUTH_SERVICE_ENDPOINT');
 
+  app.enableCors({ credentials: true, origin: true });
+
   const config = new DocumentBuilder()
     .addServer(authEndpoint)
     .setTitle('Utilities V2 Auth API Docs')

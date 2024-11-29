@@ -79,8 +79,6 @@ export class UserService implements OnModuleInit {
     const q = query.q || '';
     const orderBy = query.orderBy || { username: 1 };
 
-    console.log('Query', query);
-
     const pipeline: PipelineStage[] = [
       {
         $match: {
@@ -115,7 +113,7 @@ export class UserService implements OnModuleInit {
       },
     ]);
 
-    return plainToInstance(UserEntity, users);
+    return users.map((user) => plainToInstance(UserEntity, user));
   }
 
   async getUserByUsername(username: string): Promise<UserEntity> {

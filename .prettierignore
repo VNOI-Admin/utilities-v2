@@ -1,2 +1,5 @@
 apps/admin-panel/src/auto-imports.d.ts
 apps/admin-panel/src/components.d.ts
+apps/stream-overlay/src/auto-imports.d.ts
+apps/stream-overlay/src/components.d.ts
+.yarn/
