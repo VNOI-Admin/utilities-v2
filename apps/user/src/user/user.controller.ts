@@ -26,7 +26,7 @@ import { CreateUserDto } from './dtos/createUser.dto';
 import { GetUserDto } from './dtos/getUser.dto';
 import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
-import { MachineUsageEntity, UserEntity } from './entities/User.entity';
+import { MachineUsageEntity, UserEntity } from '@libs/common/dtos/User.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')

@@ -1,6 +1,6 @@
 import { PrintStatus } from '@libs/common-db/schemas/printJob.schema';
 import { ApiProperty } from '@nestjs/swagger';
-import { UserEntity } from 'apps/user/src/user/entities/User.entity';
+import { UserEntity } from '@libs/common/dtos/User.entity';
 import { Expose } from 'class-transformer';
 import { Types } from 'mongoose';
 

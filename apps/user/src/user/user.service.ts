@@ -21,7 +21,7 @@ import type { CreateUserDto } from './dtos/createUser.dto';
 import type { GetUserDto } from './dtos/getUser.dto';
 import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import type { UpdateUserDto } from './dtos/updateUser.dto';
-import { MachineUsageEntity, UserEntity } from './entities/User.entity';
+import { MachineUsageEntity, UserEntity } from '@libs/common/dtos/User.entity';
 
 @Injectable()
 export class UserService implements OnModuleInit {

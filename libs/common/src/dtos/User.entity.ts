@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Transform, Type } from 'class-transformer';
-import { GroupEntity } from '../../group/entities/Group.entity';
+import { GroupEntity } from './Group.entity';
 
 export class MachineUsageEntity {
   @Expose()

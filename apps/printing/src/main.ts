@@ -33,7 +33,7 @@ async function bootstrap() {
   });
   SwaggerModule.setup('docs', app, document);
 
-  await app.listen(8003, '0.0.0.0');
+  await app.listen(8004);
 }
 
 void bootstrap();

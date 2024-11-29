@@ -11,6 +11,7 @@ PRINTING_URL = os.getenv("PRINTING_URL", "https://vpn.vnoi.info/printing")
 CLIENT_ID = os.getenv("CLIENT_ID", "print-client")
 AUTH_KEY = os.getenv("AUTH_KEY", "secret")
 PRINT_FILES_FOLDER = os.getenv("PRINT_FILES_FOLDER", "files")
+PRINTER = os.getenv("PRINTER", None)
 
 HEARTBEAT_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/heartbeat"
 QUEUE_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/queue"
@@ -19,7 +20,7 @@ QUEUE_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/queue"
 def heartbeat():
     while True:
         try:
-            response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY})
+            response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=HEARTBEAT_INTERVAL)
             response.raise_for_status()
         except requests.RequestException as e:
             print(f"Failed to send heartbeat: {e}")
@@ -27,7 +28,7 @@ def heartbeat():
 
 def get_print_queue():
     try:
-        response = requests.get(QUEUE_ENDPOINT, params={"authKey": AUTH_KEY})
+        response = requests.get(QUEUE_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=QUEUE_CHECK_INTERVAL)
         response.raise_for_status()
         queue = response.json()
         return queue
@@ -63,7 +64,9 @@ def update_print_status(job_id, status):
 
 def print_job(filepath):
     try:
-        process = subprocess.Popen(f'lpr -o media=A4 -o prettyprint -o fit-to-page {filepath}', shell=True)
+        process = subprocess.Popen(
+            ["lpr", "-P", PRINTER, "-o", "media=A4", "-o", "prettyprint", "-o", "fit-to-page", filepath]
+        )
         process.wait()
         return True
     except Exception as e:
@@ -96,11 +99,33 @@ def process_print_queue():
 
         time.sleep(QUEUE_CHECK_INTERVAL)
 
+def check_printer_exists():
+    # run lpstat -a | awk '{print $1}' to get list of printers and check if PRINTER is in the list
+    # if PRINTER is not specified, use the default printer
+    global PRINTER
+
+    try:
+        process = subprocess.Popen(["lpstat", "-a"], stdout=subprocess.PIPE)
+        output = process.communicate()[0].decode("utf-8")
+        printers = output.split("\n")
+        printers = [p.split()[0] for p in printers if p]
+        print("Checking printer in list:", printers)
+        if PRINTER is None:
+            print("No printer specified. Using default printer.")
+            PRINTER = printers[0]
+        elif PRINTER not in printers:
+            print(f"Printer {PRINTER} not found. Using default printer {printers[0]} instead.")
+            PRINTER = printers[0]
+    except Exception as e:
+        print(f"Failed to check printer: {e}")
+        PRINTER = None
+
 def main():
     heartbeat_thread = threading.Thread(target=heartbeat, daemon=True)
     heartbeat_thread.start()
 
     # Run the print queue processing in the main thread
+    check_printer_exists()
     process_print_queue()
 
 if __name__ == "__main__":

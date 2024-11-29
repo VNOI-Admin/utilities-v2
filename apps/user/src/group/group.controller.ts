@@ -21,8 +21,8 @@ import {
 } from '@nestjs/swagger';
 
 import { CreateGroupDto } from './dtos/createGroup.dto';
-import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from '../user/entities/User.entity';
+import { GroupEntity } from '@libs/common/dtos/Group.entity';
+import { UserEntity } from '@libs/common/dtos/User.entity';
 import { GroupService } from './group.service';
 import { UpdateGroupDto } from './dtos/updateGroup.dto';
 

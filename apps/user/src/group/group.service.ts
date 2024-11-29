@@ -10,9 +10,9 @@ import { plainToInstance } from 'class-transformer';
 import { Model } from 'mongoose';
 
 import type { CreateGroupDto } from './dtos/createGroup.dto';
-import { GroupEntity } from './entities/Group.entity';
+import { GroupEntity } from '@libs/common/dtos/Group.entity';
 import { UpdateGroupDto } from './dtos/updateGroup.dto';
-import { UserEntity } from '../user/entities/User.entity';
+import { UserEntity } from '@libs/common/dtos/User.entity';
 
 @Injectable()
 export class GroupService implements OnModuleInit {

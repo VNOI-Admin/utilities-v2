@@ -1,0 +1,53 @@
+# Create containers from images: utilies/{user,auth,printing} with exposed ports 8001, 8002, 8003 internally in network utilities_network
+# Create container from image mongo with exposed port 27017 internally in network utilities_network
+
+services:
+  user:
+    image: utilities/user
+    container_name: utilities_user
+    networks:
+      - utilities_network
+    env_file:
+      - .docker.env
+    ports:
+      - "8001:8001"
+
+  auth:
+    image: utilities/auth
+    container_name: utilities_auth
+    networks:
+      - utilities_network
+    env_file:
+      - .docker.env
+    ports:
+      - "8002:8002"
+
+  internal:
+    image: utilities/internal
+    container_name: utilities_internal
+    networks:
+      - utilities_network
+    env_file:
+      - .docker.env
+    ports:
+      - "8003:8003"
+
+  printing:
+    image: utilities/printing
+    container_name: utilities_printing
+    networks:
+      - utilities_network
+    env_file:
+      - .docker.env
+    ports:
+      - "8004:8004"
+
+  mongo:
+    image: mongo
+    container_name: utilities_mongo
+    networks:
+      - utilities_network
+
+networks:
+  utilities_network:
+    driver: bridge
