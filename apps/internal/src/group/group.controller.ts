@@ -10,7 +10,7 @@ import {
 
 import { Controller, Post, Body, Patch, Param, Delete } from '@nestjs/common';
 import { GroupService } from './group.service';
-import { GroupEntity } from '../../../user/src/group/entities/Group.entity';
+import { GroupEntity } from '@libs/common/dtos/Group.entity';
 
 @ApiTags('Group')
 @Controller('groups')
