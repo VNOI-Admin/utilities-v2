@@ -8,9 +8,19 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { Controller, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { GroupService } from './group.service';
 import { GroupEntity } from '@libs/common/dtos/Group.entity';
+import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 
 @ApiTags('Group')
 @Controller('groups')
@@ -19,8 +29,8 @@ export class GroupController {
   /** Group **/
 
   @ApiBearerAuth()
-  // @UseGuards(AccessTokenGuard)
-  // @RequiredRoles(Role.ADMIN)
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Create new group' })
   @ApiResponse({
     status: 200,
@@ -32,8 +42,8 @@ export class GroupController {
     return await this.groupService.createGroup(createGroupDto);
   }
   @ApiBearerAuth()
-  // @UseGuards(AccessTokenGuard)
-  // @RequiredRoles(Role.ADMIN)
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Update group' })
   @ApiResponse({
     status: 200,
@@ -49,8 +59,8 @@ export class GroupController {
   }
 
   @ApiBearerAuth()
-  // @UseGuards(AccessTokenGuard)
-  // @RequiredRoles(Role.ADMIN)
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Delete group' })
   @ApiResponse({
     status: 200,
