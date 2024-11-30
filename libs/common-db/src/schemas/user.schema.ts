@@ -5,8 +5,7 @@ import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
 import type { Model } from 'mongoose';
-import { type Document, SchemaTypes } from 'mongoose';
-import { GroupDocument } from './group.schema';
+import { type Document } from 'mongoose';
 
 export type UserDocument = User & Document;
 
@@ -68,9 +67,7 @@ export class User {
   )
   machineUsage: MachineUsage;
 
-  // Belong to one group
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Group' })
-  group: GroupDocument;
+  group: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

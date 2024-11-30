@@ -50,12 +50,12 @@ export class GroupController {
     description: 'Return group',
     type: GroupEntity,
   })
-  @Patch('/:groupCodeName')
+  @Patch('/:code')
   async updateGroup(
-    @Param('groupCodeName') groupCodeName: string,
+    @Param('code') code: string,
     @Body() updateGroupDto: UpdateGroupDto,
   ) {
-    return await this.groupService.updateGroup(groupCodeName, updateGroupDto);
+    return await this.groupService.updateGroup(code, updateGroupDto);
   }
 
   @ApiBearerAuth()
@@ -67,8 +67,8 @@ export class GroupController {
     description: 'Return status',
     schema: { properties: { success: { type: 'boolean' } } },
   })
-  @Delete('/:groupCodeName')
-  async deleteGroup(@Param('groupCodeName') groupCodeName: string) {
-    return await this.groupService.deleteGroup(groupCodeName);
+  @Delete('/:code')
+  async deleteGroup(@Param('code') code: string) {
+    return await this.groupService.deleteGroup(code);
   }
 }

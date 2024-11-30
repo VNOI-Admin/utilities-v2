@@ -24,8 +24,8 @@ export class GroupService {
   async createGroup(createGroupDto: CreateGroupDto) {
     try {
       const group = await this.groupModel.create({
-        groupCodeName: createGroupDto.groupCodeName,
-        groupFullName: createGroupDto.groupFullName,
+        code: createGroupDto.code,
+        fullName: createGroupDto.fullName,
       });
 
       await group.save();
@@ -40,21 +40,21 @@ export class GroupService {
     }
   }
 
-  async updateGroup(groupCodeName: string, updateGroupDto: UpdateGroupDto) {
-    const group = await this.groupModel.findOne({ groupCodeName });
+  async updateGroup(code: string, updateGroupDto: UpdateGroupDto) {
+    const group = await this.groupModel.findOne({ code });
     if (!group) {
       throw new BadRequestException('Group not found');
     }
 
-    group.groupCodeName = updateGroupDto.groupCodeName || group.groupCodeName;
-    group.groupFullName = updateGroupDto.groupFullName || group.groupFullName;
+    group.code = updateGroupDto.code || group.code;
+    group.fullName = updateGroupDto.fullName || group.fullName;
     await group.save();
     return plainToInstance(GroupEntity, group.toObject());
   }
 
-  async deleteGroup(groupCodeName: string) {
+  async deleteGroup(code: string) {
     try {
-      const group = await this.groupModel.findOne({ groupCodeName });
+      const group = await this.groupModel.findOne({ code });
       if (!group) {
         throw new BadRequestException('Group not found');
       }

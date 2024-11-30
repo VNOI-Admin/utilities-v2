@@ -50,8 +50,8 @@ export class GroupController {
     description: 'Return users',
     type: [UserEntity],
   })
-  @Get('/:groupCodeName/users')
-  async getUsers(@Param('groupCodeName') groupCodeName: string) {
-    return await this.groupService.getUsersInGroup(groupCodeName);
+  @Get('/:code/users')
+  async getUsers(@Param('code') code: string) {
+    return await this.groupService.getUsersInGroup(code);
   }
 }
