@@ -47,6 +47,8 @@ services:
     container_name: utilities_mongo
     volumes:
       - mongo_data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
     networks:
       - utilities_network
 
