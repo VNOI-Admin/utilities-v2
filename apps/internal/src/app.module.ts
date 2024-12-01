@@ -6,10 +6,12 @@ import { OverlayModule } from './overlay/overlay.module';
 import { DatabaseModule } from '@libs/common-db/database.module';
 import { GroupModule } from './group/group.module';
 import { UserModule } from './user/user.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    JwtModule.register({ global: true }),
     OverlayModule,
     DatabaseModule,
     GroupModule,

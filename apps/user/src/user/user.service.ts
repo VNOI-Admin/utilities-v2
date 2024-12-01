@@ -4,6 +4,7 @@ import {
   type GroupDocument,
 } from '@libs/common-db/schemas/group.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import type { OnModuleInit } from '@nestjs/common';
 import {
   BadRequestException,
   Injectable,
@@ -11,23 +12,46 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
+import * as argon2 from 'argon2';
 import { plainToInstance } from 'class-transformer';
 import type { PipelineStage } from 'mongoose';
 import { Model } from 'mongoose';
 
 import type { GetUserDto } from './dtos/getUser.dto';
-import type { ReportUsageDto } from './dtos/reportUsage.dto';
 import { MachineUsageEntity, UserEntity } from '@libs/common/dtos/User.entity';
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
+  private printUrl: string;
   constructor(
     private readonly configService: ConfigService,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
-  ) {}
+  ) {
+    this.printUrl = this.configService.get('PRINTER_URL');
+  }
+
+  async onModuleInit() {
+    let admin = await this.userModel.findOne({ username: 'admin' });
+    if (!admin) {
+      console.log('Initializing admin user...');
+      admin = await this.userModel.create({
+        username: 'admin',
+        password: 'admin',
+        role: 'admin',
+        isActive: true,
+        refreshToken: null,
+      });
+    }
+    const defaultPasswordCheck = await argon2.verify(admin.password, 'admin');
+    if (defaultPasswordCheck) {
+      console.warn(
+        'Password for admin user is currently set to default. Please change it as soon as possible.',
+      );
+    }
+  }
 
   async checkPrivilege(userId: string, roles: Role[]): Promise<void> {
     const user = await this.userModel.findOne({ _id: userId }).lean();
@@ -116,17 +140,5 @@ export class UserService {
       throw new BadRequestException('User not found');
     }
     return plainToInstance(MachineUsageEntity, user.machineUsage);
-  }
-
-  async reportUsage(userId: string, usage: ReportUsageDto) {
-    const user = await this.userModel.findOne({ _id: userId });
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
-    user.machineUsage.cpu = usage.cpu;
-    user.machineUsage.memory = usage.memory;
-    user.machineUsage.disk = usage.disk;
-    user.machineUsage.lastReportedAt = new Date();
-    await user.save();
   }
 }
