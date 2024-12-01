@@ -1,14 +1,11 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import {
-  Body,
   ClassSerializerInterceptor,
   Controller,
   Get,
   Param,
-  Post,
   Query,
-  Request,
   SerializeOptions,
   UseGuards,
   UseInterceptors,
@@ -21,7 +18,6 @@ import {
 } from '@nestjs/swagger';
 
 import { GetUserDto } from './dtos/getUser.dto';
-import { ReportUsageDto } from './dtos/reportUsage.dto';
 import { MachineUsageEntity, UserEntity } from '@libs/common/dtos/User.entity';
 import { UserService } from './user.service';
 
@@ -72,21 +68,5 @@ export class UserController {
   @Get('/:username/machine')
   async getMachineUsage(@Param('username') username: string) {
     return await this.userService.getMachineUsage(username);
-  }
-
-  @ApiOperation({
-    summary: 'Receive machine status report from contestant. Verified by IP.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Update user machine usage report',
-  })
-  @Post('/report')
-  async report(@Request() req: any, @Body() report: ReportUsageDto) {
-    // Get caller ip address
-    const callerIp =
-      req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-    const callerId = await this.userService.getUserByIp(callerIp);
-    return await this.userService.reportUsage(callerId, report);
   }
 }
