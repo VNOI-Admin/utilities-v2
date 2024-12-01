@@ -74,8 +74,9 @@ export const UserRawSchema = SchemaFactory.createForClass(User);
 
 export const UserSchemaFactory = (configService: ConfigService) => {
   const schema = UserRawSchema;
-  schema.pre('validate', async function () {
+  schema.pre('save', async function (next) {
     if (this.isModified('password')) {
+      console.log(this.password);
       this.password = await argon2.hash(this.password);
     }
 
@@ -114,6 +115,8 @@ export const UserSchemaFactory = (configService: ConfigService) => {
 
       this.keyPair = generateKeyPair();
     }
+
+    next();
   });
 
   return schema;

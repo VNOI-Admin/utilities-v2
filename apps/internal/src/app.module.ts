@@ -12,10 +12,10 @@ import { JwtModule } from '@nestjs/jwt';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     JwtModule.register({ global: true }),
-    OverlayModule,
     DatabaseModule,
-    GroupModule,
     UserModule,
+    GroupModule,
+    OverlayModule,
   ],
   controllers: [AppController],
   providers: [AppService],

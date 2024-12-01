@@ -23,6 +23,15 @@ import { UserService } from './user.service';
   ],
   controllers: [UserController],
   providers: [UserService],
-  exports: [UserService],
+  exports: [
+    UserService,
+    MongooseModule.forFeatureAsync([
+      {
+        name: User.name,
+        inject: [ConfigService],
+        useFactory: UserSchemaFactory,
+      },
+    ]),
+  ],
 })
 export class UserModule {}
