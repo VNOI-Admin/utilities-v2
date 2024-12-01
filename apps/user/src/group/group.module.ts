@@ -4,14 +4,16 @@ import { Group, GroupSchema } from 'libs/common-db/src/schemas/group.schema';
 
 import { GroupController } from './group.controller';
 import { GroupService } from './group.service';
-import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
+import { User, UserSchemaFactory } from '@libs/common-db/schemas/user.schema';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     MongooseModule.forFeatureAsync([
       {
         name: User.name,
-        useFactory: () => UserSchema,
+        inject: [ConfigService],
+        useFactory: UserSchemaFactory,
       },
       {
         name: Group.name,

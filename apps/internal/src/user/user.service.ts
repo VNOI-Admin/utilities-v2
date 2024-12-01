@@ -1,7 +1,7 @@
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import {
@@ -11,15 +11,36 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { UserEntity } from './entities/User.entity';
+import * as argon2 from 'argon2';
 
 @Injectable()
-export class UserService {
+export class UserService implements OnModuleInit {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
   ) {}
+
+  async onModuleInit() {
+    let admin = await this.userModel.findOne({ username: 'admin' });
+    if (!admin) {
+      console.log('Initializing admin user...');
+      admin = await this.userModel.create({
+        username: 'admin',
+        password: 'admin',
+        role: 'admin',
+        isActive: true,
+        refreshToken: null,
+      });
+    }
+    const defaultPasswordCheck = await argon2.verify(admin.password, 'admin');
+    if (defaultPasswordCheck) {
+      console.warn(
+        'Password for admin user is currently set to default. Please change it as soon as possible.',
+      );
+    }
+  }
 
   async createUser(createUserDto: CreateUserDto) {
     try {

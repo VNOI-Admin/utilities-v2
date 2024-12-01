@@ -70,16 +70,15 @@ export class User {
   group: string;
 }
 
-export const UserSchema = SchemaFactory.createForClass(User);
+export const UserRawSchema = SchemaFactory.createForClass(User);
 
-export function buildUserSchema(configService: ConfigService) {
-  const schema = UserSchema;
-  schema.pre('validate', async function (next) {
+export const UserSchemaFactory = (configService: ConfigService) => {
+  const schema = UserRawSchema;
+  schema.pre('validate', async function () {
     if (this.isModified('password')) {
       this.password = await argon2.hash(this.password);
     }
 
-    // Generate VPN IP address and key pair. Only generate for new users.
     if ((this.isNew && !this.vpnIpAddress) || this.isModified('role')) {
       const users = await this.model<Model<UserDocument>>(User.name)
         .find({ role: this.role })
@@ -115,7 +114,7 @@ export function buildUserSchema(configService: ConfigService) {
 
       this.keyPair = generateKeyPair();
     }
-
-    next();
   });
-}
+
+  return schema;
+};

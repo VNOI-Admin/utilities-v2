@@ -4,7 +4,6 @@ import {
   type GroupDocument,
 } from '@libs/common-db/schemas/group.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
-import type { OnModuleInit } from '@nestjs/common';
 import {
   BadRequestException,
   Injectable,
@@ -12,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import * as argon2 from 'argon2';
 import { plainToInstance } from 'class-transformer';
 import type { PipelineStage } from 'mongoose';
 import { Model } from 'mongoose';
@@ -21,7 +19,7 @@ import type { GetUserDto } from './dtos/getUser.dto';
 import { MachineUsageEntity, UserEntity } from '@libs/common/dtos/User.entity';
 
 @Injectable()
-export class UserService implements OnModuleInit {
+export class UserService {
   private printUrl: string;
   constructor(
     private readonly configService: ConfigService,
@@ -31,26 +29,6 @@ export class UserService implements OnModuleInit {
     private groupModel: Model<GroupDocument>,
   ) {
     this.printUrl = this.configService.get('PRINTER_URL');
-  }
-
-  async onModuleInit() {
-    let admin = await this.userModel.findOne({ username: 'admin' });
-    if (!admin) {
-      console.log('Initializing admin user...');
-      admin = await this.userModel.create({
-        username: 'admin',
-        password: 'admin',
-        role: 'admin',
-        isActive: true,
-        refreshToken: null,
-      });
-    }
-    const defaultPasswordCheck = await argon2.verify(admin.password, 'admin');
-    if (defaultPasswordCheck) {
-      console.warn(
-        'Password for admin user is currently set to default. Please change it as soon as possible.',
-      );
-    }
   }
 
   async checkPrivilege(userId: string, roles: Role[]): Promise<void> {
