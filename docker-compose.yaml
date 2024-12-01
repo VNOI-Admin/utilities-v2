@@ -45,8 +45,13 @@ services:
   mongo:
     image: mongo
     container_name: utilities_mongo
+    volumes:
+      - mongo_data:/data/db
     networks:
       - utilities_network
+
+volumes:
+  mongo_data:
 
 networks:
   utilities_network:
