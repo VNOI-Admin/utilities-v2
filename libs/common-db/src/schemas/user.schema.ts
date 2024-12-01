@@ -76,7 +76,6 @@ export const UserSchemaFactory = (configService: ConfigService) => {
   const schema = UserRawSchema;
   schema.pre('save', async function (next) {
     if (this.isModified('password')) {
-      console.log(this.password);
       this.password = await argon2.hash(this.password);
     }
 
