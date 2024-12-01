@@ -53,7 +53,9 @@ export class AccessTokenGuard implements CanActivate {
           'User not authorized to access this resource',
         );
       }
-    } catch {
+    } catch (e) {
+      // console.log(e);
+
       throw new UnauthorizedException('Unauthorized');
     }
     return true;

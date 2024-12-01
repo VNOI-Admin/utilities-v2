@@ -161,7 +161,7 @@ export class UserService implements OnModuleInit {
     if ('group' in updateUserDto) {
       // Find new group document
       let newGroup = undefined;
-      if (updateUserDto.group !== '') {
+      if (updateUserDto.group) {
         newGroup = await this.groupModel.findOne({
           groupCodeName: updateUserDto.group,
         });
@@ -192,7 +192,7 @@ export class UserService implements OnModuleInit {
     user.fullName = updateUserDto.fullName || user.fullName;
     user.password = updateUserDto.password || user.password;
     user.role = updateUserDto.role || user.role;
-    user.username = updateUserDto.usernameNew || user.username;
+    user.username = updateUserDto.username || user.username;
 
     await user.save();
     const updatedUser = await user.populate('group');

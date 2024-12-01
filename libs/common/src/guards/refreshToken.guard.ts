@@ -30,7 +30,7 @@ export class RefreshTokenGuard implements CanActivate {
         secret: this.configService.get('JWT_REFRESH_TOKEN_SECRET'),
       });
 
-      const user = await this.userModel.findById(payload.sub);
+      const user = await this.userModel.findOne({ username: payload.username });
 
       if (!user) {
         throw new UnauthorizedException('User not found');
@@ -40,23 +40,25 @@ export class RefreshTokenGuard implements CanActivate {
         ...payload,
         refreshToken: token,
       };
-    } catch {
+    } catch (e) {
+      console.log(e);
+
       throw new UnauthorizedException('Unauthorized');
     }
     return true;
   }
 
   extractTokenFromHeader(req: any): string | null {
-    let accessToken = null;
+    let refreshToken = null;
 
     if (req && req.cookies) {
-      accessToken = req.cookies.accessToken;
+      refreshToken = req.cookies.refreshToken;
     }
 
-    if (!accessToken) {
-      accessToken = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+    if (!refreshToken) {
+      refreshToken = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
     }
 
-    return accessToken;
+    return refreshToken;
   }
 }
