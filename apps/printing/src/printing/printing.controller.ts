@@ -39,6 +39,7 @@ import { PrintClientEntity } from './entities/PrintClient.entity';
 import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
 import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
 import { GetPrintJobDto } from './dtos/getPrintJob.dto';
+import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
 
 @ApiTags('Printing')
 @Controller('printing')
@@ -47,7 +48,7 @@ import { GetPrintJobDto } from './dtos/getPrintJob.dto';
 export class PrintingController {
   constructor(private readonly printingService: PrintingService) {}
 
-  // @UseGuards(IPAddressGuard)
+  @UseGuards(IPAddressGuard)
   @ApiOperation({ summary: 'Send print job' })
   @ApiBody({
     description: 'Print job',
