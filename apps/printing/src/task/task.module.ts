@@ -7,6 +7,7 @@ import {
   PrintClient,
   PrintClientSchema,
 } from '@libs/common-db/schemas/printClient.schema';
+import { PrintingModule } from '../printing/printing.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import {
       { name: PrintClient.name, schema: PrintClientSchema },
     ]),
     ScheduleModule.forRoot(),
+    PrintingModule,
   ],
   providers: [TaskService],
 })

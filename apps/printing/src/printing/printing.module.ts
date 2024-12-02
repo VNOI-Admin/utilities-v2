@@ -28,5 +28,6 @@ import { ConfigService } from '@nestjs/config';
   ],
   controllers: [PrintingController],
   providers: [PrintingService],
+  exports: [PrintingService],
 })
 export class PrintingModule {}

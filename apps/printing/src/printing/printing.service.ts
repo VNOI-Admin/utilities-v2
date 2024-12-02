@@ -10,7 +10,6 @@ import {
   StreamableFile,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { PrintJobEntity } from './entities/PrintJob.entity';
@@ -29,7 +28,6 @@ import { GetPrintJobDto } from './dtos/getPrintJob.dto';
 @Injectable()
 export class PrintingService implements OnModuleInit {
   constructor(
-    private readonly configService: ConfigService,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
     @InjectModel(PrintJob.name)
@@ -42,15 +40,16 @@ export class PrintingService implements OnModuleInit {
 
   async createPrintJob(callerId: string, file: Express.Multer.File) {
     const user = await this.userModel.findOne({ _id: callerId }).lean();
+
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
     try {
-      const clientId = this.getFreePrintClient();
+      const clientId = await this.getFreePrintClient();
 
       const printJob = await this.printJobModel.create({
-        user: user._id,
+        user: user.username,
         requestedAt: new Date(),
         filename: file.originalname,
         content: file.buffer.toString('base64'),
@@ -96,6 +95,85 @@ export class PrintingService implements OnModuleInit {
     return clientId;
   }
 
+  async getFreePrintClients() {
+    const availablePrintClients = await this.printClientModel.find({
+      isActive: true,
+      isOnline: true,
+    });
+
+    // Get the most free print client by counting the number of queued jobs
+    const printJobs = await this.printJobModel
+      .find({ status: 'queued' })
+      .lean();
+
+    const sortedPrintClients = availablePrintClients
+      .map((client) => {
+        const queuedJobs = printJobs.filter(
+          (job) => job.clientId === client.clientId,
+        );
+        return {
+          ...client.toObject(),
+          queuedJobs: queuedJobs.length,
+        };
+      })
+      .sort((a, b) => a.queuedJobs - b.queuedJobs);
+
+    return sortedPrintClients;
+  }
+
+  async rearrangeFloatingPrintJobs() {
+    const floatingPrintJobs = await this.printJobModel
+      .find({ clientId: null })
+      .lean();
+
+    const freePrintClients = await this.getFreePrintClients();
+
+    const floatingPrintJobsPerClient = Math.ceil(
+      floatingPrintJobs.length / freePrintClients.length,
+    );
+
+    for (let i = 0; i < freePrintClients.length; i++) {
+      const client = freePrintClients[i];
+      const jobsToAssign = floatingPrintJobs.slice(
+        i * floatingPrintJobsPerClient,
+        (i + 1) * floatingPrintJobsPerClient,
+      );
+
+      for (const job of jobsToAssign) {
+        job.clientId = client.clientId;
+        await this.printJobModel.updateOne(
+          { _id: job._id },
+          { clientId: client.clientId },
+        );
+      }
+    }
+  }
+
+  async updatePrintClientStatus(clientId: string, isOnline: boolean) {
+    const printClient = await this.printClientModel.findOne({
+      clientId,
+    });
+
+    if (!printClient) {
+      throw new BadRequestException('Print client not found');
+    }
+
+    if (printClient.isOnline === isOnline) {
+      return;
+    }
+
+    printClient.isOnline = isOnline;
+
+    // if print client goes offline, nullify all its queued jobs to be reassigned
+    if (!isOnline) {
+      await this.printJobModel.updateMany({ clientId }, { clientId: null });
+    }
+
+    await printClient.save();
+
+    await this.rearrangeFloatingPrintJobs();
+  }
+
   async getPrintJobs(
     getPrintJobDto: GetPrintJobDto,
   ): Promise<PrintJobEntity[]> {
@@ -105,10 +183,8 @@ export class PrintingService implements OnModuleInit {
       ),
     );
 
-    const printJobs = await this.printJobModel
-      .find(query)
-      .lean()
-      .populate('user');
+    const printJobs = await this.printJobModel.find(query).lean();
+
     return plainToInstance(PrintJobEntity, printJobs);
   }
 
@@ -179,9 +255,11 @@ export class PrintingService implements OnModuleInit {
     clientId?: string,
   ): Promise<StreamableFile> {
     try {
-      const printJob = await this.printJobModel.findOne({
-        _id: jobId,
-      });
+      const printJob = await this.printJobModel
+        .findOne({
+          _id: jobId,
+        })
+        .lean();
 
       if (!printJob) {
         throw new BadRequestException('Print job not found');
@@ -192,7 +270,7 @@ export class PrintingService implements OnModuleInit {
       }
 
       return new StreamableFile(Buffer.from(printJob.content, 'base64'), {
-        disposition: `attachment; filename="${printJob.filename}"`,
+        disposition: `attachment; filename="${printJob.user}_${printJob.filename}"`,
       });
     } catch (error) {
       throw new BadRequestException(error.message);
@@ -266,9 +344,11 @@ export class PrintingService implements OnModuleInit {
     authKey: string,
   ): Promise<boolean> {
     const printClient = await this.printClientModel.findOne({ clientId });
+
     if (!printClient) {
       throw new BadRequestException('Print client not found');
     }
+
     return printClient.isActive && printClient.authKey === authKey;
   }
 

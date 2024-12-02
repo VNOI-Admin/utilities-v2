@@ -1,7 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import type { Types } from 'mongoose';
-import { type Document, SchemaTypes } from 'mongoose';
-import { UserDocument } from './user.schema';
+import { type Document } from 'mongoose';
 
 export enum PrintStatus {
   QUEUED = 'queued',
@@ -13,8 +11,8 @@ export type PrintJobDocument = PrintJob & Document;
 
 @Schema()
 export class PrintJob {
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
-  user: UserDocument;
+  @Prop()
+  user: string;
 
   @Prop()
   clientId: string;

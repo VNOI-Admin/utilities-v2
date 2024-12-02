@@ -10,18 +10,19 @@ QUEUE_CHECK_INTERVAL = int(os.getenv("QUEUE_CHECK_INTERVAL", 10))  # seconds
 PRINTING_URL = os.getenv("PRINTING_URL", "https://vpn.vnoi.info/printing/printing")
 CLIENT_ID = os.getenv("CLIENT_ID", "print-client")
 AUTH_KEY = os.getenv("AUTH_KEY", "secret")
-PRINT_FILES_FOLDER = os.getenv("PRINT_FILES_FOLDER", "files")
+PRINT_FILES_FOLDER = os.getenv("PRINT_FILES_FOLDER", "print_files")
 PRINTER = os.getenv("PRINTER", None)
 
 HEARTBEAT_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/heartbeat"
 QUEUE_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/queue"
 
+# Create folder files if it does not exist
+os.makedirs(PRINT_FILES_FOLDER, exist_ok=True)
 
 def heartbeat():
     while True:
         try:
             response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=HEARTBEAT_INTERVAL)
-            print(response.text)
             response.raise_for_status()
         except requests.RequestException as e:
             print(f"Failed to send heartbeat: {e}")
@@ -39,11 +40,12 @@ def get_print_queue():
 
 def get_print_file(job_id, filename):
     try:
+        print(f"Processing job {job_id}")
         url = f"{PRINTING_URL}/clients/{CLIENT_ID}/jobs/{job_id}/file"
-        response = requests.get(url, stream=True)
+        response = requests.get(url, params={"authKey": AUTH_KEY}, stream=True)
         response.raise_for_status()
 
-        filepath = os.path.join(PRINT_FILES_FOLDER, job_id + "_" + filename)
+        filepath = os.path.join(PRINT_FILES_FOLDER, filename)
         with open(filepath, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
@@ -66,9 +68,10 @@ def update_print_status(job_id, status):
 def print_job(filepath):
     try:
         process = subprocess.Popen(
-            ["lpr", "-P", PRINTER, "-o", "media=A4", "-o", "prettyprint", "-o", "fit-to-page", filepath]
+            ["lpr", f"-P", PRINTER, "-o", "media=A4", "-o", "prettyprint", "-o", "fit-to-page", filepath]
         )
         process.wait()
+        print(f"Printed {filepath}")
         return True
     except Exception as e:
         print(f"Failed to print {filepath}: {e}")

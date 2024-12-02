@@ -1,4 +1,3 @@
-import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
 import {
   Body,
   ClassSerializerInterceptor,
@@ -47,7 +46,8 @@ import { GetPrintJobDto } from './dtos/getPrintJob.dto';
 @SerializeOptions({ excludeExtraneousValues: true })
 export class PrintingController {
   constructor(private readonly printingService: PrintingService) {}
-  @UseGuards(IPAddressGuard)
+
+  // @UseGuards(IPAddressGuard)
   @ApiOperation({ summary: 'Send print job' })
   @ApiBody({
     description: 'Print job',
@@ -275,6 +275,7 @@ export class PrintingController {
       !authKey ||
       !(await this.printingService.checkPrintClientAuth(clientId, authKey))
     ) {
+      console.log('Unauthorized', authKey, clientId);
       throw new UnauthorizedException('Unauthorized');
     }
 
