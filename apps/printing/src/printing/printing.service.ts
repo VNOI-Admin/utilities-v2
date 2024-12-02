@@ -47,45 +47,7 @@ export class PrintingService implements OnModuleInit {
     }
 
     try {
-      const availablePrintClients = await this.printClientModel.aggregate([
-        {
-          $match: {
-            isActive: true,
-            isOnline: true,
-          },
-        },
-        {
-          $lookup: {
-            from: 'printjobs',
-            localField: 'clientId',
-            foreignField: 'clientId',
-            as: 'printJobs',
-            pipeline: [
-              {
-                $match: {
-                  status: 'queued',
-                },
-              },
-            ],
-          },
-        },
-        {
-          $project: {
-            clientId: 1,
-            printJobs: 1,
-            printJobsCount: { $size: '$printJobs' },
-          },
-        },
-        {
-          $sort: {
-            printJobsCount: 1,
-          },
-        },
-      ]);
-
-      let clientId = null;
-      if (availablePrintClients.length > 0)
-        clientId = availablePrintClients[0].clientId;
+      const clientId = this.getFreePrintClient();
 
       const printJob = await this.printJobModel.create({
         user: user._id,
@@ -101,6 +63,37 @@ export class PrintingService implements OnModuleInit {
     } catch (error) {
       throw new BadRequestException(error.message);
     }
+  }
+
+  async getFreePrintClient() {
+    const availablePrintClients = await this.printClientModel.find({
+      isActive: true,
+      isOnline: true,
+    });
+
+    // Get the most free print client by counting the number of queued jobs
+    const printJobs = await this.printJobModel
+      .find({ status: 'queued' })
+      .lean();
+
+    const sortedPrintClients = availablePrintClients
+      .map((client) => {
+        const queuedJobs = printJobs.filter(
+          (job) => job.clientId === client.clientId,
+        );
+        return {
+          ...client.toObject(),
+          queuedJobs: queuedJobs.length,
+        };
+      })
+      .sort((a, b) => a.queuedJobs - b.queuedJobs);
+
+    let clientId = null;
+    if (sortedPrintClients.length > 0) {
+      clientId = sortedPrintClients[0].clientId;
+    }
+
+    return clientId;
   }
 
   async getPrintJobs(
@@ -324,6 +317,7 @@ export class PrintingService implements OnModuleInit {
         throw new BadRequestException('Print client not found');
       }
 
+      printClient.isOnline = true;
       printClient.lastReportedAt = date;
 
       await printClient.save();

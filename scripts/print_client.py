@@ -5,9 +5,9 @@ import subprocess
 import threading
 
 # Configuration from environment variables, with fallback defaults
-HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", 30))  # seconds
+HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", 10))  # seconds
 QUEUE_CHECK_INTERVAL = int(os.getenv("QUEUE_CHECK_INTERVAL", 10))  # seconds
-PRINTING_URL = os.getenv("PRINTING_URL", "https://vpn.vnoi.info/printing")
+PRINTING_URL = os.getenv("PRINTING_URL", "https://vpn.vnoi.info/printing/printing")
 CLIENT_ID = os.getenv("CLIENT_ID", "print-client")
 AUTH_KEY = os.getenv("AUTH_KEY", "secret")
 PRINT_FILES_FOLDER = os.getenv("PRINT_FILES_FOLDER", "files")
@@ -21,6 +21,7 @@ def heartbeat():
     while True:
         try:
             response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=HEARTBEAT_INTERVAL)
+            print(response.text)
             response.raise_for_status()
         except requests.RequestException as e:
             print(f"Failed to send heartbeat: {e}")

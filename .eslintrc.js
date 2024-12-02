@@ -24,6 +24,7 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-floating-promises': 'error',
+    '@typescript-eslint/no-unused-vars': 'off',
     'unused-imports/no-unused-imports': 'error',
   },
 };

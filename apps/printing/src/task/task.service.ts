@@ -18,7 +18,7 @@ export class TaskService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const job = new CronJob(CronExpression.EVERY_MINUTE, async () => {
+    const job = new CronJob(CronExpression.EVERY_10_SECONDS, async () => {
       const clients = await this.printClientModel.find();
       for (const client of clients) {
         let newIsOnline = false;
@@ -29,10 +29,11 @@ export class TaskService implements OnModuleInit {
 
         if (client.isOnline !== newIsOnline) {
           client.isOnline = newIsOnline;
-          client.save();
+          await client.save();
         }
       }
     });
+
     this.schedulerRegistry.addCronJob(`printClientOnlineUpdate`, job);
     job.start();
   }
