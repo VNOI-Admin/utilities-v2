@@ -15,7 +15,12 @@ export class IPAddressGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
 
     const user = await this.userModel
-      .findOne({ vpnIpAddress: request.ip })
+      .findOne({
+        vpnIpAddress:
+          request.headers['x-real-ip'] ??
+          request.headers['x-forwarded-for'] ??
+          request.ip,
+      })
       .lean();
 
     if (!user) {
