@@ -51,7 +51,7 @@ export class PrintingService implements OnModuleInit {
       const printJob = await this.printJobModel.create({
         user: user.username,
         requestedAt: new Date(),
-        filename: file.originalname,
+        filename: `${user.username}-${file.originalname}`,
         content: file.buffer.toString('base64'),
         clientId: clientId,
       });
@@ -270,7 +270,7 @@ export class PrintingService implements OnModuleInit {
       }
 
       return new StreamableFile(Buffer.from(printJob.content, 'base64'), {
-        disposition: `attachment; filename="${printJob.user}_${printJob.filename}"`,
+        disposition: `attachment; filename="${printJob.filename}"`,
       });
     } catch (error) {
       throw new BadRequestException(error.message);
