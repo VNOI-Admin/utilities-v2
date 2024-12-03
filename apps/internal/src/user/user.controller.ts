@@ -7,9 +7,19 @@ import {
 
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
-import { Controller, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserEntity } from './entities/User.entity';
+import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 
 @ApiTags('User')
 @Controller('users')
@@ -18,8 +28,8 @@ export class UserController {
 
   /** User */
   @ApiBearerAuth()
-  //@UseGuards(AccessTokenGuard)
-  //@RequiredRoles(Role.ADMIN)
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Create new user' })
   @ApiResponse({
     status: 200,
@@ -32,8 +42,8 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  //@UseGuards(AccessTokenGuard)
-  //@RequiredRoles(Role.ADMIN)
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Update user' })
   @ApiResponse({
     status: 200,
@@ -49,8 +59,8 @@ export class UserController {
   }
 
   @ApiBearerAuth()
-  //@UseGuards(AccessTokenGuard)
-  //@RequiredRoles(Role.ADMIN)
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Delete user' })
   @ApiResponse({
     status: 200,

@@ -8,14 +8,17 @@ import { InjectModel } from '@nestjs/mongoose';
 import { plainToInstance } from 'class-transformer';
 import { Model } from 'mongoose';
 
-import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from '../user/entities/User.entity';
+import { GroupEntity } from '@libs/common/dtos/Group.entity';
+import { UserEntity } from '@libs/common/dtos/User.entity';
+import { User, UserDocument } from '@libs/common-db/schemas/user.schema';
 
 @Injectable()
 export class GroupService implements OnModuleInit {
   constructor(
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
   ) {}
 
   async onModuleInit() {}
@@ -25,15 +28,13 @@ export class GroupService implements OnModuleInit {
     return plainToInstance(GroupEntity, groups);
   }
 
-  async getUsersInGroup(groupCodeName: string) {
-    const group = await this.groupModel
-      .findOne({ groupCodeName })
-      .populate('members');
+  async getUsersInGroup(code: string) {
+    const group = await this.groupModel.findOne({ code });
     if (!group) {
       throw new BadRequestException('Group not found');
     }
 
-    const users = group.toObject().members;
+    const users = await this.userModel.find({ group: group.code }).lean();
     return plainToInstance(UserEntity, users);
   }
 }

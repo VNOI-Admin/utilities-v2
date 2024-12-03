@@ -72,3 +72,7 @@ data/uploads/
 wg0.conf
 
 scripts/users.json
+
+.docker.env
+
+print_files/

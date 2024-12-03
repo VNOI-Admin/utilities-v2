@@ -16,8 +16,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { GroupEntity } from './entities/Group.entity';
-import { UserEntity } from '../user/entities/User.entity';
+import { GroupEntity } from '@libs/common/dtos/Group.entity';
+import { UserEntity } from '@libs/common/dtos/User.entity';
 import { GroupService } from './group.service';
 
 @ApiTags('Group')
@@ -50,8 +50,8 @@ export class GroupController {
     description: 'Return users',
     type: [UserEntity],
   })
-  @Get('/:groupCodeName/users')
-  async getUsers(@Param('groupCodeName') groupCodeName: string) {
-    return await this.groupService.getUsersInGroup(groupCodeName);
+  @Get('/:code/users')
+  async getUsers(@Param('code') code: string) {
+    return await this.groupService.getUsersInGroup(code);
   }
 }

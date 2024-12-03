@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Transform, Type } from 'class-transformer';
-import { GroupEntity } from '../../group/entities/Group.entity';
+import { GroupEntity } from './Group.entity';
 
 export class MachineUsageEntity {
   @Expose()
@@ -55,8 +55,8 @@ export class UserEntity {
   machineUsage: MachineUsageEntity;
 
   @Expose()
-  // exclude values that does not contain groupCodeName
-  @Transform((group) => group.value?.groupCodeName && group.value)
+  // exclude values that does not contain code
+  @Transform((group) => group.value?.code && group.value)
   @Type(() => GroupEntity)
   @ApiProperty({ type: GroupEntity })
   group: GroupEntity;

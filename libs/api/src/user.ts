@@ -20,8 +20,8 @@ export interface MachineUsageEntity {
 }
 
 export interface GroupEntity {
-  groupCodeName: string;
-  groupFullName: string;
+  code: string;
+  fullName: string;
 }
 
 export interface UserEntity {
@@ -57,13 +57,13 @@ export interface ReportUsageDto {
 }
 
 export interface CreateGroupDto {
-  groupCodeName: string;
-  groupFullName: string;
+  code: string;
+  fullName: string;
 }
 
 export interface UpdateGroupDto {
-  groupCodeName?: string;
-  groupFullName?: string;
+  code?: string;
+  fullName?: string;
 }
 
 export interface VpnConfig {
@@ -495,16 +495,16 @@ export class UserApi<
      * @tags Group
      * @name UpdateGroup
      * @summary Update group
-     * @request PATCH:/group/{groupCodeName}
+     * @request PATCH:/group/{code}
      * @secure
      */
     updateGroup: (
-      groupCodeName: string,
+      code: string,
       data: UpdateGroupDto,
       params: RequestParams = {},
     ) =>
       this.request<GroupEntity, any>({
-        path: `/group/${groupCodeName}`,
+        path: `/group/${code}`,
         method: 'PATCH',
         body: data,
         secure: true,
@@ -519,17 +519,17 @@ export class UserApi<
      * @tags Group
      * @name DeleteGroup
      * @summary Delete group
-     * @request DELETE:/group/{groupCodeName}
+     * @request DELETE:/group/{code}
      * @secure
      */
-    deleteGroup: (groupCodeName: string, params: RequestParams = {}) =>
+    deleteGroup: (code: string, params: RequestParams = {}) =>
       this.request<
         {
           success?: boolean;
         },
         any
       >({
-        path: `/group/${groupCodeName}`,
+        path: `/group/${code}`,
         method: 'DELETE',
         secure: true,
         format: 'json',
@@ -542,12 +542,12 @@ export class UserApi<
      * @tags Group
      * @name GetUsers
      * @summary Get users in group
-     * @request GET:/group/{groupCodeName}/users
+     * @request GET:/group/{code}/users
      * @secure
      */
-    getUsers: (groupCodeName: string, params: RequestParams = {}) =>
+    getUsers: (code: string, params: RequestParams = {}) =>
       this.request<UserEntity[], any>({
-        path: `/group/${groupCodeName}/users`,
+        path: `/group/${code}/users`,
         method: 'GET',
         secure: true,
         format: 'json',

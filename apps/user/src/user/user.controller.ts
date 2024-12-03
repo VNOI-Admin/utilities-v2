@@ -1,24 +1,15 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import {
-  Body,
   ClassSerializerInterceptor,
   Controller,
-  Delete,
   Get,
-  MaxFileSizeValidator,
   Param,
-  ParseFilePipe,
-  Patch,
-  Post,
   Query,
-  Request,
   SerializeOptions,
-  UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -27,7 +18,7 @@ import {
 } from '@nestjs/swagger';
 
 import { GetUserDto } from './dtos/getUser.dto';
-import { MachineUsageEntity, UserEntity } from './entities/User.entity';
+import { MachineUsageEntity, UserEntity } from '@libs/common/dtos/User.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')

@@ -5,8 +5,7 @@ import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
 import type { Model } from 'mongoose';
-import { type Document, SchemaTypes } from 'mongoose';
-import { GroupDocument } from './group.schema';
+import { type Document } from 'mongoose';
 
 export type UserDocument = User & Document;
 
@@ -68,21 +67,18 @@ export class User {
   )
   machineUsage: MachineUsage;
 
-  // Belong to one group
-  @Prop({ type: SchemaTypes.ObjectId, ref: 'Group' })
-  group: GroupDocument;
+  group: string;
 }
 
-export const UserSchema = SchemaFactory.createForClass(User);
+export const UserRawSchema = SchemaFactory.createForClass(User);
 
-export function buildUserSchema(configService: ConfigService) {
-  const schema = UserSchema;
-  schema.pre('validate', async function (next) {
+export const UserSchemaFactory = (configService: ConfigService) => {
+  const schema = UserRawSchema;
+  schema.pre('save', async function (next) {
     if (this.isModified('password')) {
       this.password = await argon2.hash(this.password);
     }
 
-    // Generate VPN IP address and key pair. Only generate for new users.
     if ((this.isNew && !this.vpnIpAddress) || this.isModified('role')) {
       const users = await this.model<Model<UserDocument>>(User.name)
         .find({ role: this.role })
@@ -121,4 +117,6 @@ export function buildUserSchema(configService: ConfigService) {
 
     next();
   });
-}
+
+  return schema;
+};

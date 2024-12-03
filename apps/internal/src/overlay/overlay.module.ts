@@ -2,17 +2,17 @@ import { Module } from '@nestjs/common';
 import { OverlayController } from './overlay.controller';
 import { OverlayService } from './overlay.service';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import {
   OverlayLayout,
   OverlayLayoutSchema,
 } from '@libs/common-db/schemas/overlay.schema';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: User.name, schema: UserSchema },
-      { name: OverlayLayout.name, schema: OverlayLayoutSchema },
+    UserModule,
+    MongooseModule.forFeatureAsync([
+      { name: OverlayLayout.name, useFactory: () => OverlayLayoutSchema },
     ]),
   ],
   controllers: [OverlayController],

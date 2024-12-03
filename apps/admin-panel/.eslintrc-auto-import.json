@@ -274,6 +274,13 @@
     "u": true,
     "y": true,
     "z": true,
-    "useLazyPromise": true
+    "useLazyPromise": true,
+    "DirectiveBinding": true,
+    "MaybeRef": true,
+    "MaybeRefOrGetter": true,
+    "onWatcherCleanup": true,
+    "useId": true,
+    "useModel": true,
+    "useTemplateRef": true
   }
 }
