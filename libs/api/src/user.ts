@@ -20,8 +20,8 @@ export interface MachineUsageEntity {
 }
 
 export interface GroupEntity {
-  groupCodeName: string;
-  groupFullName: string;
+  code: string;
+  fullName: string;
 }
 
 export interface UserEntity {
@@ -57,31 +57,25 @@ export interface ReportUsageDto {
 }
 
 export interface CreateGroupDto {
-  groupCodeName: string;
-  groupFullName: string;
+  code: string;
+  fullName: string;
 }
 
 export interface UpdateGroupDto {
-  groupCodeName?: string;
-  groupFullName?: string;
+  code?: string;
+  fullName?: string;
 }
 
 export interface VpnConfig {
   config: string;
 }
 
-import type {
-  AxiosInstance,
-  AxiosRequestConfig,
-  HeadersDefaults,
-  ResponseType,
-} from 'axios';
+import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
 import axios from 'axios';
 
 export type QueryParamsType = Record<string | number, any>;
 
-export interface FullRequestParams
-  extends Omit<AxiosRequestConfig, 'data' | 'params' | 'url' | 'responseType'> {
+export interface FullRequestParams extends Omit<AxiosRequestConfig, 'data' | 'params' | 'url' | 'responseType'> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
   /** request path */
@@ -96,13 +90,9 @@ export interface FullRequestParams
   body?: unknown;
 }
 
-export type RequestParams = Omit<
-  FullRequestParams,
-  'body' | 'method' | 'query' | 'path'
->;
+export type RequestParams = Omit<FullRequestParams, 'body' | 'method' | 'query' | 'path'>;
 
-export interface ApiConfig<SecurityDataType = unknown>
-  extends Omit<AxiosRequestConfig, 'data' | 'cancelToken'> {
+export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, 'data' | 'cancelToken'> {
   securityWorker?: (
     securityData: SecurityDataType | null,
   ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
@@ -124,12 +114,7 @@ export class HttpClient<SecurityDataType = unknown> {
   private secure?: boolean;
   private format?: ResponseType;
 
-  constructor({
-    securityWorker,
-    secure,
-    format,
-    ...axiosConfig
-  }: ApiConfig<SecurityDataType> = {}) {
+  constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
     this.instance = axios.create({
       ...axiosConfig,
       baseURL: axiosConfig.baseURL || 'http://localhost:8001',
@@ -143,24 +128,17 @@ export class HttpClient<SecurityDataType = unknown> {
     this.securityData = data;
   };
 
-  protected mergeRequestParams(
-    params1: AxiosRequestConfig,
-    params2?: AxiosRequestConfig,
-  ): AxiosRequestConfig {
-    const method = params1.method || (params2 && params2.method);
+  protected mergeRequestParams(params1: AxiosRequestConfig, params2?: AxiosRequestConfig): AxiosRequestConfig {
+    const method = params1.method || params2?.method;
 
     return {
       ...this.instance.defaults,
       ...params1,
       ...(params2 || {}),
       headers: {
-        ...((method &&
-          this.instance.defaults.headers[
-            method.toLowerCase() as keyof HeadersDefaults
-          ]) ||
-          {}),
+        ...((method && this.instance.defaults.headers[method.toLowerCase() as keyof HeadersDefaults]) || {}),
         ...(params1.headers || {}),
-        ...((params2 && params2.headers) || {}),
+        ...(params2?.headers || {}),
       },
     };
   }
@@ -179,15 +157,11 @@ export class HttpClient<SecurityDataType = unknown> {
     }
     return Object.keys(input || {}).reduce((formData, key) => {
       const property = input[key];
-      const propertyContent: any[] =
-        property instanceof Array ? property : [property];
+      const propertyContent: any[] = property instanceof Array ? property : [property];
 
       for (const formItem of propertyContent) {
         const isFileType = formItem instanceof Blob || formItem instanceof File;
-        formData.append(
-          key,
-          isFileType ? formItem : this.stringifyFormItem(formItem),
-        );
+        formData.append(key, isFileType ? formItem : this.stringifyFormItem(formItem));
       }
 
       return formData;
@@ -211,21 +185,11 @@ export class HttpClient<SecurityDataType = unknown> {
     const requestParams = this.mergeRequestParams(params, secureParams);
     const responseFormat = format || this.format || undefined;
 
-    if (
-      type === ContentType.FormData &&
-      body &&
-      body !== null &&
-      typeof body === 'object'
-    ) {
+    if (type === ContentType.FormData && body && body !== null && typeof body === 'object') {
       body = this.createFormData(body as Record<string, unknown>);
     }
 
-    if (
-      type === ContentType.Text &&
-      body &&
-      body !== null &&
-      typeof body !== 'string'
-    ) {
+    if (type === ContentType.Text && body && body !== null && typeof body !== 'string') {
       body = JSON.stringify(body);
     }
 
@@ -253,9 +217,7 @@ export class HttpClient<SecurityDataType = unknown> {
  *
  * Utilities V2 User API Docs
  */
-export class UserApi<
-  SecurityDataType extends unknown,
-> extends HttpClient<SecurityDataType> {
+export class UserApi<SecurityDataType> extends HttpClient<SecurityDataType> {
   /**
    * No description
    *
@@ -264,7 +226,7 @@ export class UserApi<
    */
   getStatus = (params: RequestParams = {}) =>
     this.request<any, any>({
-      path: `/`,
+      path: '/',
       method: 'GET',
       ...params,
     });
@@ -289,7 +251,7 @@ export class UserApi<
       params: RequestParams = {},
     ) =>
       this.request<UserEntity[], any>({
-        path: `/user`,
+        path: '/user',
         method: 'GET',
         query: query,
         secure: true,
@@ -308,7 +270,7 @@ export class UserApi<
      */
     getCurrentUser: (params: RequestParams = {}) =>
       this.request<UserEntity, any>({
-        path: `/user/me`,
+        path: '/user/me',
         method: 'GET',
         secure: true,
         format: 'json',
@@ -342,11 +304,7 @@ export class UserApi<
      * @request PATCH:/user/{username}
      * @secure
      */
-    updateUser: (
-      username: string,
-      data: UpdateUserDto,
-      params: RequestParams = {},
-    ) =>
+    updateUser: (username: string, data: UpdateUserDto, params: RequestParams = {}) =>
       this.request<UserEntity, any>({
         path: `/user/${username}`,
         method: 'PATCH',
@@ -391,7 +349,7 @@ export class UserApi<
      */
     createUser: (data: CreateUserDto, params: RequestParams = {}) =>
       this.request<UserEntity, any>({
-        path: `/user/new`,
+        path: '/user/new',
         method: 'POST',
         body: data,
         secure: true,
@@ -428,7 +386,7 @@ export class UserApi<
      */
     report: (data: ReportUsageDto, params: RequestParams = {}) =>
       this.request<any, any>({
-        path: `/user/report`,
+        path: '/user/report',
         method: 'POST',
         body: data,
         type: ContentType.Json,
@@ -445,7 +403,7 @@ export class UserApi<
      */
     print: (params: RequestParams = {}) =>
       this.request<any, any>({
-        path: `/user/print`,
+        path: '/user/print',
         method: 'POST',
         ...params,
       }),
@@ -462,7 +420,7 @@ export class UserApi<
      */
     getGroups: (params: RequestParams = {}) =>
       this.request<GroupEntity[], any>({
-        path: `/group`,
+        path: '/group',
         method: 'GET',
         secure: true,
         format: 'json',
@@ -480,7 +438,7 @@ export class UserApi<
      */
     createGroup: (data: CreateGroupDto, params: RequestParams = {}) =>
       this.request<GroupEntity, any>({
-        path: `/group/new`,
+        path: '/group/new',
         method: 'POST',
         body: data,
         secure: true,
@@ -495,16 +453,12 @@ export class UserApi<
      * @tags Group
      * @name UpdateGroup
      * @summary Update group
-     * @request PATCH:/group/{groupCodeName}
+     * @request PATCH:/group/{code}
      * @secure
      */
-    updateGroup: (
-      groupCodeName: string,
-      data: UpdateGroupDto,
-      params: RequestParams = {},
-    ) =>
+    updateGroup: (code: string, data: UpdateGroupDto, params: RequestParams = {}) =>
       this.request<GroupEntity, any>({
-        path: `/group/${groupCodeName}`,
+        path: `/group/${code}`,
         method: 'PATCH',
         body: data,
         secure: true,
@@ -519,17 +473,17 @@ export class UserApi<
      * @tags Group
      * @name DeleteGroup
      * @summary Delete group
-     * @request DELETE:/group/{groupCodeName}
+     * @request DELETE:/group/{code}
      * @secure
      */
-    deleteGroup: (groupCodeName: string, params: RequestParams = {}) =>
+    deleteGroup: (code: string, params: RequestParams = {}) =>
       this.request<
         {
           success?: boolean;
         },
         any
       >({
-        path: `/group/${groupCodeName}`,
+        path: `/group/${code}`,
         method: 'DELETE',
         secure: true,
         format: 'json',
@@ -542,12 +496,12 @@ export class UserApi<
      * @tags Group
      * @name GetUsers
      * @summary Get users in group
-     * @request GET:/group/{groupCodeName}/users
+     * @request GET:/group/{code}/users
      * @secure
      */
-    getUsers: (groupCodeName: string, params: RequestParams = {}) =>
+    getUsers: (code: string, params: RequestParams = {}) =>
       this.request<UserEntity[], any>({
-        path: `/group/${groupCodeName}/users`,
+        path: `/group/${code}/users`,
         method: 'GET',
         secure: true,
         format: 'json',
@@ -566,7 +520,7 @@ export class UserApi<
      */
     getWireGuardConfig: (params: RequestParams = {}) =>
       this.request<VpnConfig, any>({
-        path: `/vpn/config`,
+        path: '/vpn/config',
         method: 'GET',
         secure: true,
         format: 'json',
@@ -582,10 +536,7 @@ export class UserApi<
      * @request GET:/vpn/config/{username}
      * @secure
      */
-    getWireGuardConfigByUsername: (
-      username: string,
-      params: RequestParams = {},
-    ) =>
+    getWireGuardConfigByUsername: (username: string, params: RequestParams = {}) =>
       this.request<VpnConfig, any>({
         path: `/vpn/config/${username}`,
         method: 'GET',

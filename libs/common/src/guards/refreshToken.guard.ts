@@ -51,7 +51,7 @@ export class RefreshTokenGuard implements CanActivate {
   extractTokenFromHeader(req: any): string | null {
     let refreshToken = null;
 
-    if (req && req.cookies) {
+    if (req?.cookies) {
       refreshToken = req.cookies.refreshToken;
     }
 

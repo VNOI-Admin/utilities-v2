@@ -4,9 +4,9 @@ import { Expose } from 'class-transformer';
 export class GroupEntity {
   @Expose()
   @ApiProperty()
-  groupCodeName: string;
+  code: string;
 
   @Expose()
   @ApiProperty()
-  groupFullName: string;
+  fullName: string;
 }

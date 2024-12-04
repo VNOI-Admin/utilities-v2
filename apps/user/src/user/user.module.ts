@@ -1,4 +1,4 @@
-import { buildUserSchema, User } from '@libs/common-db/schemas/user.schema';
+import { User, UserSchemaFactory } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -13,8 +13,7 @@ import { UserService } from './user.service';
       {
         name: User.name,
         inject: [ConfigService],
-        useFactory: (configService: ConfigService) =>
-          buildUserSchema(configService),
+        useFactory: UserSchemaFactory,
       },
       {
         name: 'Group',

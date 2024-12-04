@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
 import { writeFileSync } from 'fs';
+import * as dotenv from 'dotenv';
 import { MongoClient } from 'mongodb';
 
 dotenv.config();

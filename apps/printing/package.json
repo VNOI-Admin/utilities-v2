@@ -1,0 +1,19 @@
+{
+  "name": "printing",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "cd ../.. && nest build $npm_package_name",
+    "dev": "cd ../.. && nest start $npm_package_name --watch",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
+  },
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "../..",
+    "testEnvironment": "node"
+  }
+}

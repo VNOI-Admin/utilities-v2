@@ -4,9 +4,9 @@ import { IsString } from 'class-validator';
 export class CreateGroupDto {
   @ApiProperty({ required: true })
   @IsString()
-  groupCodeName: string;
+  code: string;
 
   @ApiProperty({ required: true })
   @IsString()
-  groupFullName: string;
+  fullName: string;
 }

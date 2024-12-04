@@ -25,18 +25,12 @@ export interface SingleUserStreamDto {
   webcam?: boolean;
 }
 
-import type {
-  AxiosInstance,
-  AxiosRequestConfig,
-  HeadersDefaults,
-  ResponseType,
-} from 'axios';
+import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
 import axios from 'axios';
 
 export type QueryParamsType = Record<string | number, any>;
 
-export interface FullRequestParams
-  extends Omit<AxiosRequestConfig, 'data' | 'params' | 'url' | 'responseType'> {
+export interface FullRequestParams extends Omit<AxiosRequestConfig, 'data' | 'params' | 'url' | 'responseType'> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
   /** request path */
@@ -51,13 +45,9 @@ export interface FullRequestParams
   body?: unknown;
 }
 
-export type RequestParams = Omit<
-  FullRequestParams,
-  'body' | 'method' | 'query' | 'path'
->;
+export type RequestParams = Omit<FullRequestParams, 'body' | 'method' | 'query' | 'path'>;
 
-export interface ApiConfig<SecurityDataType = unknown>
-  extends Omit<AxiosRequestConfig, 'data' | 'cancelToken'> {
+export interface ApiConfig<SecurityDataType = unknown> extends Omit<AxiosRequestConfig, 'data' | 'cancelToken'> {
   securityWorker?: (
     securityData: SecurityDataType | null,
   ) => Promise<AxiosRequestConfig | void> | AxiosRequestConfig | void;
@@ -79,12 +69,7 @@ export class HttpClient<SecurityDataType = unknown> {
   private secure?: boolean;
   private format?: ResponseType;
 
-  constructor({
-    securityWorker,
-    secure,
-    format,
-    ...axiosConfig
-  }: ApiConfig<SecurityDataType> = {}) {
+  constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
     this.instance = axios.create({
       ...axiosConfig,
       baseURL: axiosConfig.baseURL || 'http://localhost:8003',
@@ -98,24 +83,17 @@ export class HttpClient<SecurityDataType = unknown> {
     this.securityData = data;
   };
 
-  protected mergeRequestParams(
-    params1: AxiosRequestConfig,
-    params2?: AxiosRequestConfig,
-  ): AxiosRequestConfig {
-    const method = params1.method || (params2 && params2.method);
+  protected mergeRequestParams(params1: AxiosRequestConfig, params2?: AxiosRequestConfig): AxiosRequestConfig {
+    const method = params1.method || params2?.method;
 
     return {
       ...this.instance.defaults,
       ...params1,
       ...(params2 || {}),
       headers: {
-        ...((method &&
-          this.instance.defaults.headers[
-            method.toLowerCase() as keyof HeadersDefaults
-          ]) ||
-          {}),
+        ...((method && this.instance.defaults.headers[method.toLowerCase() as keyof HeadersDefaults]) || {}),
         ...(params1.headers || {}),
-        ...((params2 && params2.headers) || {}),
+        ...(params2?.headers || {}),
       },
     };
   }
@@ -134,15 +112,11 @@ export class HttpClient<SecurityDataType = unknown> {
     }
     return Object.keys(input || {}).reduce((formData, key) => {
       const property = input[key];
-      const propertyContent: any[] =
-        property instanceof Array ? property : [property];
+      const propertyContent: any[] = Array.isArray(property) ? property : [property];
 
       for (const formItem of propertyContent) {
         const isFileType = formItem instanceof Blob || formItem instanceof File;
-        formData.append(
-          key,
-          isFileType ? formItem : this.stringifyFormItem(formItem),
-        );
+        formData.append(key, isFileType ? formItem : this.stringifyFormItem(formItem));
       }
 
       return formData;
@@ -166,21 +140,11 @@ export class HttpClient<SecurityDataType = unknown> {
     const requestParams = this.mergeRequestParams(params, secureParams);
     const responseFormat = format || this.format || undefined;
 
-    if (
-      type === ContentType.FormData &&
-      body &&
-      body !== null &&
-      typeof body === 'object'
-    ) {
+    if (type === ContentType.FormData && body && body !== null && typeof body === 'object') {
       body = this.createFormData(body as Record<string, unknown>);
     }
 
-    if (
-      type === ContentType.Text &&
-      body &&
-      body !== null &&
-      typeof body !== 'string'
-    ) {
+    if (type === ContentType.Text && body && body !== null && typeof body !== 'string') {
       body = JSON.stringify(body);
     }
 
@@ -208,9 +172,7 @@ export class HttpClient<SecurityDataType = unknown> {
  *
  * Utilities V2 Internal API Docs
  */
-export class InternalApi<
-  SecurityDataType extends unknown,
-> extends HttpClient<SecurityDataType> {
+export class InternalApi<SecurityDataType> extends HttpClient<SecurityDataType> {
   overlay = {
     /**
      * No description
@@ -222,7 +184,7 @@ export class InternalApi<
      */
     getMultiUserStream: (params: RequestParams = {}) =>
       this.request<UserStream[], any>({
-        path: `/overlay/user-stream/multi`,
+        path: '/overlay/user-stream/multi',
         method: 'GET',
         format: 'json',
         ...params,
@@ -236,12 +198,9 @@ export class InternalApi<
      * @summary Set multiple users to user stream display
      * @request POST:/overlay/user-stream/multi
      */
-    setMultiUserStream: (
-      data: MultiUserStreamDto,
-      params: RequestParams = {},
-    ) =>
+    setMultiUserStream: (data: MultiUserStreamDto, params: RequestParams = {}) =>
       this.request<UserStream[], any>({
-        path: `/overlay/user-stream/multi`,
+        path: '/overlay/user-stream/multi',
         method: 'POST',
         body: data,
         type: ContentType.Json,
@@ -259,7 +218,7 @@ export class InternalApi<
      */
     getUserStream: (params: RequestParams = {}) =>
       this.request<UserStream, any>({
-        path: `/overlay/user-stream/single`,
+        path: '/overlay/user-stream/single',
         method: 'GET',
         format: 'json',
         ...params,
@@ -275,7 +234,7 @@ export class InternalApi<
      */
     setUserStream: (data: SingleUserStreamDto, params: RequestParams = {}) =>
       this.request<UserStream, any>({
-        path: `/overlay/user-stream/single`,
+        path: '/overlay/user-stream/single',
         method: 'POST',
         body: data,
         type: ContentType.Json,
