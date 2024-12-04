@@ -49,7 +49,7 @@ export class RefreshTokenGuard implements CanActivate {
   extractTokenFromHeader(req: any): string | null {
     let accessToken = null;
 
-    if (req && req.cookies) {
+    if (req?.cookies) {
       accessToken = req.cookies.accessToken;
     }
 

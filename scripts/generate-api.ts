@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
 import path from 'path';
+import dotenv from 'dotenv';
 import { generateApi } from 'swagger-typescript-api';
 
 dotenv.config();
@@ -12,9 +12,7 @@ const SERVICE_NAME_TO_ENDPOINT_MAPPING = {
 
 async function bootstrap() {
   // for each service, fetch the openapi schema and generate types
-  for (const [serviceName, endpoint] of Object.entries(
-    SERVICE_NAME_TO_ENDPOINT_MAPPING,
-  )) {
+  for (const [serviceName, endpoint] of Object.entries(SERVICE_NAME_TO_ENDPOINT_MAPPING)) {
     try {
       const data = await fetch(`${endpoint}/docs-json`);
       if (!data.ok) {
@@ -23,9 +21,7 @@ async function bootstrap() {
       }
       void data.json();
     } catch (e) {
-      console.warn(
-        `Failed to fetch Swagger JSON file from ${serviceName} service`,
-      );
+      console.warn(`Failed to fetch Swagger JSON file from ${serviceName} service`);
       continue;
     }
 
@@ -33,11 +29,9 @@ async function bootstrap() {
     await generateApi({
       name: `${serviceName}`,
       url: `${endpoint}/docs-json`,
-      output: path.resolve(process.cwd(), `./libs/api/src/`),
+      output: path.resolve(process.cwd(), './libs/api/src/'),
       httpClientType: 'axios',
-      apiClassName: `${serviceName.charAt(0).toUpperCase()}${serviceName.slice(
-        1,
-      )}Api`,
+      apiClassName: `${serviceName.charAt(0).toUpperCase()}${serviceName.slice(1)}Api`,
       silent: true,
       unwrapResponseData: true,
       // TODO: Should remove in the future by adding the correct response type to all endpoints
@@ -48,14 +42,9 @@ async function bootstrap() {
       hooks: {
         onCreateRouteName(routeNameInfo) {
           routeNameInfo.usage = routeNameInfo.usage.split('Controller')[1];
-          routeNameInfo.original =
-            routeNameInfo.original.split('Controller')[1];
-          routeNameInfo.usage =
-            routeNameInfo.usage.charAt(0).toLowerCase() +
-            routeNameInfo.usage.slice(1);
-          routeNameInfo.original =
-            routeNameInfo.original.charAt(0).toLowerCase() +
-            routeNameInfo.original.slice(1);
+          routeNameInfo.original = routeNameInfo.original.split('Controller')[1];
+          routeNameInfo.usage = routeNameInfo.usage.charAt(0).toLowerCase() + routeNameInfo.usage.slice(1);
+          routeNameInfo.original = routeNameInfo.original.charAt(0).toLowerCase() + routeNameInfo.original.slice(1);
         },
       },
     });

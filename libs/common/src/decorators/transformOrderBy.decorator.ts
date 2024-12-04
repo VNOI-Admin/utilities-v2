@@ -13,7 +13,7 @@ export function TransformOrderBy() {
         if (value !== '1' && value !== '-1') {
           throw new BadRequestException('Invalid order_by value');
         }
-        a[key] = parseInt(value);
+        a[key] = Number.parseInt(value);
         return a;
       },
       {} as Record<string, number>,
