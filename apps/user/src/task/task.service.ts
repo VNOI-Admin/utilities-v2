@@ -31,6 +31,7 @@ export class TaskService implements OnModuleInit {
         users.map(async (user) => {
           const res = await ping.promise.probe(user.vpnIpAddress, {
             timeout: 3,
+            min_reply: 3,
           });
           if (res.alive && res.time !== 'unknown') {
             user.machineUsage.ping = res.time;
