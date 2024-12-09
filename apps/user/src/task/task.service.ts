@@ -20,12 +20,12 @@ export class TaskService implements OnModuleInit {
     // make this cron fetch the users by every minute, then after that check their ping
     const job = new CronJob(CronExpression.EVERY_30_SECONDS, async () => {
       const users = await this.userModel.find({
-        role: 'user',
+        role: 'contestant',
         vpnIpAddress: { $ne: null },
         isActive: true,
       });
 
-      this.logger.debug(`Pinging ${users.length} users`);
+      this.logger.log(`Pinging ${users.length} users`);
 
       for (const user of users) {
         const res = await ping.promise.probe(user.vpnIpAddress, {
