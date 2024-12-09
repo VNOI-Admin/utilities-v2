@@ -19,8 +19,10 @@ const tableHeaders: ReadonlyHeaders = [
       { title: 'Disk', align: 'center', value: 'machineUsage.disk', sortable: true },
       { title: 'Ping', align: 'center', value: 'machineUsage.ping', sortable: true },
       { title: 'Online', align: 'center', key: 'machineUsage.isOnline', sortable: true },
+      { title: 'Last online', align: 'center', value: 'machineUsage.lastUpdatedAt', sortable: true },
     ],
   },
+  { title: '', align: 'center', value: 'actions', sortable: false },
 ];
 
 const users = ref<UserEntity[]>([]);
@@ -148,6 +150,16 @@ onMounted(async () => {
           <v-chip :color="item.machineUsage.isOnline ? 'green' : 'red'">
             {{ item.machineUsage.isOnline ? 'Online' : 'Offline' }}
           </v-chip>
+        </template>
+
+        <!-- add a button at the last row -->
+        <template #item.actions="{ item }">
+          <v-btn
+            color="primary"
+            @click="() => console.log('Edit', item)"
+          >
+            Edit
+          </v-btn>
         </template>
       </v-data-table>
     </v-col>

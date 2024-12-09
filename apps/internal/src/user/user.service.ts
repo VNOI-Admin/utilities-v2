@@ -40,7 +40,6 @@ export class UserService implements OnModuleInit {
 
   async getUsers(caller: string, query: GetUsersDto) {
     const { q, role, me, isActive, isOnline, orderBy } = query;
-    console.log(query);
 
     const pipeline: PipelineStage[] = [];
 
