@@ -35,4 +35,4 @@ EXPOSE 8000
 
 USER node
 
-CMD ["http-server", "dist/apps/admin-panel", "-p", "8000"]
+CMD ["http-server", "apps/admin-panel/dist", "-p", "8000"]
