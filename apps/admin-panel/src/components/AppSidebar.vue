@@ -1,22 +1,56 @@
-<script setup>
+<script setup lang="ts">
+const drawer = ref(true);
+const rail = ref(true);
 
+const paths = [
+  {
+    title: 'Dashboard',
+    icon: 'mdi-view-dashboard',
+    path: '/',
+  },
+  {
+    title: 'Users',
+    icon: 'mdi-account',
+    path: '/users',
+  },
+  {
+    title: 'Coach view',
+    icon: 'mdi-monitor',
+    path: '/coach-view',
+  },
+  {
+    title: 'Settings',
+    icon: 'mdi-cog',
+    path: '/settings',
+  },
+];
 </script>
 
 <template>
-    <div class="sidebar">
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/users">Users</RouterLink>
-    </div>
-</template>
+  <v-navigation-drawer
+    v-model="drawer"
+    :rail="rail"
+    permanent
+    @click="rail = false"
+  >
 
-<style lang="css" scoped>
-    .sidebar {
-        min-width: 300px;
-        height: 100%;
-        /* background-color: ; */
-        border-right: 1px solid #ccc;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-    }
-</style>
+  <v-btn
+    :icon="rail ? 'mdi-chevron-right' : 'mdi-chevron-left'"
+    variant="text"
+    @click.stop="rail = !rail"
+    class="text-right"
+  />
+
+    <v-divider></v-divider>
+
+    <v-list density="compact" nav>
+      <v-list-item
+        v-for="item in paths"
+        :key="item.path"
+        :to="item.path"
+        :prepend-icon="item.icon"
+        :title="item.title"
+      />
+    </v-list>
+  </v-navigation-drawer>
+</template>

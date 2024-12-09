@@ -6,10 +6,10 @@ export type GroupDocument = Group & Document;
 @Schema()
 export class Group {
   @Prop({ required: true, unique: true })
-  code: string;
+  code!: string;
 
   @Prop({ required: true })
-  fullName: string;
+  name!: string;
 }
 
 export const GroupSchema = SchemaFactory.createForClass(Group);

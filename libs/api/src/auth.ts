@@ -64,10 +64,7 @@ export class HttpClient<SecurityDataType = unknown> {
   private format?: ResponseType;
 
   constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
-    this.instance = axios.create({
-      ...axiosConfig,
-      baseURL: axiosConfig.baseURL || 'http://localhost:8002',
-    });
+    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || 'http://localhost:8002' });
     this.secure = secure;
     this.format = format;
     this.securityWorker = securityWorker;
@@ -78,7 +75,7 @@ export class HttpClient<SecurityDataType = unknown> {
   };
 
   protected mergeRequestParams(params1: AxiosRequestConfig, params2?: AxiosRequestConfig): AxiosRequestConfig {
-    const method = params1.method || params2?.method;
+    const method = params1.method || (params2 && params2.method);
 
     return {
       ...this.instance.defaults,
@@ -87,7 +84,7 @@ export class HttpClient<SecurityDataType = unknown> {
       headers: {
         ...((method && this.instance.defaults.headers[method.toLowerCase() as keyof HeadersDefaults]) || {}),
         ...(params1.headers || {}),
-        ...(params2?.headers || {}),
+        ...((params2 && params2.headers) || {}),
       },
     };
   }
@@ -106,7 +103,7 @@ export class HttpClient<SecurityDataType = unknown> {
     }
     return Object.keys(input || {}).reduce((formData, key) => {
       const property = input[key];
-      const propertyContent: any[] = Array.isArray(property) ? property : [property];
+      const propertyContent: any[] = property instanceof Array ? property : [property];
 
       for (const formItem of propertyContent) {
         const isFileType = formItem instanceof Blob || formItem instanceof File;
@@ -166,7 +163,7 @@ export class HttpClient<SecurityDataType = unknown> {
  *
  * Utilities V2 Auth API Docs
  */
-export class AuthApi<SecurityDataType> extends HttpClient<SecurityDataType> {
+export class AuthApi<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   auth = {
     /**
      * No description
@@ -178,7 +175,7 @@ export class AuthApi<SecurityDataType> extends HttpClient<SecurityDataType> {
      */
     login: (data: AuthDto, params: RequestParams = {}) =>
       this.request<TokensEntity, any>({
-        path: '/auth/login',
+        path: `/auth/login`,
         method: 'POST',
         body: data,
         type: ContentType.Json,
@@ -197,7 +194,7 @@ export class AuthApi<SecurityDataType> extends HttpClient<SecurityDataType> {
      */
     logout: (params: RequestParams = {}) =>
       this.request<any, any>({
-        path: '/auth/logout',
+        path: `/auth/logout`,
         method: 'POST',
         secure: true,
         ...params,
@@ -214,7 +211,7 @@ export class AuthApi<SecurityDataType> extends HttpClient<SecurityDataType> {
      */
     refresh: (params: RequestParams = {}) =>
       this.request<TokensEntity, any>({
-        path: '/auth/refresh',
+        path: `/auth/refresh`,
         method: 'POST',
         secure: true,
         format: 'json',

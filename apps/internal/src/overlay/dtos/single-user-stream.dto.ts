@@ -4,7 +4,7 @@ import { IsBoolean, IsOptional, IsString } from 'class-validator';
 export class SingleUserStreamDto {
   @ApiProperty()
   @IsString()
-  username: string;
+  username!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

@@ -6,6 +6,7 @@
 
 // Composables
 import { RouteRecordRaw, createRouter, createWebHistory } from 'vue-router';
+import { authenticated } from '~/services/auth';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -30,7 +31,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/users',
-    name: 'Users Management',
+    name: 'Users',
     component: () => import('../views/users/Index.vue'),
   },
 ];
@@ -40,16 +41,16 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
-  console.log($cookies.get('accessToken'));
+router.beforeEach(async (to, from, next) => {
+  const isAuth = await authenticated();
+  console.log('isAuth', isAuth);
 
-  const token = $cookies.get('accessToken');
-  console.log(token);
-
-  if (to.name !== 'Login' && token === null) {
-    console.log('redirecting to login');
-
-    next({ name: 'Login', query: { redirect: to.fullPath } });
+  if (to.name !== 'Login' && !isAuth) {
+    next({ name: 'Login' });
+    return;
+  } else if (to.name === 'Login' && isAuth) {
+    next({ name: 'Home' });
+    return;
   }
 
   next();

@@ -3,12 +3,13 @@ import { UpdateUserDto } from './dtos/updateUser.dto';
 
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { UserEntity } from '@libs/common/dtos/User.entity';
+import { getErrorMessage } from '@libs/common/helper/error';
 import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
-import { plainToInstance } from 'class-transformer';
-import { Model } from 'mongoose';
-import { UserEntity } from './entities/User.entity';
+import { Model, PipelineStage } from 'mongoose';
+import { GetUsersDto } from './dtos/getUsers.dto';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -37,6 +38,73 @@ export class UserService implements OnModuleInit {
     }
   }
 
+  async getUsers(caller: string, query: GetUsersDto) {
+    const { q, role, me, isActive, isOnline, orderBy } = query;
+    console.log(query);
+
+    const pipeline: PipelineStage[] = [];
+
+    if (q) {
+      pipeline.push({
+        $match: {
+          $or: [{ username: { $regex: q, $options: 'i' } }, { fullName: { $regex: q, $options: 'i' } }],
+        },
+      });
+    }
+
+    if (role) {
+      pipeline.push({
+        $match: {
+          role,
+        },
+      });
+    }
+
+    if (me) {
+      pipeline.push({
+        $match: {
+          username: caller,
+        },
+      });
+    }
+
+    if (isActive !== undefined) {
+      pipeline.push({
+        $match: {
+          isActive,
+        },
+      });
+    }
+
+    if (isOnline !== undefined) {
+      pipeline.push({
+        $match: {
+          'machineUsage.isOnline': isOnline,
+        },
+      });
+    }
+
+    if (orderBy) {
+      for (const [key, value] of Object.entries(orderBy)) {
+        pipeline.push({
+          $sort: {
+            [key]: value,
+          },
+        });
+      }
+    } else {
+      pipeline.push({
+        $sort: {
+          createdAt: -1,
+        },
+      });
+    }
+
+    const users = await this.userModel.aggregate(pipeline).exec();
+
+    return users.map((user) => new UserEntity(user));
+  }
+
   async createUser(createUserDto: CreateUserDto) {
     try {
       const user = await this.userModel.create({
@@ -45,14 +113,15 @@ export class UserService implements OnModuleInit {
         password: createUserDto.password,
         role: createUserDto.role,
       });
-      return plainToInstance(UserEntity, user.toObject());
+
+      return new UserEntity(user.toObject());
     } catch (error) {
-      throw new BadRequestException(`Unable to create user: ${error.message}`);
+      throw new BadRequestException(`Unable to create user: ${getErrorMessage(error)}`);
     }
   }
 
   async updateUser(username: string, updateUserDto: UpdateUserDto) {
-    const user = await this.userModel.findOne({ username });
+    const user = await this.userModel.findOne({ username }).lean();
 
     if (!user) {
       throw new BadRequestException('User not found');
@@ -61,7 +130,6 @@ export class UserService implements OnModuleInit {
     user.fullName = updateUserDto.fullName ?? user.fullName;
     user.password = updateUserDto.password ?? user.password;
     user.role = updateUserDto.role ?? user.role;
-    user.username = updateUserDto.usernameNew || user.username;
 
     if (updateUserDto.group) {
       const group = await this.groupModel.findOne({
@@ -76,8 +144,8 @@ export class UserService implements OnModuleInit {
     }
 
     await user.save();
-    const updatedUser = await user.populate('group');
-    return plainToInstance(UserEntity, updatedUser.toObject());
+
+    return new UserEntity(user);
   }
 
   async deleteUser(username: string) {
@@ -91,7 +159,7 @@ export class UserService implements OnModuleInit {
         success: true,
       };
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(`Unable to delete user: ${getErrorMessage(error)}`);
     }
   }
 }

@@ -1,5 +1,5 @@
-import path from 'path';
-import dotenv from 'dotenv';
+import * as path from 'path';
+import * as dotenv from 'dotenv';
 import { generateApi } from 'swagger-typescript-api';
 
 dotenv.config();
@@ -8,6 +8,7 @@ const SERVICE_NAME_TO_ENDPOINT_MAPPING = {
   user: process.env.USER_SERVICE_ENDPOINT,
   auth: process.env.AUTH_SERVICE_ENDPOINT,
   internal: process.env.INTERNAL_SERVICE_ENDPOINT,
+  printing: process.env.PRINTING_SERVICE_ENDPOINT,
 };
 
 async function bootstrap() {
@@ -45,6 +46,8 @@ async function bootstrap() {
           routeNameInfo.original = routeNameInfo.original.split('Controller')[1];
           routeNameInfo.usage = routeNameInfo.usage.charAt(0).toLowerCase() + routeNameInfo.usage.slice(1);
           routeNameInfo.original = routeNameInfo.original.charAt(0).toLowerCase() + routeNameInfo.original.slice(1);
+
+          return routeNameInfo;
         },
       },
     });

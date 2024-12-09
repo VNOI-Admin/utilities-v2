@@ -5,15 +5,15 @@ export class UpdatePrintClientDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  clientId: string;
+  clientId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  authKey: string;
+  authKey?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
-  isActive: boolean;
+  isActive?: boolean;
 }

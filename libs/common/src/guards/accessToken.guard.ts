@@ -33,7 +33,7 @@ export class AccessTokenGuard implements CanActivate {
         secret: this.configService.get('JWT_ACCESS_TOKEN_SECRET'),
       });
 
-      const user = await this.userModel.findById(payload.sub);
+      const user = await this.userModel.findOne({ username: payload.sub }).lean();
 
       if (!user) {
         throw new UnauthorizedException('User not found');
@@ -47,6 +47,7 @@ export class AccessTokenGuard implements CanActivate {
       const isAdmin = user.role === Role.ADMIN;
       const isPublic = roles.length === 0;
       const isMatchedRole = roles.includes(user.role);
+
       if (!isAdmin && !isPublic && !isMatchedRole) {
         throw new UnauthorizedException('User not authorized to access this resource');
       }
@@ -59,7 +60,7 @@ export class AccessTokenGuard implements CanActivate {
   }
 
   extractTokenFromHeader(req: any): string | null {
-    let accessToken = null;
+    let accessToken: string | null = null;
 
     if (req?.cookies) {
       accessToken = req.cookies.accessToken;

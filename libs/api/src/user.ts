@@ -9,63 +9,6 @@
  * ---------------------------------------------------------------
  */
 
-export interface MachineUsageEntity {
-  cpu: number;
-  memory: number;
-  disk: number;
-  ping: number;
-  isOnline: boolean;
-  /** @format date-time */
-  lastReportedAt: string;
-}
-
-export interface GroupEntity {
-  code: string;
-  fullName: string;
-}
-
-export interface UserEntity {
-  username: string;
-  fullName: string;
-  isActive: boolean;
-  vpnIpAddress: string;
-  role: string;
-  machineUsage: MachineUsageEntity;
-  group: GroupEntity;
-}
-
-export interface CreateUserDto {
-  username: string;
-  fullName: string;
-  password: string;
-  role: 'contestant' | 'coach' | 'admin';
-}
-
-export interface UpdateUserDto {
-  fullName?: string;
-  password?: string;
-  usernameNew?: string;
-  /** @default "contestant" */
-  role?: 'contestant' | 'coach' | 'admin';
-  group?: string;
-}
-
-export interface ReportUsageDto {
-  cpu: number;
-  memory: number;
-  disk: number;
-}
-
-export interface CreateGroupDto {
-  code: string;
-  fullName: string;
-}
-
-export interface UpdateGroupDto {
-  code?: string;
-  fullName?: string;
-}
-
 export interface VpnConfig {
   config: string;
 }
@@ -115,10 +58,7 @@ export class HttpClient<SecurityDataType = unknown> {
   private format?: ResponseType;
 
   constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
-    this.instance = axios.create({
-      ...axiosConfig,
-      baseURL: axiosConfig.baseURL || 'http://localhost:8001',
-    });
+    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || 'http://localhost:8001' });
     this.secure = secure;
     this.format = format;
     this.securityWorker = securityWorker;
@@ -129,7 +69,7 @@ export class HttpClient<SecurityDataType = unknown> {
   };
 
   protected mergeRequestParams(params1: AxiosRequestConfig, params2?: AxiosRequestConfig): AxiosRequestConfig {
-    const method = params1.method || params2?.method;
+    const method = params1.method || (params2 && params2.method);
 
     return {
       ...this.instance.defaults,
@@ -138,7 +78,7 @@ export class HttpClient<SecurityDataType = unknown> {
       headers: {
         ...((method && this.instance.defaults.headers[method.toLowerCase() as keyof HeadersDefaults]) || {}),
         ...(params1.headers || {}),
-        ...(params2?.headers || {}),
+        ...((params2 && params2.headers) || {}),
       },
     };
   }
@@ -217,7 +157,7 @@ export class HttpClient<SecurityDataType = unknown> {
  *
  * Utilities V2 User API Docs
  */
-export class UserApi<SecurityDataType> extends HttpClient<SecurityDataType> {
+export class UserApi<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   /**
    * No description
    *
@@ -226,288 +166,11 @@ export class UserApi<SecurityDataType> extends HttpClient<SecurityDataType> {
    */
   getStatus = (params: RequestParams = {}) =>
     this.request<any, any>({
-      path: '/',
+      path: `/`,
       method: 'GET',
       ...params,
     });
 
-  user = {
-    /**
-     * No description
-     *
-     * @tags User
-     * @name GetUsers
-     * @summary Get all users
-     * @request GET:/user
-     * @secure
-     */
-    getUsers: (
-      query?: {
-        /** Sort by field, 1 for ascending, -1 for descending. Example: key1:1,key2:-1 */
-        orderBy?: string;
-        q?: string;
-        role?: 'contestant' | 'coach' | 'admin';
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<UserEntity[], any>({
-        path: '/user',
-        method: 'GET',
-        query: query,
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name GetCurrentUser
-     * @summary Get current user
-     * @request GET:/user/me
-     * @secure
-     */
-    getCurrentUser: (params: RequestParams = {}) =>
-      this.request<UserEntity, any>({
-        path: '/user/me',
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name GetUser
-     * @summary Get user by username
-     * @request GET:/user/{username}
-     * @secure
-     */
-    getUser: (username: string, params: RequestParams = {}) =>
-      this.request<UserEntity, any>({
-        path: `/user/${username}`,
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name UpdateUser
-     * @summary Update user
-     * @request PATCH:/user/{username}
-     * @secure
-     */
-    updateUser: (username: string, data: UpdateUserDto, params: RequestParams = {}) =>
-      this.request<UserEntity, any>({
-        path: `/user/${username}`,
-        method: 'PATCH',
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name DeleteUser
-     * @summary Delete user
-     * @request DELETE:/user/{username}
-     * @secure
-     */
-    deleteUser: (username: string, params: RequestParams = {}) =>
-      this.request<
-        {
-          success?: boolean;
-        },
-        any
-      >({
-        path: `/user/${username}`,
-        method: 'DELETE',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name CreateUser
-     * @summary Create new user
-     * @request POST:/user/new
-     * @secure
-     */
-    createUser: (data: CreateUserDto, params: RequestParams = {}) =>
-      this.request<UserEntity, any>({
-        path: '/user/new',
-        method: 'POST',
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name GetMachineUsage
-     * @summary Get machine usage of user
-     * @request GET:/user/{username}/machine
-     * @secure
-     */
-    getMachineUsage: (username: string, params: RequestParams = {}) =>
-      this.request<MachineUsageEntity, any>({
-        path: `/user/${username}/machine`,
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name Report
-     * @summary Receive machine status report from contestant. Verified by IP.
-     * @request POST:/user/report
-     */
-    report: (data: ReportUsageDto, params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: '/user/report',
-        method: 'POST',
-        body: data,
-        type: ContentType.Json,
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags User
-     * @name Print
-     * @summary Send print job
-     * @request POST:/user/print
-     */
-    print: (params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: '/user/print',
-        method: 'POST',
-        ...params,
-      }),
-  };
-  group = {
-    /**
-     * No description
-     *
-     * @tags Group
-     * @name GetGroups
-     * @summary Get all groups
-     * @request GET:/group
-     * @secure
-     */
-    getGroups: (params: RequestParams = {}) =>
-      this.request<GroupEntity[], any>({
-        path: '/group',
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Group
-     * @name CreateGroup
-     * @summary Create new group
-     * @request POST:/group/new
-     * @secure
-     */
-    createGroup: (data: CreateGroupDto, params: RequestParams = {}) =>
-      this.request<GroupEntity, any>({
-        path: '/group/new',
-        method: 'POST',
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Group
-     * @name UpdateGroup
-     * @summary Update group
-     * @request PATCH:/group/{code}
-     * @secure
-     */
-    updateGroup: (code: string, data: UpdateGroupDto, params: RequestParams = {}) =>
-      this.request<GroupEntity, any>({
-        path: `/group/${code}`,
-        method: 'PATCH',
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Group
-     * @name DeleteGroup
-     * @summary Delete group
-     * @request DELETE:/group/{code}
-     * @secure
-     */
-    deleteGroup: (code: string, params: RequestParams = {}) =>
-      this.request<
-        {
-          success?: boolean;
-        },
-        any
-      >({
-        path: `/group/${code}`,
-        method: 'DELETE',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Group
-     * @name GetUsers
-     * @summary Get users in group
-     * @request GET:/group/{code}/users
-     * @secure
-     */
-    getUsers: (code: string, params: RequestParams = {}) =>
-      this.request<UserEntity[], any>({
-        path: `/group/${code}/users`,
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-  };
   vpn = {
     /**
      * No description
@@ -520,7 +183,7 @@ export class UserApi<SecurityDataType> extends HttpClient<SecurityDataType> {
      */
     getWireGuardConfig: (params: RequestParams = {}) =>
       this.request<VpnConfig, any>({
-        path: '/vpn/config',
+        path: `/vpn/config`,
         method: 'GET',
         secure: true,
         format: 'json',

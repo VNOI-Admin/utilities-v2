@@ -5,10 +5,7 @@ interface Options<T> {
   onError?: (error: any) => void;
 }
 
-export default function useLazyPromise<T = any>(
-  fn?: () => Promise<T>,
-  options?: Options<T>,
-) {
+export default function useLazyPromise<T = any>(fn?: () => Promise<T>, options?: Options<T>) {
   const response = shallowReactive<{
     loading: boolean;
     result: T | null;
@@ -38,6 +35,6 @@ export default function useLazyPromise<T = any>(
 
   return [run, toRefs(response)] as [
     () => Promise<void>,
-    ToRefs<{ loading: boolean; result: T | null; error: any }>,
+    ToRefs<{ loading: boolean; result: T | undefined; error: any }>,
   ];
 }

@@ -1,15 +1,11 @@
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import type { OnModuleInit } from '@nestjs/common';
-import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import { plainToInstance } from 'class-transformer';
 import { Model } from 'mongoose';
 
+import { Role } from '@libs/common/decorators/role.decorator';
 import { VpnConfig } from './entities/vpnConfig.entity';
 
 @Injectable()
@@ -22,41 +18,26 @@ export class VpnService implements OnModuleInit {
 
   onModuleInit() {}
 
-  async getWireGuardConfig(
-    caller: string,
-    username?: string | undefined,
-  ): Promise<VpnConfig> {
-    const reqCaller = await this.userModel.findById(caller);
-    let user: UserDocument;
+  async getWireGuardConfig(caller: string, username?: string | undefined): Promise<VpnConfig> {
+    const reqCaller = await this.userModel.findOne({ username: caller }).lean();
 
-    if (username) {
-      user = await this.userModel.findOne({ username: username });
-    } else {
-      user = reqCaller;
-    }
+    const user = username ? await this.userModel.findOne({ username }) : reqCaller;
 
     if (!reqCaller || !user) {
       throw new BadRequestException('User not found');
     }
 
-    if (reqCaller.role !== 'admin' && reqCaller._id !== user._id) {
-      throw new ForbiddenException(
-        "You are not authorized to generate this user's WireGuard configuration",
-      );
+    if (reqCaller.role !== Role.ADMIN && reqCaller.username !== user.username) {
+      throw new ForbiddenException("You are not authorized to generate this user's WireGuard configuration");
     }
 
     if (!user.keyPair || !user.vpnIpAddress) {
-      // Throw runtime error
-      throw new Error(
-        `User ${username} does not have a key pair or VPN IP address`,
-      );
+      throw new BadRequestException(`User ${caller} does not have a key pair or VPN IP address`);
     }
 
-    const plain = {
-      config: await this.generateWireGuardUserConfig(user),
-    };
-
-    return plainToInstance(VpnConfig, plain);
+    return new VpnConfig({
+      config: await this.generateWireGuardUserConfig(user as UserDocument),
+    });
   }
 
   async generateWireGuardUserConfig(user: UserDocument): Promise<string> {

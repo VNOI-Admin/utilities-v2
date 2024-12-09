@@ -5,10 +5,10 @@ export class UpdateGroupDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  code: string;
+  code?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  fullName: string;
+  name?: string;
 }

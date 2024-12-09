@@ -62,7 +62,8 @@ export class PrintingController {
     )
     file: Express.Multer.File,
   ) {
-    return await this.printingService.createPrintJob(req.userId, file);
+    const username = req.user;
+    return await this.printingService.createPrintJob(username, file);
   }
 
   @ApiBearerAuth()

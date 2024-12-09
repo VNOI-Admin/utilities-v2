@@ -11,26 +11,29 @@ export type PrintJobDocument = PrintJob & Document;
 
 @Schema()
 export class PrintJob {
-  @Prop()
-  user: string;
+  @Prop({ unique: true })
+  jobId!: string;
 
   @Prop()
-  clientId: string;
+  username!: string;
+
+  @Prop()
+  clientId!: string;
 
   @Prop({ required: true, enum: PrintStatus, default: PrintStatus.QUEUED })
-  status: PrintStatus;
+  status!: PrintStatus;
 
   @Prop({ required: true, default: 0 })
-  priority: number;
+  priority!: number;
 
   @Prop({ required: true })
-  requestedAt: Date;
+  requestedAt!: Date;
 
   @Prop({ required: true })
-  filename: string;
+  filename!: string;
 
   @Prop({ required: true })
-  content: string;
+  content!: string;
 }
 
 export const PrintJobSchema = SchemaFactory.createForClass(PrintJob);

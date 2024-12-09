@@ -2,6 +2,16 @@
 # Create container from image mongo with exposed port 27017 internally in network utilities_network
 
 services:
+  admin_panel:
+    image: utilities/admin_panel
+    container_name: utilities_admin_panel
+    networks:
+      - utilities_network
+    env_file:
+      - .docker.env
+    ports:
+      - "8000:8000"
+
   user:
     image: utilities/user
     container_name: utilities_user

@@ -1,11 +1,13 @@
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
+import { UserEntity } from '@libs/common/dtos/User.entity';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { CreateUserDto } from './dtos/createUser.dto';
+import { GetUsersDto } from './dtos/getUsers.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
-import { UserEntity } from './entities/User.entity';
 import { UserService } from './user.service';
 
 @ApiTags('User')
@@ -13,7 +15,20 @@ import { UserService } from './user.service';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  /** User */
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN, Role.COACH)
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return users',
+    type: [UserEntity],
+  })
+  @Get('/')
+  async getUsers(@Req() req: Request, @Query() query: GetUsersDto) {
+    return await this.userService.getUsers(req.user?.['sub'], query);
+  }
+
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)

@@ -24,7 +24,7 @@ export class IPAddressGuard implements CanActivate {
       throw new UnauthorizedException('User not found');
     }
 
-    request['userId'] = user._id.toString();
+    request['user'] = user.username;
 
     return true;
   }

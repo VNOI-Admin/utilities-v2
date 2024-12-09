@@ -6,29 +6,24 @@ export class UpdateUserDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  fullName: string;
+  password?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  password: string;
-
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  username: string;
+  fullName?: string;
 
   @ApiProperty({
     required: false,
-    enum: Object.values(Role),
+    enum: Role,
     default: Role.CONTESTANT,
   })
   @IsOptional()
   @IsString()
-  role: Role;
+  role?: Role;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  group: string;
+  group?: string;
 }

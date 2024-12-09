@@ -1,15 +1,15 @@
+import Vue from '@vitejs/plugin-vue';
 // Plugins
 import AutoImport from 'unplugin-auto-import/vite';
-import Components from 'unplugin-vue-components/vite';
 import Fonts from 'unplugin-fonts/vite';
+import Components from 'unplugin-vue-components/vite';
 import Layouts from 'vite-plugin-vue-layouts';
-import Vue from '@vitejs/plugin-vue';
 import Vuetify, { transformAssetUrls } from 'vite-plugin-vuetify';
 import tsConfigPaths from 'vite-tsconfig-paths';
 
+import path from 'node:path';
 // Utilities
 import { defineConfig } from 'vite';
-import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -27,13 +27,11 @@ export default defineConfig({
         'vue',
         'vue-router',
         '@vueuse/core',
+        { 'vue-cookies': ['VueCookies'] },
         { 'vue-toastification': ['useToast'] },
         { '~/hooks/useLazyPromise': [['default', 'useLazyPromise']] },
       ],
       dts: 'src/auto-imports.d.ts',
-      eslintrc: {
-        enabled: true,
-      },
     }),
     Components({
       dirs: ['src/components'],

@@ -1,22 +1,10 @@
 <template>
-  <div class="main">
-    <AppSidebar v-if="route.path !== '/login'" />
-    <router-view />
-  </div>
+  <v-app>
+    <app-sidebar />
+    <v-main>
+      <v-container>
+        <router-view />
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
-
-<script lang="ts" setup>
-import AppSidebar from '~/components/AppSidebar.vue';
-
-const route = useRoute();
-
-</script>
-
-<style lang="css" scoped>
-  .main {
-    display: flex;
-    justify-content: stretch;
-    height: 100vh;
-    width: 100%;
-  }
-</style>

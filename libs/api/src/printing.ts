@@ -9,71 +9,52 @@
  * ---------------------------------------------------------------
  */
 
-export interface MachineUsageEntity {
-  cpu: number;
-  memory: number;
-  disk: number;
-  ping: number;
+export interface FileUploadDto {
+  /** @format binary */
+  file: File;
+}
+
+export interface PrintJobEntity {
+  jobId: string;
+  filename: string;
+  username: string;
+  clientId: string;
+  priority: number;
+  status: object;
+  /** @format date-time */
+  requestedAt: string;
+}
+
+export interface UpdatePrintJobDto {
+  status?: 'queued' | 'printing' | 'done';
+  username?: string;
+  clientId?: string;
+  priority?: number;
+}
+
+export interface CreatePrintClientDto {
+  clientId: string;
+  authKey?: string;
+  isActive?: boolean;
+}
+
+export interface PrintClientEntity {
+  clientId: string;
+  authKey: string;
+  isActive: boolean;
   isOnline: boolean;
   /** @format date-time */
   lastReportedAt: string;
 }
 
-export interface UserEntity {
-  username: string;
-  fullName: string;
-  isActive: boolean;
-  vpnIpAddress: string;
-  role: string;
-  machineUsage: MachineUsageEntity;
-  group: string;
+export interface UpdatePrintClientDto {
+  clientId?: string;
+  authKey?: string;
+  isActive?: boolean;
 }
 
-export interface CreateUserDto {
-  username: string;
-  fullName: string;
-  password: string;
-  /** @default "contestant" */
-  role: 'contestant' | 'coach' | 'admin';
-}
-
-export interface UpdateUserDto {
-  password?: string;
-  fullName?: string;
-  /** @default "contestant" */
-  role?: 'contestant' | 'coach' | 'admin';
-  group?: string;
-}
-
-export interface CreateGroupDto {
-  code: string;
-  name: string;
-}
-
-export interface GroupEntity {
-  code: string;
-  name: string;
-}
-
-export interface UpdateGroupDto {
-  code?: string;
-  name?: string;
-}
-
-export interface UserStream {
-  username: string;
-  streamUrl?: string;
-  webcamUrl?: string;
-}
-
-export interface MultiUserStreamDto {
-  usernames: string[];
-}
-
-export interface SingleUserStreamDto {
-  username: string;
-  stream?: boolean;
-  webcam?: boolean;
+export interface UpdatePrintJobStatusDto {
+  status: 'queued' | 'printing' | 'done';
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -121,7 +102,7 @@ export class HttpClient<SecurityDataType = unknown> {
   private format?: ResponseType;
 
   constructor({ securityWorker, secure, format, ...axiosConfig }: ApiConfig<SecurityDataType> = {}) {
-    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || 'http://localhost:8003' });
+    this.instance = axios.create({ ...axiosConfig, baseURL: axiosConfig.baseURL || 'http://localhost:8004' });
     this.secure = secure;
     this.format = format;
     this.securityWorker = securityWorker;
@@ -213,45 +194,52 @@ export class HttpClient<SecurityDataType = unknown> {
 }
 
 /**
- * @title Utilities V2 Internal API Docs
+ * @title Utilities V2 Printing API Docs
  * @version 1.0
- * @baseUrl http://localhost:8003
+ * @baseUrl http://localhost:8004
  * @contact
  *
- * Utilities V2 Internal API Docs
+ * Utilities V2 Printing API Docs
  */
-export class InternalApi<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
-  user = {
+export class PrintingApi<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
+  printing = {
     /**
      * No description
      *
-     * @tags User
-     * @name GetUsers
-     * @summary Get all users
-     * @request GET:/users
+     * @tags Printing
+     * @name CreatePrintJob
+     * @summary Send print job
+     * @request POST:/printing/jobs
+     */
+    createPrintJob: (data: FileUploadDto, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/printing/jobs`,
+        method: 'POST',
+        body: data,
+        type: ContentType.FormData,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name GetPrintJobs
+     * @summary Get all print jobs
+     * @request GET:/printing/jobs
      * @secure
      */
-    getUsers: (
+    getPrintJobs: (
       query?: {
-        /** Sort by field, 1 for ascending, -1 for descending. Example: key1:1,key2:-1 */
-        orderBy?: string;
-        /** Search query */
-        q?: string;
-        role?: 'contestant' | 'coach' | 'admin';
-        /** Return current user based on access token */
-        me?: boolean;
-        /**
-         * Return only active users. Default is true.
-         * @default true
-         */
-        isActive?: boolean;
-        /** Return only online users */
-        isOnline?: boolean;
+        status?: 'queued' | 'printing' | 'done';
+        username?: string;
+        clientId?: string;
+        priority?: number;
       },
       params: RequestParams = {},
     ) =>
-      this.request<UserEntity[], any>({
-        path: `/users`,
+      this.request<PrintJobEntity[], any>({
+        path: `/printing/jobs`,
         method: 'GET',
         query: query,
         secure: true,
@@ -262,19 +250,17 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
     /**
      * No description
      *
-     * @tags User
-     * @name CreateUser
-     * @summary Create new user
-     * @request POST:/users
+     * @tags Printing
+     * @name GetPrintJob
+     * @summary Get one print job
+     * @request GET:/printing/jobs/{id}
      * @secure
      */
-    createUser: (data: CreateUserDto, params: RequestParams = {}) =>
-      this.request<UserEntity, any>({
-        path: `/users`,
-        method: 'POST',
-        body: data,
+    getPrintJob: (id: string, params: RequestParams = {}) =>
+      this.request<PrintJobEntity, any>({
+        path: `/printing/jobs/${id}`,
+        method: 'GET',
         secure: true,
-        type: ContentType.Json,
         format: 'json',
         ...params,
       }),
@@ -282,15 +268,15 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
     /**
      * No description
      *
-     * @tags User
-     * @name UpdateUser
-     * @summary Update user
-     * @request PATCH:/users/{username}
+     * @tags Printing
+     * @name UpdatePrintJob
+     * @summary Update one print job
+     * @request PATCH:/printing/jobs/{id}
      * @secure
      */
-    updateUser: (username: string, data: UpdateUserDto, params: RequestParams = {}) =>
-      this.request<UserEntity, any>({
-        path: `/users/${username}`,
+    updatePrintJob: (id: string, data: UpdatePrintJobDto, params: RequestParams = {}) =>
+      this.request<PrintJobEntity, any>({
+        path: `/printing/jobs/${id}`,
         method: 'PATCH',
         body: data,
         secure: true,
@@ -302,39 +288,49 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
     /**
      * No description
      *
-     * @tags User
-     * @name DeleteUser
-     * @summary Delete user
-     * @request DELETE:/users/{username}
+     * @tags Printing
+     * @name DeletePrintJob
+     * @summary Delete one print job
+     * @request DELETE:/printing/jobs/{id}
      * @secure
      */
-    deleteUser: (username: string, params: RequestParams = {}) =>
-      this.request<
-        {
-          success?: boolean;
-        },
-        any
-      >({
-        path: `/users/${username}`,
+    deletePrintJob: (id: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/printing/jobs/${id}`,
         method: 'DELETE',
         secure: true,
-        format: 'json',
         ...params,
       }),
-  };
-  group = {
+
     /**
      * No description
      *
-     * @tags Group
-     * @name CreateGroup
-     * @summary Create new group
-     * @request POST:/groups
+     * @tags Printing
+     * @name GetPrintJobFile
+     * @summary Get print job file
+     * @request GET:/printing/jobs/{id}/file
      * @secure
      */
-    createGroup: (data: CreateGroupDto, params: RequestParams = {}) =>
-      this.request<GroupEntity, any>({
-        path: `/groups`,
+    getPrintJobFile: (id: string, params: RequestParams = {}) =>
+      this.request<File, any>({
+        path: `/printing/jobs/${id}/file`,
+        method: 'GET',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name CreatePrintClient
+     * @summary Create print client
+     * @request POST:/printing/clients
+     * @secure
+     */
+    createPrintClient: (data: CreatePrintClientDto, params: RequestParams = {}) =>
+      this.request<PrintClientEntity, any>({
+        path: `/printing/clients`,
         method: 'POST',
         body: data,
         secure: true,
@@ -346,15 +342,51 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
     /**
      * No description
      *
-     * @tags Group
-     * @name UpdateGroup
-     * @summary Update group
-     * @request PATCH:/groups/{code}
+     * @tags Printing
+     * @name GetPrintClients
+     * @summary Get all print clients
+     * @request GET:/printing/clients
      * @secure
      */
-    updateGroup: (code: string, data: UpdateGroupDto, params: RequestParams = {}) =>
-      this.request<GroupEntity, any>({
-        path: `/groups/${code}`,
+    getPrintClients: (params: RequestParams = {}) =>
+      this.request<PrintClientEntity[], any>({
+        path: `/printing/clients`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name GetPrintClient
+     * @summary Get one print client
+     * @request GET:/printing/clients/{clientId}
+     * @secure
+     */
+    getPrintClient: (clientId: string, params: RequestParams = {}) =>
+      this.request<PrintClientEntity, any>({
+        path: `/printing/clients/${clientId}`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name UpdatePrintClient
+     * @summary Update one print client
+     * @request PATCH:/printing/clients/{clientId}
+     * @secure
+     */
+    updatePrintClient: (clientId: string, data: UpdatePrintClientDto, params: RequestParams = {}) =>
+      this.request<PrintClientEntity, any>({
+        path: `/printing/clients/${clientId}`,
         method: 'PATCH',
         body: data,
         secure: true,
@@ -366,57 +398,50 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
     /**
      * No description
      *
-     * @tags Group
-     * @name DeleteGroup
-     * @summary Delete group
-     * @request DELETE:/groups/{code}
-     * @secure
+     * @tags Printing
+     * @name GetPrintClientQueue
+     * @summary Get print client's queued jobs
+     * @request GET:/printing/clients/{clientId}/queue
      */
-    deleteGroup: (code: string, params: RequestParams = {}) =>
+    getPrintClientQueue: (
+      clientId: string,
+      query: {
+        authKey: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<PrintJobEntity[], any>({
+        path: `/printing/clients/${clientId}/queue`,
+        method: 'GET',
+        query: query,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name PrintClientHeartbeat
+     * @summary Print client heartbeat
+     * @request POST:/printing/clients/{clientId}/heartbeat
+     */
+    printClientHeartbeat: (
+      clientId: string,
+      query: {
+        authKey: string;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         {
           success?: boolean;
         },
         any
       >({
-        path: `/groups/${code}`,
-        method: 'DELETE',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-  };
-  overlay = {
-    /**
-     * No description
-     *
-     * @tags Overlay
-     * @name GetMultiUserStream
-     * @summary Get multiple users to user stream display
-     * @request GET:/overlay/user-stream/multi
-     */
-    getMultiUserStream: (params: RequestParams = {}) =>
-      this.request<UserStream[], any>({
-        path: `/overlay/user-stream/multi`,
-        method: 'GET',
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Overlay
-     * @name SetMultiUserStream
-     * @summary Set multiple users to user stream display
-     * @request POST:/overlay/user-stream/multi
-     */
-    setMultiUserStream: (data: MultiUserStreamDto, params: RequestParams = {}) =>
-      this.request<UserStream[], any>({
-        path: `/overlay/user-stream/multi`,
+        path: `/printing/clients/${clientId}/heartbeat`,
         method: 'POST',
-        body: data,
-        type: ContentType.Json,
+        query: query,
         format: 'json',
         ...params,
       }),
@@ -424,31 +449,52 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
     /**
      * No description
      *
-     * @tags Overlay
-     * @name GetUserStream
-     * @summary Get current user stream display
-     * @request GET:/overlay/user-stream/single
+     * @tags Printing
+     * @name GetClientPrintJobFile
+     * @summary Get print job file
+     * @request GET:/printing/clients/{clientId}/jobs/{jobId}/file
      */
-    getUserStream: (params: RequestParams = {}) =>
-      this.request<UserStream, any>({
-        path: `/overlay/user-stream/single`,
+    getClientPrintJobFile: (
+      clientId: string,
+      jobId: string,
+      query: {
+        authKey: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<File, any>({
+        path: `/printing/clients/${clientId}/jobs/${jobId}/file`,
         method: 'GET',
-        format: 'json',
+        query: query,
         ...params,
       }),
 
     /**
      * No description
      *
-     * @tags Overlay
-     * @name SetUserStream
-     * @summary Set current user to user stream display
-     * @request POST:/overlay/user-stream/single
+     * @tags Printing
+     * @name UpdatePrintJobStatus
+     * @summary Update print job status
+     * @request PATCH:/printing/clients/{clientId}/jobs/{jobId}/status
      */
-    setUserStream: (data: SingleUserStreamDto, params: RequestParams = {}) =>
-      this.request<UserStream, any>({
-        path: `/overlay/user-stream/single`,
-        method: 'POST',
+    updatePrintJobStatus: (
+      clientId: string,
+      jobId: string,
+      query: {
+        authKey: string;
+      },
+      data: UpdatePrintJobStatusDto,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        {
+          success?: boolean;
+        },
+        any
+      >({
+        path: `/printing/clients/${clientId}/jobs/${jobId}/status`,
+        method: 'PATCH',
+        query: query,
         body: data,
         type: ContentType.Json,
         format: 'json',

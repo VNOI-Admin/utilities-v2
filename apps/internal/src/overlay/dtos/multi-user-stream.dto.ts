@@ -5,5 +5,5 @@ export class MultiUserStreamDto {
   @ApiProperty()
   @IsArray()
   @IsString({ each: true })
-  usernames: string[];
+  usernames!: string[];
 }

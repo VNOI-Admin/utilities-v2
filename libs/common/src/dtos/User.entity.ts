@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Transform, Type } from 'class-transformer';
-import { GroupEntity } from './Group.entity';
+import { Expose, Type } from 'class-transformer';
+import { ConstructorType } from '../serializers/type';
 
 export class MachineUsageEntity {
   @Expose()
@@ -26,6 +26,15 @@ export class MachineUsageEntity {
   @Expose()
   @ApiProperty()
   lastReportedAt: Date;
+
+  constructor(data: ConstructorType<MachineUsageEntity>) {
+    this.cpu = data.cpu;
+    this.memory = data.memory;
+    this.disk = data.disk;
+    this.ping = data.ping;
+    this.isOnline = data.isOnline;
+    this.lastReportedAt = data.lastReportedAt;
+  }
 }
 
 export class UserEntity {
@@ -55,9 +64,16 @@ export class UserEntity {
   machineUsage: MachineUsageEntity;
 
   @Expose()
-  // exclude values that does not contain code
-  @Transform((group) => group.value?.code && group.value)
-  @Type(() => GroupEntity)
-  @ApiProperty({ type: GroupEntity })
-  group: GroupEntity;
+  @ApiProperty()
+  group: string;
+
+  constructor(data: ConstructorType<UserEntity>) {
+    this.username = data.username;
+    this.fullName = data.fullName;
+    this.isActive = data.isActive;
+    this.vpnIpAddress = data.vpnIpAddress;
+    this.role = data.role;
+    this.machineUsage = new MachineUsageEntity(data.machineUsage);
+    this.group = data.group;
+  }
 }

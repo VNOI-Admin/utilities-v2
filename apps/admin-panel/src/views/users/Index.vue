@@ -1,86 +1,155 @@
-<script setup>
-import { ref } from 'vue'
-import { userApi } from '~/services/api';
-const search = ref('')
-const headers = [
-  { title: "Username", value: "username" },
-  { title: "Full Name", value: "fullName" },
-  { title: "Active", value: "isActive" },
-  { title: "VPN IP Address", value: "vpnIpAddress" },
-  { title: "Role", value: "role" },
-  { title: "Machine Usage", value: "machineUsage.cpu" },
-  { title: 'Actions', key: 'actions', sortable: false }
-]
+<script setup lang="ts">
+import { UserEntity } from '@libs/api/internal';
+import { internalApi } from '~/services/api';
+import { Role } from '@libs/common/decorators/role.decorator';
+import type { VDataTable } from 'vuetify/components';
 
-const items = ref([])
-const dialogDelete = ref(false)
-const dialogEdit = ref(false)
-const deleteUser = ref('')
-const user = ref(null)
-userApi.user.getUsers().then((data) => {
-  items.value = data
-})
+type ReadonlyHeaders = VDataTable['$props']['headers'];
 
-const editItem = (item) => {
-  dialogEdit.value = true
-  user.value = item
-}
+const tableHeaders: ReadonlyHeaders = [
+  { title: 'Username', align: 'start', value: 'username', sortable: true },
+  { title: 'Full name', align: 'center', value: 'fullName' },
+  { title: 'Role', align: 'center', value: 'role', sortable: true },
+  {
+    title: 'Machine usage',
+    align: 'center',
+    children: [
+      { title: 'CPU', align: 'center', value: 'machineUsage.cpu', sortable: true },
+      { title: 'Memory', align: 'center', value: 'machineUsage.memory', sortable: true },
+      { title: 'Disk', align: 'center', value: 'machineUsage.disk', sortable: true },
+      { title: 'Ping', align: 'center', value: 'machineUsage.ping', sortable: true },
+      { title: 'Online', align: 'center', key: 'machineUsage.isOnline', sortable: true },
+    ],
+  },
+];
 
-const deleteItem = (item) => {
-  deleteUser.value = item.username
-  dialogDelete.value = true
-}
+const users = ref<UserEntity[]>([]);
+const search = ref('');
+const isActive = ref<string>('All');
+const isOnline = ref<string>('All');
+const role = ref<Role | 'All'>(Role.CONTESTANT);
 
-const closeDelete = () => {
-  dialogDelete.value = false
-}
+const [fetchUsers, { loading: userLoading }] = useLazyPromise(async () => {
+  users.value = await internalApi.user.getUsers({
+    q: search.value,
+    isActive: isActive.value === 'Active' ? true : isActive.value === 'Inactive' ? false : undefined,
+    isOnline: isOnline.value === 'Online' ? true : isOnline.value === 'Offline' ? false : undefined,
+    role: role.value === 'All' ? undefined : role.value,
+  });
+});
 
-const closeEdit = () => {
-  dialogEdit.value = false
-  user.value = null
-}
+debouncedWatch(
+  [search, isActive, isOnline, role],
+  () => {
+    fetchUsers();
+  },
+  {
+    debounce: 500,
+  },
+);
 
-const deleteItemConfirm = () => {
-  console.log(deleteUser.value);
-
-  userApi.user.deleteUser(deleteUser.value).then(() => {
-    window.location.reload()
-  })
-  dialogDelete.value = false
-}
+onMounted(async () => {
+  await fetchUsers();
+});
 </script>
 
 <template>
-  <v-dialog v-model="dialogDelete" max-width="500px">
-    <v-card>
-      <v-card-title class="text-h5">Are you sure you want to delete this user?</v-card-title>
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn color="blue-darken-1" variant="text" @click="closeDelete">Cancel</v-btn>
-        <v-btn color="blue-darken-1" variant="text" @click="deleteItemConfirm">OK</v-btn>
-        <v-spacer></v-spacer>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-  <v-dialog v-model="dialogEdit" max-width="500px">
-    <user-form :user="user" @close-edit-dialog="closeEdit"></user-form>
-  </v-dialog>
-  <v-card title="Users" flat width="100%">
-    <template v-slot:text>
-      <v-text-field v-model="search" label="Search" prepend-inner-icon="mdi-magnify" variant="outlined" hide-details
-        single-line></v-text-field>
-      <v-btn color="blue-darken-1" @click="dialogEdit = true">Add User</v-btn>
-    </template>
+  <h1>Users</h1>
 
-    <v-data-table :headers="headers" :items="items">
-      <template v-slot:item.actions="{ item }">
-        <v-icon class="me-2" size="small" @click="editItem(item)">
-          mdi-pencil
-        </v-icon>
-        <v-icon size="small" @click="deleteItem(item)">
-          mdi-delete
-        </v-icon>
-      </template>
-    </v-data-table>
-  </v-card>
+  <v-divider class="mb-4"></v-divider>
+
+  <v-row>
+    <v-col cols="3">
+      <v-text-field
+        v-model="search"
+        label="Search for users"
+        outlined
+        dense
+        clearable
+      />
+    </v-col>
+    <v-col cols="3">
+      <v-select
+        v-model="isActive"
+        :items="['All', 'Active', 'Inactive']"
+        label="Is active"
+        outlined
+        dense
+      />
+    </v-col>
+    <v-col cols="3">
+      <v-select
+        v-model="isOnline"
+        :items="['All', 'Online', 'Offline']"
+        label="Is online"
+        outlined
+        dense
+      />
+    </v-col>
+    <v-col cols="3">
+      <v-select
+        v-model="role"
+        :items="[...Object.values(Role), 'All']"
+        label="Role"
+        outlined
+        dense
+      />
+    </v-col>
+  </v-row>
+
+  <v-row>
+    <v-col cols="12">
+      <v-data-table
+        :headers="tableHeaders"
+        :items="users"
+        :loading="userLoading"
+        item-key="username"
+      >
+        <template #item.username="{ item }">
+          <v-chip>{{ item.username }}</v-chip>
+        </template>
+        <template #item.fullName="{ item }">
+          <v-chip>{{ item.fullName }}</v-chip>
+        </template>
+        <template #item.role="{ item }">
+          <v-chip>{{ item.role }}</v-chip>
+        </template>
+        <template #item.machineUsage.cpu="{ item }">
+          <v-progress-linear
+            :value="item.machineUsage.cpu"
+            color="blue"
+            height="10"
+          ></v-progress-linear>
+        </template>
+        <template #item.machineUsage.memory="{ item }">
+          <v-progress-linear
+            :value="item.machineUsage.memory"
+            color="green"
+            height="10"
+          ></v-progress-linear>
+        </template>
+        <template #item.machineUsage.disk="{ item }">
+          <v-progress-linear
+            :value="item.machineUsage.disk"
+            color="orange"
+            height="10"
+          ></v-progress-linear>
+        </template>
+        <template #item.machineUsage.ping="{ item }">
+          <v-chip
+            :color="item.machineUsage.ping <= 0 ? 'grey' : item.machineUsage.ping < 50 ? 'green' : item.machineUsage.ping < 100 ? 'yellow' : 'red'"
+            class="font-mono"
+          >
+            {{ item.machineUsage.ping }}ms
+          </v-chip>
+        </template>
+
+        <template #item.machineUsage.isOnline="{ item }">
+          <v-chip :color="item.machineUsage.isOnline ? 'green' : 'red'">
+            {{ item.machineUsage.isOnline ? 'Online' : 'Offline' }}
+          </v-chip>
+        </template>
+      </v-data-table>
+    </v-col>
+  </v-row>
 </template>
