@@ -25,6 +25,8 @@ export class TaskService implements OnModuleInit {
         isActive: true,
       });
 
+      this.logger.debug(`Pinging ${users.length} users`);
+
       for (const user of users) {
         const res = await ping.promise.probe(user.vpnIpAddress, {
           timeout: 3,
@@ -41,5 +43,6 @@ export class TaskService implements OnModuleInit {
     });
 
     this.schedulerRegistry.addCronJob('ping-all-users', job);
+    job.start();
   }
 }
