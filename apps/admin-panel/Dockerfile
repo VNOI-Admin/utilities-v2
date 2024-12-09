@@ -4,6 +4,9 @@ RUN apk update
 WORKDIR /app
 RUN yarn global add turbo
 COPY . .
+RUN apk add --no-cache jq && rm -rf /var/cache/apk/*
+RUN jq 'to_entries | map_values({(.key) : ("$" + .key) }) | reduce .[] as $item ({}; . + $item)' ./apps/admin-panel/config/config.json > ./apps/admin-panel/config/config.tmp.json && mv ./apps/admin-panel/config/config.tmp.json ./apps/admin-panel/config/config.json
+
 RUN turbo prune --scope=admin-panel --docker
 
 FROM node:20-alpine AS installer
@@ -23,16 +26,21 @@ RUN yarn install
 
 RUN yarn turbo run build --filter=admin-panel...
 
-FROM node:20-alpine AS runner
-ENV NODE_ENV=production
-WORKDIR /app
+FROM nginx:alpine AS server
+ENV JSFOLDER=/usr/share/nginx/html/assets/*.js
 
-RUN yarn global add http-server
+RUN apk update && apk add moreutils
 
-COPY --from=installer /app .
+COPY ./apps/admin-panel/nginx.conf /etc/nginx/conf.d/nginx.conf
+RUN rm /etc/nginx/conf.d/default.conf
 
-EXPOSE 8000
+RUN rm -rf /usr/share/nginx/html/*
 
-USER node
+COPY ./apps/admin-panel/nginx.sh /usr/bin/nginx.sh
+RUN chmod +x /usr/bin/nginx.sh
+WORKDIR /usr/share/nginx/html
+COPY --from=installer /app/apps/admin-panel/dist /usr/share/nginx/html
 
-CMD ["http-server", "apps/admin-panel/dist", "-p", "8000"]
+EXPOSE 80
+
+ENTRYPOINT [ "nginx.sh" ]

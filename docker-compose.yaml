@@ -10,7 +10,7 @@ services:
     env_file:
       - .docker.env
     ports:
-      - "8000:8000"
+      - "8000:80"
 
   user:
     image: utilities/user
@@ -61,6 +61,14 @@ services:
       - "127.0.0.1:27017:27017"
     networks:
       - utilities_network
+
+  redis:
+    image: redis
+    container_name: utilities_redis
+    networks:
+      - utilities_network
+    ports:
+      - "6379:6379"
 
 volumes:
   mongo_data:
