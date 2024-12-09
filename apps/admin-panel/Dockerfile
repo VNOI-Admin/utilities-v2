@@ -2,7 +2,7 @@ FROM node:20-alpine AS builder
 RUN apk update
 
 WORKDIR /app
-RUN yarn global add turbo http-server
+RUN yarn global add turbo
 COPY . .
 RUN turbo prune --scope=admin-panel --docker
 
@@ -26,6 +26,8 @@ RUN yarn turbo run build --filter=admin-panel...
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /app
+
+RUN yarn global add http-server
 
 COPY --from=installer /app .
 
