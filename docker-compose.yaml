@@ -3,8 +3,8 @@
 
 services:
   admin_panel:
-    image: utilities/admin_panel
-    container_name: utilities_admin_panel
+    image: utilities/admin-panel
+    container_name: utilities_admin-panel
     networks:
       - utilities_network
     env_file:
