@@ -11,7 +11,7 @@ const [fetchUsers] = useLazyPromise(
   async () => {
     users.value = await internalApi.user.getUsers({
       role: 'contestant',
-      // isOnline: true,
+      isOnline: true,
       q: search.value,
     });
   }
