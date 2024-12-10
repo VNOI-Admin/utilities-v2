@@ -96,8 +96,8 @@ def process_print_queue():
                 continue
 
             if not print_job(filepath):
-                # Failed to print; skip this job
-                continue
+                # Failed to print; revert status to queued
+                update_print_status(job_id, "queued")
 
             update_print_status(job_id, "done")
 
