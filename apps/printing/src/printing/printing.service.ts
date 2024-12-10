@@ -5,7 +5,7 @@ import { getErrorMessage } from '@libs/common/helper/error';
 import { BadRequestException, Injectable, OnModuleInit, StreamableFile, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import uuid from 'uuid';
+import * as uuid from 'uuid';
 import { CreatePrintClientDto } from './dtos/createPrintClient.dto';
 import { GetPrintJobDto } from './dtos/getPrintJob.dto';
 import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
