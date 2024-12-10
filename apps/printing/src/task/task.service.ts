@@ -23,20 +23,16 @@ export class TaskService implements OnModuleInit {
         let isOnline = false;
         if (client.lastReportedAt) {
           const diff = new Date().getTime() - client.lastReportedAt.getTime();
-          isOnline = diff < 60 * 1000;
+          isOnline = diff < 30 * 1000;
         }
 
         await this.printingService.updatePrintClientStatus(client.clientId, isOnline);
+
+        await this.printingService.rearrangeFloatingPrintJobs();
       }
     });
 
-    const rearrangeFloatingPrintJobs = new CronJob(CronExpression.EVERY_10_SECONDS, async () => {
-      await this.printingService.rearrangeFloatingPrintJobs();
-    });
-
     this.schedulerRegistry.addCronJob('printClientOnlineUpdate', checkClientOnlineStatus);
-    this.schedulerRegistry.addCronJob('rearrangeFloatingPrintJobs', rearrangeFloatingPrintJobs);
     checkClientOnlineStatus.start();
-    rearrangeFloatingPrintJobs.start();
   }
 }
