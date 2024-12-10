@@ -30,6 +30,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../views/overlay/DisplaySingle.vue'),
   },
   {
+    path: '/coach-view',
+    name: 'Coach View',
+    component: () => import('../views/CoachView/Index.vue'),
+  },
+  {
     path: '/users',
     name: 'Users',
     component: () => import('../views/users/Index.vue'),

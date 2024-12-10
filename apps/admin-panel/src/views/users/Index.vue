@@ -26,10 +26,10 @@ const tableHeaders: ReadonlyHeaders = [
 ];
 
 const users = ref<UserEntity[]>([]);
-const search = ref('');
-const isActive = ref<string>('All');
-const isOnline = ref<string>('All');
-const role = ref<Role | 'All'>(Role.CONTESTANT);
+const search = routerRef<string>('search', '');
+const isActive = routerRef<'Active' | 'Inactive' | 'All'>('isActive', 'Active');
+const isOnline = routerRef<'Online' | 'Offline' | 'All'>('isOnline', 'Online');
+const role = routerRef<Role | 'All'>('role', Role.CONTESTANT);
 
 const [fetchUsers, { loading: userLoading }] = useLazyPromise(async () => {
   users.value = await internalApi.user.getUsers({

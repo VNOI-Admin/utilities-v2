@@ -29,6 +29,7 @@ export default defineConfig({
         '@vueuse/core',
         { 'vue-cookies': ['VueCookies'] },
         { 'vue-toastification': ['useToast'] },
+        { '~/hooks/routerRef': [['default', 'routerRef']] },
         { '~/hooks/useLazyPromise': [['default', 'useLazyPromise']] },
       ],
       dts: 'src/auto-imports.d.ts',
