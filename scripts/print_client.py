@@ -84,7 +84,7 @@ def process_print_queue():
 
         if queue:
             job = queue[0]
-            job_id = job["id"]
+            job_id = job["jobId"]
             filename = job["filename"]
 
             filepath = get_print_file(job_id, filename)
