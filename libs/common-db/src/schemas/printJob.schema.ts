@@ -3,7 +3,6 @@ import { type Document } from 'mongoose';
 
 export enum PrintStatus {
   QUEUED = 'queued',
-  PRINTING = 'printing',
   DONE = 'done',
 }
 

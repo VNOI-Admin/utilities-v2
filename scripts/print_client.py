@@ -92,13 +92,8 @@ def process_print_queue():
                 print(f"Skipping job {job_id} due to download failure.")
                 continue
 
-            if not update_print_status(job_id, "printing"):
-                # Failed to update status; skip this job
-                continue
-
             if not print_job(filepath):
-                # Failed to print; revert status to queued
-                update_print_status(job_id, "queued")
+                continue
 
             update_print_status(job_id, "done")
 
