@@ -16,6 +16,7 @@ const [fetchUsers, { result: users }] = useLazyPromise(
   () =>
     internalApi.user.getUsers({
       role: 'contestant',
+      isOnline: true,
     }) || [],
 );
 
