@@ -75,7 +75,7 @@ export class PrintingService implements OnModuleInit {
       })
       .sort((a, b) => a.queuedJobs - b.queuedJobs);
 
-    let clientId: string | undefined = undefined;
+    let clientId: string | null = null;
     if (sortedPrintClients.length > 0) {
       clientId = sortedPrintClients[0].clientId;
     }
