@@ -104,6 +104,20 @@ export class UserService implements OnModuleInit {
     return users.map((user) => new UserEntity(user));
   }
 
+  async getUser(username: string) {
+    const user = await this.userModel
+      .findOne({
+        username,
+      })
+      .lean();
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    return new UserEntity(user);
+  }
+
   async createUser(createUserDto: CreateUserDto) {
     try {
       const user = await this.userModel.create({

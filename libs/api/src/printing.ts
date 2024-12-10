@@ -26,7 +26,7 @@ export interface PrintJobEntity {
 }
 
 export interface UpdatePrintJobDto {
-  status?: 'queued' | 'printing' | 'done';
+  status?: 'queued' | 'done';
   username?: string;
   clientId?: string;
   priority?: number;
@@ -54,7 +54,7 @@ export interface UpdatePrintClientDto {
 }
 
 export interface UpdatePrintJobStatusDto {
-  status: 'queued' | 'printing' | 'done';
+  status: 'queued' | 'done';
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -231,7 +231,7 @@ export class PrintingApi<SecurityDataType extends unknown> extends HttpClient<Se
      */
     getPrintJobs: (
       query?: {
-        status?: 'queued' | 'printing' | 'done';
+        status?: 'queued' | 'done';
         username?: string;
         clientId?: string;
         priority?: number;

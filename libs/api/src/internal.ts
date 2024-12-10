@@ -283,6 +283,24 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * No description
      *
      * @tags User
+     * @name GetUser
+     * @summary Get user by username
+     * @request GET:/users/{username}
+     * @secure
+     */
+    getUser: (username: string, params: RequestParams = {}) =>
+      this.request<UserEntity, any>({
+        path: `/users/${username}`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags User
      * @name UpdateUser
      * @summary Update user
      * @request PATCH:/users/{username}
@@ -391,14 +409,34 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * No description
      *
      * @tags Overlay
+     * @name GetStreamSourceByUsername
+     * @summary Get stream source by username
+     * @request GET:/overlay/source/{username}
+     * @secure
+     */
+    getStreamSourceByUsername: (username: string, params: RequestParams = {}) =>
+      this.request<UserStream, any>({
+        path: `/overlay/source/${username}`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
      * @name GetMultiUserStream
      * @summary Get multiple users to user stream display
      * @request GET:/overlay/user-stream/multi
+     * @secure
      */
     getMultiUserStream: (params: RequestParams = {}) =>
       this.request<UserStream[], any>({
         path: `/overlay/user-stream/multi`,
         method: 'GET',
+        secure: true,
         format: 'json',
         ...params,
       }),
@@ -410,12 +448,14 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @name SetMultiUserStream
      * @summary Set multiple users to user stream display
      * @request POST:/overlay/user-stream/multi
+     * @secure
      */
     setMultiUserStream: (data: MultiUserStreamDto, params: RequestParams = {}) =>
       this.request<UserStream[], any>({
         path: `/overlay/user-stream/multi`,
         method: 'POST',
         body: data,
+        secure: true,
         type: ContentType.Json,
         format: 'json',
         ...params,
@@ -428,11 +468,13 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @name GetUserStream
      * @summary Get current user stream display
      * @request GET:/overlay/user-stream/single
+     * @secure
      */
     getUserStream: (params: RequestParams = {}) =>
       this.request<UserStream, any>({
         path: `/overlay/user-stream/single`,
         method: 'GET',
+        secure: true,
         format: 'json',
         ...params,
       }),
@@ -444,12 +486,14 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @name SetUserStream
      * @summary Set current user to user stream display
      * @request POST:/overlay/user-stream/single
+     * @secure
      */
     setUserStream: (data: SingleUserStreamDto, params: RequestParams = {}) =>
       this.request<UserStream, any>({
         path: `/overlay/user-stream/single`,
         method: 'POST',
         body: data,
+        secure: true,
         type: ContentType.Json,
         format: 'json',
         ...params,

@@ -21,18 +21,24 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/overlay',
-    name: 'Overlay Controller',
+    name: 'OverlayController',
     component: () => import('../views/overlay/Index.vue'),
   },
   {
     path: '/single',
-    name: 'Overlay Single Display',
+    name: 'OverlaySingle',
     component: () => import('../views/overlay/DisplaySingle.vue'),
   },
   {
     path: '/coach-view',
-    name: 'Coach View',
+    name: 'CoachViewList',
     component: () => import('../views/CoachView/Index.vue'),
+  },
+  {
+    path: '/coach-view/:username',
+    name: 'CoachViewUser',
+    component: () => import('../views/CoachView/View.vue'),
+    props: true,
   },
   {
     path: '/users',

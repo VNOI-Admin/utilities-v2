@@ -1,18 +1,17 @@
+import { OverlayLayout, OverlayLayoutDocument } from '@libs/common-db/schemas/overlay.schema';
 import { User, UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { UserStream } from './layouts/user-stream';
-import { ConfigService } from '@nestjs/config';
-import {
-  OverlayLayout,
-  OverlayLayoutDocument,
-} from '@libs/common-db/schemas/overlay.schema';
-import { MultiUserStream } from './layouts/multi-user-stream';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
+import { MultiUserStream } from './layouts/multi-user-stream';
+import { UserStream } from './layouts/user-stream';
 
 @Injectable()
 export class OverlayService {
+  private livestreamProxy: string;
+
   constructor(
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
@@ -20,7 +19,9 @@ export class OverlayService {
     private readonly overlayLayoutModel: Model<OverlayLayoutDocument>,
 
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    this.livestreamProxy = this.configService.get('LIVESTREAM_PROXY_URL') ?? '';
+  }
 
   async setUserStream(body: SingleUserStreamDto) {
     const user = await this.userModel.findOne({ username: body.username });
@@ -29,15 +30,10 @@ export class OverlayService {
       throw new Error('User not found');
     }
 
-    const livestreamProxy = this.configService.get('LIVESTREAM_PROXY_URL');
     const streamUrl =
-      !body.stream && body.webcam
-        ? undefined
-        : `${livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
+      !body.stream && body.webcam ? undefined : `${this.livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
     const webcamUrl =
-      !body.webcam && body.stream
-        ? undefined
-        : `${livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
+      !body.webcam && body.stream ? undefined : `${this.livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
 
     const userStream = new UserStream({
       username: body.username,
@@ -45,11 +41,7 @@ export class OverlayService {
       webcamUrl,
     });
 
-    await this.overlayLayoutModel.updateOne(
-      { key: 'user-stream' },
-      { data: userStream.toRecord() },
-      { upsert: true },
-    );
+    await this.overlayLayoutModel.updateOne({ key: 'user-stream' }, { data: userStream.toRecord() }, { upsert: true });
 
     return userStream.toRecord();
   }
@@ -68,6 +60,23 @@ export class OverlayService {
     }
 
     return layout.data;
+  }
+
+  async getStreamSourceByUsername(username: string) {
+    const user = await this.userModel.findOne({ username }).lean();
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const streamUrl = `${this.livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
+    const webcamUrl = `${this.livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
+
+    return new UserStream({
+      username,
+      streamUrl,
+      webcamUrl,
+    });
   }
 
   async getMultiUserStream() {

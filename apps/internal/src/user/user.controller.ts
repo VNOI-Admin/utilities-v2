@@ -31,6 +31,20 @@ export class UserController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN, Role.COACH)
+  @ApiOperation({ summary: 'Get user by username' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return user',
+    type: UserEntity,
+  })
+  @Get('/:username')
+  async getUser(@Param('username') username: string) {
+    return await this.userService.getUser(username);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Create new user' })
   @ApiResponse({
