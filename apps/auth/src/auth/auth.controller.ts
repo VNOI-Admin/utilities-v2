@@ -5,7 +5,7 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Post,
-  Request,
+  Req,
   Res,
   SerializeOptions,
   UseGuards,
@@ -14,8 +14,9 @@ import {
 import { ApiBearerAuth, ApiExcludeEndpoint, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import ms from 'ms';
 
+import { SUCCESS_RESPONSE } from '@libs/common/types/responses';
 import { ConfigService } from '@nestjs/config';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dtos/auth.dto';
 import { TokensEntity } from './entities/tokens.entity';
@@ -65,9 +66,12 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: 'Logout' })
   @Post('logout')
-  async logout(@Request() req: any) {
-    const username = req.user['sub'];
-    return this.authService.logout(username);
+  async logout(@Req() req: Request, @Res() response: Response) {
+    const username = req.user?.['sub'];
+    await this.authService.logout(username);
+    response.clearCookie('accessToken');
+    response.clearCookie('refreshToken');
+    response.json(SUCCESS_RESPONSE);
   }
 
   @ApiBearerAuth()
@@ -79,9 +83,9 @@ export class AuthController {
     type: TokensEntity,
   })
   @Post('refresh')
-  async refresh(@Request() req: any, @Res() response: Response) {
-    const username = req.user['sub'];
-    const refreshToken = req.user['refreshToken'];
+  async refresh(@Req() req: Request, @Res() response: Response) {
+    const username = req.user?.['sub'];
+    const refreshToken = req.user?.['refreshToken'];
 
     const tokens = await this.authService.refreshTokens(username, refreshToken);
 
@@ -117,7 +121,7 @@ export class AuthController {
     description: 'Test successful',
   })
   @Post('protected')
-  async protected(@Request() req: any): Promise<any> {
+  async protected(@Req() req: Request) {
     return { message: 'This is a protected endpoint', ...req.user };
   }
 }
