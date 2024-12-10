@@ -165,8 +165,7 @@ export class PrintingService implements OnModuleInit {
         .findOne({
           jobId: id,
         })
-        .lean()
-        .populate('user');
+        .lean();
 
       if (!printJob) {
         throw new BadRequestException('Print job not found');
@@ -315,8 +314,7 @@ export class PrintingService implements OnModuleInit {
       const printJobs = await this.printJobModel
         .find({ clientId, status: 'queued' })
         .sort({ priority: -1, requestedAt: 1 })
-        .lean()
-        .populate('user');
+        .lean();
 
       return printJobs.map((printJob) => new PrintJobEntity(printJob));
     } catch (error) {
