@@ -4,6 +4,8 @@ import { internalApi } from '~/services/api';
 import { Role } from '@libs/common/decorators/role.decorator';
 import type { VDataTable } from 'vuetify/components';
 
+const router = useRouter();
+
 type ReadonlyHeaders = VDataTable['$props']['headers'];
 
 const tableHeaders: ReadonlyHeaders = [
@@ -155,10 +157,11 @@ onMounted(async () => {
         <!-- add a button at the last row -->
         <template #item.actions="{ item }">
           <v-btn
+            v-if="item.role === Role.CONTESTANT"
             color="primary"
-            @click="() => console.log('Edit', item)"
+            @click="() => router.push({ name: 'CoachViewUser', params: { username: item.username } })"
           >
-            Edit
+            Live
           </v-btn>
         </template>
       </v-data-table>

@@ -11,18 +11,13 @@ const [fetchUsers] = useLazyPromise(
   async () => {
     users.value = await internalApi.user.getUsers({
       role: 'contestant',
-      isOnline: true,
       q: search.value,
     });
   }
 );
 
-const autoFetch = useIntervalFn(fetchUsers, 10000);
-
 watch(search, async () => {
-  autoFetch.pause();
   await fetchUsers();
-  autoFetch.resume();
 });
 
 onMounted(async () => {
