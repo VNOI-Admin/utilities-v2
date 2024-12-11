@@ -143,6 +143,7 @@ export class UserService implements OnModuleInit {
     user.fullName = updateUserDto.fullName ?? user.fullName;
     user.password = updateUserDto.password ?? user.password;
     user.role = updateUserDto.role ?? user.role;
+    user.isActive = updateUserDto.isActive ?? user.isActive;
 
     if (updateUserDto.group) {
       const group = await this.groupModel.findOne({

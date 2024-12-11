@@ -43,6 +43,7 @@ export interface UpdateUserDto {
   /** @default "contestant" */
   role?: 'contestant' | 'coach' | 'admin';
   group?: string;
+  isActive?: boolean;
 }
 
 export interface CreateGroupDto {

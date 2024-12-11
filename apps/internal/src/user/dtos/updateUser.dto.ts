@@ -1,6 +1,7 @@
 import { Role } from '@libs/common/decorators/role.decorator';
+import { ToBoolean } from '@libs/common/decorators/transform.decorator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class UpdateUserDto {
   @ApiProperty({ required: false })
@@ -26,4 +27,10 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   group?: string;
+
+  @ApiProperty({ required: false })
+  @ToBoolean()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
 }

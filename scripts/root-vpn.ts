@@ -16,6 +16,7 @@ async function run() {
   // Get all users
   const users = await usersCollection
     .find({
+      isActive: true,
       keyPair: { $exists: true, $ne: null },
       vpnIpAddress: { $exists: true, $ne: null },
     })
