@@ -134,7 +134,7 @@ export class UserService implements OnModuleInit {
   }
 
   async updateUser(username: string, updateUserDto: UpdateUserDto) {
-    const user = await this.userModel.findOne({ username }).lean();
+    const user = await this.userModel.findOne({ username });
 
     if (!user) {
       throw new BadRequestException('User not found');
