@@ -17,9 +17,13 @@ const [fetchUsers] = useLazyPromise(
   }
 );
 
-useIntervalFn(fetchUsers, 10000);
+const autoFetch = useIntervalFn(fetchUsers, 10000);
 
-watch(search, fetchUsers);
+watch(search, async () => {
+  autoFetch.pause();
+  await fetchUsers();
+  autoFetch.resume();
+});
 
 onMounted(async () => {
   await fetchUsers();
