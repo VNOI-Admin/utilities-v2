@@ -61,10 +61,6 @@ export class PrintingService implements OnModuleInit {
     if (line_count / LINES_BY_PAGE > 5.0) {
       throw new BadRequestException('File exceeds 5 pages.');
     }
-
-    console.log(line_count);
-
-    return true;
   }
 
   async createPrintJob(username: string, file: Express.Multer.File) {
