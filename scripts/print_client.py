@@ -13,6 +13,7 @@ AUTH_KEY = os.getenv("AUTH_KEY", "secret")
 PRINT_FILES_FOLDER = os.getenv("PRINT_FILES_FOLDER", "print_files")
 PRINTER = os.getenv("PRINTER", None)
 REQUEST_TIMEOUT = os.getenv("REQUEST_TIMEOUT", 10)
+PAGE_RANGES = os.getenv("PAGE_RANGES", "1-5")
 
 HEARTBEAT_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/heartbeat"
 QUEUE_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/queue"
@@ -69,7 +70,7 @@ def update_print_status(job_id, status):
 def print_job(filepath):
     try:
         process = subprocess.run(
-            ["lpr", f"-P", PRINTER, "-o", "media=A4", "-o", "orientation-requested=3", "-o", "prettyprint", "-o", "fit-to-page", filepath],
+            ["lpr", f"-P", PRINTER, "-o", f"page-ranges={PAGE_RANGES}", "-o", "media=A4", "-o", "orientation-requested=3", "-o", "prettyprint", "-o", "fit-to-page", filepath],
             check=True,
             capture_output=True
         )
