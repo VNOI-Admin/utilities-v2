@@ -12,6 +12,7 @@ CLIENT_ID = os.getenv("CLIENT_ID", "print-client")
 AUTH_KEY = os.getenv("AUTH_KEY", "secret")
 PRINT_FILES_FOLDER = os.getenv("PRINT_FILES_FOLDER", "print_files")
 PRINTER = os.getenv("PRINTER", None)
+REQUEST_TIMEOUT = os.getenv("REQUEST_TIMEOUT", 10)
 
 HEARTBEAT_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/heartbeat"
 QUEUE_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/queue"
@@ -22,7 +23,7 @@ os.makedirs(PRINT_FILES_FOLDER, exist_ok=True)
 def heartbeat():
     while True:
         try:
-            response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=HEARTBEAT_INTERVAL)
+            response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
         except requests.RequestException as e:
             print(f"Failed to send heartbeat: {e}")
@@ -30,7 +31,7 @@ def heartbeat():
 
 def get_print_queue():
     try:
-        response = requests.get(QUEUE_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=QUEUE_CHECK_INTERVAL)
+        response = requests.get(QUEUE_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         queue = response.json()
         return queue
