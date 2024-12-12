@@ -71,7 +71,7 @@ export class PrintingService implements OnModuleInit {
     }
 
     try {
-      this.verifyPrintContent(file.buffer);
+      await this.verifyPrintContent(file.buffer);
 
       const clientId = await this.getFreePrintClient();
 
