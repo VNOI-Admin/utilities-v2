@@ -69,7 +69,7 @@ def update_print_status(job_id, status):
 def print_job(filepath):
     try:
         process = subprocess.run(
-            ["lpr", f"-P", PRINTER, "-o", "media=A4", "-o", "prettyprint", "-o", "fit-to-page", filepath],
+            ["lpr", f"-P", PRINTER, "-o", "media=A4", "-o", "orientation-requested=3", "-o", "prettyprint", "-o", "fit-to-page", filepath],
             check=True,
             capture_output=True
         )
