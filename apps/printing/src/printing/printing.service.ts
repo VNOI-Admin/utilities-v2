@@ -45,7 +45,7 @@ export class PrintingService implements OnModuleInit {
     const LINES_BY_PAGE = 90;
     let character_count = 0;
     for (let i = 0; i < content.length; i++) {
-      if (content[i] < 0x20 || content[i] > 0x7e) {
+      if (content[i] > 0x7e) {
         throw new BadRequestException(
           `File contains invalid character at position ${i}.`,
         );
