@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { internalApi } from '~/services/api';
+import { internalApi, printingApi } from '~/services/api';
 
 const onlineContestants = ref<number>(0);
 const queuedPrintJobs = ref<number>(0);
@@ -14,8 +14,18 @@ const [fetchUsers] = useLazyPromise(
   }
 );
 
+const [fetchPrintJobs] = useLazyPromise(
+  async () => {
+    const printJobs = await printingApi.printing.getPrintJobs({
+      status: 'queued',
+    });
+    queuedPrintJobs.value = printJobs.length;
+  }
+);
+
 onMounted(async () => {
   await fetchUsers();
+  await fetchPrintJobs();
 });
 </script>
 
@@ -31,7 +41,7 @@ onMounted(async () => {
 
     <v-col cols="6">
       <app-dashboard-card title="Queued print jobs" icon="mdi-printer">
-        <p>20</p>
+        <p>{{ queuedPrintJobs }}</p>
       </app-dashboard-card>
     </v-col>
   </v-row>
