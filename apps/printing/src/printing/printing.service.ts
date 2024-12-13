@@ -52,7 +52,7 @@ export class PrintingService implements OnModuleInit {
       }
 
       character_count++;
-      if (character_count > LINE_WIDTH || content[i] == '\n') {
+      if (character_count > LINE_WIDTH || content[i] == 10) {
         line_count++;
         character_count = 0;
       }
