@@ -1,26 +1,13 @@
 import { CreateGroupDto } from '../group/dtos/createGroup.dto';
 import { UpdateGroupDto } from '../group/dtos/updateGroup.dto';
 
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-import {
-  Controller,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-} from '@nestjs/common';
-import { GroupService } from './group.service';
+import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { GroupEntity } from '@libs/common/dtos/Group.entity';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
+import { Body, Controller, Delete, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { GroupService } from './group.service';
 
 @ApiTags('Group')
 @Controller('groups')
@@ -51,10 +38,7 @@ export class GroupController {
     type: GroupEntity,
   })
   @Patch('/:code')
-  async updateGroup(
-    @Param('code') code: string,
-    @Body() updateGroupDto: UpdateGroupDto,
-  ) {
+  async updateGroup(@Param('code') code: string, @Body() updateGroupDto: UpdateGroupDto) {
     return await this.groupService.updateGroup(code, updateGroupDto);
   }
 

@@ -1,26 +1,26 @@
+import * as crypto from 'crypto';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { Types } from 'mongoose';
 import { type Document } from 'mongoose';
-import * as crypto from 'crypto';
 
 export type PrintClientDocument = PrintClient & Document;
 
 @Schema()
 export class PrintClient {
   @Prop({ required: true, unique: true })
-  clientId: string;
+  clientId!: string;
 
   @Prop({ required: true })
-  authKey: string;
+  authKey!: string;
 
   @Prop({ required: true, default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Prop({ required: true, default: false })
-  isOnline: boolean;
+  isOnline!: boolean;
 
   @Prop({ default: null })
-  lastReportedAt: Date;
+  lastReportedAt!: Date;
 }
 
 export const PrintClientSchema = SchemaFactory.createForClass(PrintClient);

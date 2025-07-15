@@ -23,7 +23,7 @@
       "@libs/common": ["../../libs/common/src"],
       "@libs/common/*": ["../../libs/common/src/*"],
     },
-    "isolatedModules": true
+    "isolatedModules": true,
   },
   "include": ["./src/typed-router.d.ts", "./src/**/*.ts", "./src/**/*.vue", "./src/auto-imports.d.ts", "./src/components.d.ts"],
   "exclude": ["dist", "node_modules", "cypress"],

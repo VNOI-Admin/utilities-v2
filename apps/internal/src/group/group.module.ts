@@ -2,9 +2,9 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Group, GroupSchema } from 'libs/common-db/src/schemas/group.schema';
 
+import { UserModule } from '../user/user.module';
 import { GroupController } from './group.controller';
 import { GroupService } from './group.service';
-import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [

@@ -2,7 +2,6 @@
 import { OVERLAY_KEYS, OverlayKey } from '@libs/common/types/overlay';
 import useLazyPromise from '~/hooks/useLazyPromise';
 import { internalApi } from '~/services/api';
-import { userApi } from '~/services/api';
 
 const toast = useToast();
 
@@ -15,8 +14,9 @@ const multiUsernames = ref<string[]>([]);
 
 const [fetchUsers, { result: users }] = useLazyPromise(
   () =>
-    userApi.user.getUsers({
+    internalApi.user.getUsers({
       role: 'contestant',
+      isOnline: true,
     }) || [],
 );
 

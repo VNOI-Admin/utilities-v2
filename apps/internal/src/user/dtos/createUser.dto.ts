@@ -5,18 +5,17 @@ import { IsEnum, IsString } from 'class-validator';
 export class CreateUserDto {
   @ApiProperty({ required: true })
   @IsString()
-  username: string;
+  username!: string;
 
   @ApiProperty({ required: true })
   @IsString()
-  fullName: string;
+  fullName!: string;
 
   @ApiProperty({ required: true })
   @IsString()
-  password: string;
+  password!: string;
 
-  @ApiProperty({ required: true, enum: Object.values(Role) })
+  @ApiProperty({ required: true, enum: Role, default: Role.CONTESTANT })
   @IsEnum(Role)
-  @IsString()
-  role: Role;
+  role!: Role;
 }

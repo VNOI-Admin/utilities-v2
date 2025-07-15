@@ -16,10 +16,7 @@ export class IPAddressGuard implements CanActivate {
 
     const user = await this.userModel
       .findOne({
-        vpnIpAddress:
-          request.headers['x-real-ip'] ??
-          request.headers['x-forwarded-for'] ??
-          request.ip,
+        vpnIpAddress: request.headers['x-real-ip'] ?? request.headers['x-forwarded-for'] ?? request.ip,
       })
       .lean();
 
@@ -27,7 +24,7 @@ export class IPAddressGuard implements CanActivate {
       throw new UnauthorizedException('User not found');
     }
 
-    request['userId'] = user._id.toString();
+    request['user'] = user.username;
 
     return true;
   }

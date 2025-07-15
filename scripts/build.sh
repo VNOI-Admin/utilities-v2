@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# If app name provided, build only that app
+if [ $# -eq 1 ]; then
+  app_name=$1
+  app=apps/$app_name
+  if [ -d "$app" ]; then
+    docker build -t utilities/$app_name -f $app/Dockerfile .
+  else
+    echo "App $app_name not found"
+  fi
+  exit
+fi
+
 # For each folder in apps, build docker image
 
 for app in apps/*; do

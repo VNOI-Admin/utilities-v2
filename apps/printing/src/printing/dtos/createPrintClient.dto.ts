@@ -4,15 +4,15 @@ import { IsBoolean, IsOptional, IsString } from 'class-validator';
 export class CreatePrintClientDto {
   @ApiProperty({ required: true })
   @IsString()
-  clientId: string;
+  clientId!: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  authKey: string;
+  authKey?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsBoolean()
-  isActive: boolean;
+  isActive!: boolean;
 }

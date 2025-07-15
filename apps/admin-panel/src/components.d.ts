@@ -7,10 +7,11 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    AppFooter: typeof import('./components/AppFooter.vue')['default']
-    HelloWorld: typeof import('./components/HelloWorld.vue')['default']
+    AppBackButton: typeof import('./components/AppBackButton.vue')['default']
+    AppDashboardCard: typeof import('./components/AppDashboardCard.vue')['default']
+    AppSidebar: typeof import('./components/AppSidebar.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    VideoPlayer: typeof import('./components/VideoPlayer.vue')['default']
+    UserForm: typeof import('./components/UserForm.vue')['default']
   }
 }

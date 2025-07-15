@@ -3,8 +3,8 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ScheduleModule } from '@nestjs/schedule';
 
-import { TaskService } from './task.service';
 import { ConfigService } from '@nestjs/config';
+import { TaskService } from './task.service';
 
 @Module({
   imports: [

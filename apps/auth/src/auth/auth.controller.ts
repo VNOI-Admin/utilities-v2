@@ -5,32 +5,31 @@ import {
   ClassSerializerInterceptor,
   Controller,
   Post,
-  Request,
+  Req,
   Res,
   SerializeOptions,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiExcludeEndpoint,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiExcludeEndpoint, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import ms from 'ms';
 
+import { SUCCESS_RESPONSE } from '@libs/common/types/responses';
+import { ConfigService } from '@nestjs/config';
+import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dtos/auth.dto';
 import { TokensEntity } from './entities/tokens.entity';
-import { Response } from 'express';
-import { plainToInstance } from 'class-transformer';
 
 @ApiTags('Auth')
 @Controller('auth')
 @UseInterceptors(ClassSerializerInterceptor)
 @SerializeOptions({ excludeExtraneousValues: true })
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private configService: ConfigService,
+    private authService: AuthService,
+  ) {}
 
   @ApiOperation({ summary: 'Login using credentials' })
   @ApiResponse({
@@ -41,19 +40,38 @@ export class AuthController {
   @Post('login')
   async login(@Body() data: AuthDto, @Res() response: Response) {
     const tokens = await this.authService.login(data);
-    response.cookie('accessToken', tokens.accessToken, {});
-    response.cookie('refreshToken', tokens.refreshToken, {});
+    const accessTokenExpiresIn = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME');
+    const refreshTokenExpiresIn = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME');
 
-    response.json(plainToInstance(TokensEntity, tokens));
+    const accessTokenMaxAge = accessTokenExpiresIn ? ms(accessTokenExpiresIn) : undefined;
+    const refreshTokenMaxAge = refreshTokenExpiresIn ? ms(refreshTokenExpiresIn) : undefined;
+
+    response.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: accessTokenMaxAge,
+      secure: true,
+    });
+    response.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: refreshTokenMaxAge,
+      secure: true,
+    });
+
+    response.json(new TokensEntity(tokens));
   }
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @ApiOperation({ summary: 'Logout' })
   @Post('logout')
-  async logout(@Request() req: any) {
-    const userId = req.user['sub'];
-    return this.authService.logout(userId);
+  async logout(@Req() req: Request, @Res() response: Response) {
+    const username = req.user?.['sub'];
+    await this.authService.logout(username);
+    response.clearCookie('accessToken');
+    response.clearCookie('refreshToken');
+    response.json(SUCCESS_RESPONSE);
   }
 
   @ApiBearerAuth()
@@ -65,10 +83,33 @@ export class AuthController {
     type: TokensEntity,
   })
   @Post('refresh')
-  async refresh(@Request() req: any): Promise<TokensEntity> {
-    const userId = req.user['sub'];
-    const refreshToken = req.user['refreshToken'];
-    return this.authService.refreshTokens(userId, refreshToken);
+  async refresh(@Req() req: Request, @Res() response: Response) {
+    const username = req.user?.['sub'];
+    const refreshToken = req.user?.['refreshToken'];
+
+    const tokens = await this.authService.refreshTokens(username, refreshToken);
+
+    const accessTokenExpiresIn = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME');
+    const refreshTokenExpiresIn = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME');
+
+    const accessTokenMaxAge = accessTokenExpiresIn ? ms(accessTokenExpiresIn) : undefined;
+    const refreshTokenMaxAge = refreshTokenExpiresIn ? ms(refreshTokenExpiresIn) : undefined;
+
+    response.cookie('accessToken', tokens.accessToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: accessTokenMaxAge,
+      secure: true,
+    });
+
+    response.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      sameSite: 'strict',
+      maxAge: refreshTokenMaxAge,
+      secure: true,
+    });
+
+    response.json(new TokensEntity(tokens));
   }
 
   @ApiBearerAuth()
@@ -80,7 +121,7 @@ export class AuthController {
     description: 'Test successful',
   })
   @Post('protected')
-  async protected(@Request() req: any): Promise<any> {
+  async protected(@Req() req: Request) {
     return { message: 'This is a protected endpoint', ...req.user };
   }
 }

@@ -12,6 +12,8 @@ CLIENT_ID = os.getenv("CLIENT_ID", "print-client")
 AUTH_KEY = os.getenv("AUTH_KEY", "secret")
 PRINT_FILES_FOLDER = os.getenv("PRINT_FILES_FOLDER", "print_files")
 PRINTER = os.getenv("PRINTER", None)
+REQUEST_TIMEOUT = os.getenv("REQUEST_TIMEOUT", 10)
+PAGE_RANGES = os.getenv("PAGE_RANGES", "1-5")
 
 HEARTBEAT_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/heartbeat"
 QUEUE_ENDPOINT = f"{PRINTING_URL}/clients/{CLIENT_ID}/queue"
@@ -22,7 +24,7 @@ os.makedirs(PRINT_FILES_FOLDER, exist_ok=True)
 def heartbeat():
     while True:
         try:
-            response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=HEARTBEAT_INTERVAL)
+            response = requests.post(HEARTBEAT_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=REQUEST_TIMEOUT)
             response.raise_for_status()
         except requests.RequestException as e:
             print(f"Failed to send heartbeat: {e}")
@@ -30,7 +32,7 @@ def heartbeat():
 
 def get_print_queue():
     try:
-        response = requests.get(QUEUE_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=QUEUE_CHECK_INTERVAL)
+        response = requests.get(QUEUE_ENDPOINT, params={"authKey": AUTH_KEY}, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         queue = response.json()
         return queue
@@ -67,10 +69,11 @@ def update_print_status(job_id, status):
 
 def print_job(filepath):
     try:
-        process = subprocess.Popen(
-            ["lpr", f"-P", PRINTER, "-o", "media=A4", "-o", "prettyprint", "-o", "fit-to-page", filepath]
+        process = subprocess.run(
+            ["lpr", f"-P", PRINTER, "-o", "sides=one-sided", "-o", f"page-ranges={PAGE_RANGES}", "-o", "media=A4", "-o", "orientation-requested=3", "-o", "prettyprint", "-o", "fit-to-page", filepath],
+            check=True,
+            capture_output=True
         )
-        process.wait()
         print(f"Printed {filepath}")
         return True
     except Exception as e:
@@ -83,7 +86,7 @@ def process_print_queue():
 
         if queue:
             job = queue[0]
-            job_id = job["id"]
+            job_id = job["jobId"]
             filename = job["filename"]
 
             filepath = get_print_file(job_id, filename)
@@ -91,12 +94,7 @@ def process_print_queue():
                 print(f"Skipping job {job_id} due to download failure.")
                 continue
 
-            if not update_print_status(job_id, "printing"):
-                # Failed to update status; skip this job
-                continue
-
             if not print_job(filepath):
-                # Failed to print; skip this job
                 continue
 
             update_print_status(job_id, "done")

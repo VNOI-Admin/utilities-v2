@@ -17,29 +17,37 @@ export class TaskService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const users = await this.userModel.find({
-      role: 'user',
-      vpnIpAddress: { $ne: null },
-      isActive: true,
-    });
-    this.logger.debug(`Initializing ${users.length} cron jobs for users`);
-
-    for (const user of users) {
-      const job = new CronJob(CronExpression.EVERY_5_SECONDS, async () => {
-        const res = await ping.promise.probe(user.vpnIpAddress, {
-          timeout: 3,
-        });
-        if (res.alive && res.time != 'unknown') {
-          user.machineUsage.ping = res.time;
-          user.machineUsage.isOnline = true;
-        } else {
-          user.machineUsage.ping = 0;
-          user.machineUsage.isOnline = false;
-        }
-        await user.save();
+    // make this cron fetch the users by every minute, then after that check their ping
+    const job = new CronJob(CronExpression.EVERY_30_SECONDS, async () => {
+      const users = await this.userModel.find({
+        role: 'contestant',
+        vpnIpAddress: { $ne: null },
+        isActive: true,
       });
-      this.schedulerRegistry.addCronJob(`${user._id}-ping`, job);
-      job.start();
-    }
+
+      this.logger.log(`Pinging ${users.length} users`);
+
+      await Promise.all(
+        users.map(async (user) => {
+          const res = await ping.promise.probe(user.vpnIpAddress, {
+            timeout: 3,
+            min_reply: 3,
+          });
+          if (res.alive && res.time !== 'unknown') {
+            user.machineUsage.ping = res.time;
+            user.machineUsage.isOnline = true;
+          } else {
+            user.machineUsage.ping = 0;
+            user.machineUsage.isOnline = false;
+          }
+          await user.save();
+        }),
+      );
+
+      this.logger.log('Pinging completed');
+    });
+
+    this.schedulerRegistry.addCronJob('ping-all-users', job);
+    job.start();
   }
 }

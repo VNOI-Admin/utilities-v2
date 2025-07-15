@@ -8,5 +8,5 @@ export class UpdatePrintJobStatusDto {
     enum: Object.values(PrintStatus),
   })
   @IsEnum(PrintStatus)
-  status: PrintStatus;
+  status!: PrintStatus;
 }

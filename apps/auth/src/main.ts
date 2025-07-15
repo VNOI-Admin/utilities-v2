@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { AuthModule } from './auth/auth.module';
 
@@ -21,6 +22,7 @@ async function bootstrap() {
   const authEndpoint = configService.get('AUTH_SERVICE_ENDPOINT');
 
   app.enableCors({ credentials: true, origin: true });
+  app.use(cookieParser());
 
   const config = new DocumentBuilder()
     .addServer(authEndpoint)

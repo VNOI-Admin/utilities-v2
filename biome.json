@@ -3,7 +3,7 @@
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
     "ignoreUnknown": false,
-    "ignore": ["**/*.spec.ts"],
+    "ignore": ["**/*.spec.ts", "libs/api"],
     "include": [
       "apps/**/*.ts",
       "apps/**/*.vue",
@@ -25,7 +25,6 @@
     "attributePosition": "auto",
     "bracketSpacing": true,
     "ignore": [
-      "apps/core/src/graphql.ts",
       "apps/admin-ui/src/auto-imports.d.ts",
       "apps/admin-ui/src/components.d.ts",
       "**/.yarn/",

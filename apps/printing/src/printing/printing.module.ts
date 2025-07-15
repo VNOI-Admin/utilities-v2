@@ -2,17 +2,11 @@ import { User, UserSchemaFactory } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
+import { PrintClient, PrintClientSchema } from '@libs/common-db/schemas/printClient.schema';
+import { PrintJob, PrintJobSchema } from '@libs/common-db/schemas/printJob.schema';
+import { ConfigService } from '@nestjs/config';
 import { PrintingController } from './printing.controller';
 import { PrintingService } from './printing.service';
-import {
-  PrintJob,
-  PrintJobSchema,
-} from '@libs/common-db/schemas/printJob.schema';
-import {
-  PrintClient,
-  PrintClientSchema,
-} from '@libs/common-db/schemas/printClient.schema';
-import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [

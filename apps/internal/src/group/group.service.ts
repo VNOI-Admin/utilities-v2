@@ -1,16 +1,14 @@
 import { CreateGroupDto } from './dtos/createGroup.dto';
 import { UpdateGroupDto } from './dtos/updateGroup.dto';
 
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { plainToInstance } from 'class-transformer';
+import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
-import {
-  Group,
-  type GroupDocument,
-} from '@libs/common-db/schemas/group.schema';
+import { GroupEntity } from '@libs/common/dtos/Group.entity';
+import { getErrorMessage } from '@libs/common/helper/error';
+import { SUCCESS_RESPONSE } from '@libs/common/types/responses';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { GroupEntity } from './entities/Group.entity';
 
 @Injectable()
 export class GroupService {
@@ -25,7 +23,7 @@ export class GroupService {
     try {
       const group = await this.groupModel.create({
         code: createGroupDto.code,
-        fullName: createGroupDto.fullName,
+        name: createGroupDto.name,
       });
 
       await group.save();
@@ -34,9 +32,9 @@ export class GroupService {
         throw new BadRequestException('Unable to create group');
       }
 
-      return plainToInstance(GroupEntity, group.toObject());
+      return new GroupEntity(group.toObject());
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -47,9 +45,10 @@ export class GroupService {
     }
 
     group.code = updateGroupDto.code || group.code;
-    group.fullName = updateGroupDto.fullName || group.fullName;
+    group.name = updateGroupDto.name || group.name;
     await group.save();
-    return plainToInstance(GroupEntity, group.toObject());
+
+    return new GroupEntity(group.toObject());
   }
 
   async deleteGroup(code: string) {
@@ -58,15 +57,11 @@ export class GroupService {
       if (!group) {
         throw new BadRequestException('Group not found');
       }
-      await this.userModel
-        .updateMany({ group: group._id }, { $unset: { group: 1 } })
-        .exec();
+      await this.userModel.updateMany({ group: group._id }, { $unset: { group: 1 } }).exec();
       await group.deleteOne();
-      return {
-        success: true,
-      };
+      return SUCCESS_RESPONSE;
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 }

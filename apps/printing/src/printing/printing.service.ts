@@ -1,8 +1,13 @@
 import {
+  PrintClient,
+  PrintClientDocument,
+} from '@libs/common-db/schemas/printClient.schema';
+import {
   PrintJob,
   PrintJobDocument,
 } from '@libs/common-db/schemas/printJob.schema';
 import { User, UserDocument } from '@libs/common-db/schemas/user.schema';
+import { getErrorMessage } from '@libs/common/helper/error';
 import {
   BadRequestException,
   Injectable,
@@ -12,18 +17,14 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { PrintJobEntity } from './entities/PrintJob.entity';
-import { plainToInstance } from 'class-transformer';
-import { UpdatePrintJobDto } from './dtos/updatePrintJob.dto';
+import * as uuid from 'uuid';
 import { CreatePrintClientDto } from './dtos/createPrintClient.dto';
-import {
-  PrintClient,
-  PrintClientDocument,
-} from '@libs/common-db/schemas/printClient.schema';
-import { PrintClientEntity } from './entities/PrintClient.entity';
-import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
-import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
 import { GetPrintJobDto } from './dtos/getPrintJob.dto';
+import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
+import { UpdatePrintJobDto } from './dtos/updatePrintJob.dto';
+import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
+import { PrintClientEntity } from './entities/PrintClient.entity';
+import { PrintJobEntity } from './entities/PrintJob.entity';
 
 @Injectable()
 export class PrintingService implements OnModuleInit {
@@ -38,18 +39,47 @@ export class PrintingService implements OnModuleInit {
 
   async onModuleInit() {}
 
-  async createPrintJob(callerId: string, file: Express.Multer.File) {
-    const user = await this.userModel.findOne({ _id: callerId }).lean();
+  async verifyPrintContent(content) {
+    let line_count = 1;
+    const LINE_WIDTH = 99;
+    const LINES_BY_PAGE = 90;
+    let character_count = 0;
+    for (let i = 0; i < content.length; i++) {
+      if (content[i] > 0x7e) {
+        throw new BadRequestException(
+          `File contains invalid character at position ${i}.`,
+        );
+      }
+
+      character_count++;
+      if (character_count > LINE_WIDTH || content[i] == 10) {
+        line_count++;
+        character_count = 0;
+      }
+    }
+
+    if (line_count / LINES_BY_PAGE > 5.0) {
+      throw new BadRequestException('File exceeds 5 pages.');
+    }
+  }
+
+  async createPrintJob(username: string, file: Express.Multer.File) {
+    const user = await this.userModel.findOne({ username }).lean();
 
     if (!user) {
       throw new BadRequestException('User not found');
     }
 
     try {
+      await this.verifyPrintContent(file.buffer);
+
       const clientId = await this.getFreePrintClient();
 
+      const uniqueId = uuid.v4();
+
       const printJob = await this.printJobModel.create({
-        user: user.username,
+        jobId: uniqueId,
+        username: user.username,
         requestedAt: new Date(),
         filename: `${user.username}-${file.originalname}`,
         content: file.buffer.toString('base64'),
@@ -60,7 +90,7 @@ export class PrintingService implements OnModuleInit {
 
       return { success: true };
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -87,7 +117,7 @@ export class PrintingService implements OnModuleInit {
       })
       .sort((a, b) => a.queuedJobs - b.queuedJobs);
 
-    let clientId = null;
+    let clientId: string | null = null;
     if (sortedPrintClients.length > 0) {
       clientId = sortedPrintClients[0].clientId;
     }
@@ -142,7 +172,7 @@ export class PrintingService implements OnModuleInit {
       for (const job of jobsToAssign) {
         job.clientId = client.clientId;
         await this.printJobModel.updateOne(
-          { _id: job._id },
+          { jobId: job.jobId },
           { clientId: client.clientId },
         );
       }
@@ -185,31 +215,30 @@ export class PrintingService implements OnModuleInit {
 
     const printJobs = await this.printJobModel.find(query).lean();
 
-    return plainToInstance(PrintJobEntity, printJobs);
+    return printJobs.map((printJob) => new PrintJobEntity(printJob));
   }
 
   async getPrintJob(id: string): Promise<PrintJobEntity> {
     try {
       const printJob = await this.printJobModel
         .findOne({
-          _id: id,
+          jobId: id,
         })
-        .lean()
-        .populate('user');
+        .lean();
 
       if (!printJob) {
         throw new BadRequestException('Print job not found');
       }
 
-      return plainToInstance(PrintJobEntity, printJob);
+      return new PrintJobEntity(printJob);
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
   async updatePrintJob(id: string, updatePrintJobDto: UpdatePrintJobDto) {
     try {
-      const printJob = await this.printJobModel.findOne({ _id: id });
+      const printJob = await this.printJobModel.findOne({ jobId: id });
       if (!printJob) {
         throw new BadRequestException('Print job not found');
       }
@@ -220,7 +249,7 @@ export class PrintingService implements OnModuleInit {
           username: updatePrintJobDto.username,
         });
         if (!newUser) throw new BadRequestException('User not found');
-        printJob.user = newUser.id;
+        printJob.username = newUser.id;
       }
 
       printJob.status = updatePrintJobDto.status || printJob.status;
@@ -228,16 +257,16 @@ export class PrintingService implements OnModuleInit {
       printJob.priority = updatePrintJobDto.priority ?? printJob.priority;
 
       await printJob.save();
-      const updatedPrintJob = await printJob.populate('user');
-      return plainToInstance(PrintJobEntity, updatedPrintJob.toObject());
+
+      return new PrintJobEntity(printJob.toObject());
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
   async deletePrintJob(id: string) {
     try {
-      const printJob = await this.printJobModel.findOne({ _id: id });
+      const printJob = await this.printJobModel.findOne({ jobId: id });
       if (!printJob) {
         throw new BadRequestException('Print job not found');
       }
@@ -246,7 +275,7 @@ export class PrintingService implements OnModuleInit {
         success: true,
       };
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -257,7 +286,7 @@ export class PrintingService implements OnModuleInit {
     try {
       const printJob = await this.printJobModel
         .findOne({
-          _id: jobId,
+          jobId: jobId,
         })
         .lean();
 
@@ -273,7 +302,7 @@ export class PrintingService implements OnModuleInit {
         disposition: `attachment; filename="${printJob.filename}"`,
       });
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -289,15 +318,17 @@ export class PrintingService implements OnModuleInit {
         throw new BadRequestException('Unable to create print client');
       }
 
-      return plainToInstance(PrintClientEntity, printClient.toObject());
+      return new PrintClientEntity(printClient.toObject());
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
   async getPrintClients(): Promise<PrintClientEntity[]> {
     const printClients = await this.printClientModel.find().lean();
-    return plainToInstance(PrintClientEntity, printClients);
+    return printClients.map(
+      (printClient) => new PrintClientEntity(printClient),
+    );
   }
 
   async getPrintClient(clientId: string): Promise<PrintClientEntity> {
@@ -310,9 +341,9 @@ export class PrintingService implements OnModuleInit {
         throw new BadRequestException('Print client not found');
       }
 
-      return plainToInstance(PrintClientEntity, printClient);
+      return new PrintClientEntity(printClient);
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -333,9 +364,9 @@ export class PrintingService implements OnModuleInit {
         updatePrintClientDto.isActive ?? printClient.isActive;
 
       await printClient.save();
-      return plainToInstance(PrintClientEntity, printClient.toObject());
+      return new PrintClientEntity(printClient.toObject());
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -357,12 +388,11 @@ export class PrintingService implements OnModuleInit {
       const printJobs = await this.printJobModel
         .find({ clientId, status: 'queued' })
         .sort({ priority: -1, requestedAt: 1 })
-        .lean()
-        .populate('user');
+        .lean();
 
-      return plainToInstance(PrintJobEntity, printJobs);
+      return printJobs.map((printJob) => new PrintJobEntity(printJob));
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -372,7 +402,7 @@ export class PrintingService implements OnModuleInit {
     updatePrintJobDto: UpdatePrintJobStatusDto,
   ) {
     try {
-      const printJob = await this.printJobModel.findOne({ _id: jobId });
+      const printJob = await this.printJobModel.findOne({ jobId: jobId });
       if (!printJob) {
         throw new BadRequestException('Print job not found');
       }
@@ -386,7 +416,7 @@ export class PrintingService implements OnModuleInit {
       await printJob.save();
       return { success: true };
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 
@@ -402,7 +432,7 @@ export class PrintingService implements OnModuleInit {
 
       await printClient.save();
     } catch (error) {
-      throw new BadRequestException(error.message);
+      throw new BadRequestException(getErrorMessage(error));
     }
   }
 }

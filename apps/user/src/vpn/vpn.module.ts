@@ -3,9 +3,9 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 
+import { ConfigService } from '@nestjs/config';
 import { VpnController } from './vpn.controller';
 import { VpnService } from './vpn.service';
-import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [

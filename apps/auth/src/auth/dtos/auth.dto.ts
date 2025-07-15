@@ -4,9 +4,9 @@ import { IsString } from 'class-validator';
 export class AuthDto {
   @ApiProperty()
   @IsString()
-  username: string;
+  username!: string;
 
   @ApiProperty()
   @IsString()
-  password: string;
+  password!: string;
 }

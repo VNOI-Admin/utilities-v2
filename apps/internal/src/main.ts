@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 import { NestFactory } from '@nestjs/core';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -18,6 +19,7 @@ async function bootstrap() {
   const internalEndpoint = configService.get('INTERNAL_SERVICE_ENDPOINT');
 
   app.enableCors({ credentials: true, origin: true });
+  app.use(cookieParser());
 
   const config = new DocumentBuilder()
     .addServer(internalEndpoint)

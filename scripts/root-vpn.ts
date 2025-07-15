@@ -1,5 +1,5 @@
-import * as dotenv from 'dotenv';
 import { writeFileSync } from 'fs';
+import * as dotenv from 'dotenv';
 import { MongoClient } from 'mongodb';
 
 dotenv.config();
@@ -16,6 +16,7 @@ async function run() {
   // Get all users
   const users = await usersCollection
     .find({
+      isActive: true,
       keyPair: { $exists: true, $ne: null },
       vpnIpAddress: { $exists: true, $ne: null },
     })

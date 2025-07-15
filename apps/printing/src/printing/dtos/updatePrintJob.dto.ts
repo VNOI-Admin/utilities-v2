@@ -9,20 +9,20 @@ export class UpdatePrintJobDto {
   })
   @IsOptional()
   @IsEnum(PrintStatus)
-  status: PrintStatus;
+  status?: PrintStatus;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  username: string;
+  username?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  clientId: string;
+  clientId?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsNumber()
-  priority: number;
+  priority?: number;
 }

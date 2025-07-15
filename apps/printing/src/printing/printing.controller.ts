@@ -18,28 +18,20 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiProduces,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-import { PrintingService } from './printing.service';
-import { FileUploadDto } from './dtos/fileUpload.dto';
-import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
-import { PrintJobEntity } from './entities/PrintJob.entity';
-import { UpdatePrintJobDto } from './dtos/updatePrintJob.dto';
-import { CreatePrintClientDto } from './dtos/createPrintClient.dto';
-import { PrintClientEntity } from './entities/PrintClient.entity';
-import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
-import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
-import { GetPrintJobDto } from './dtos/getPrintJob.dto';
+import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
+import { CreatePrintClientDto } from './dtos/createPrintClient.dto';
+import { FileUploadDto } from './dtos/fileUpload.dto';
+import { GetPrintJobDto } from './dtos/getPrintJob.dto';
+import { UpdatePrintClientDto } from './dtos/updatePrintClient.dto';
+import { UpdatePrintJobDto } from './dtos/updatePrintJob.dto';
+import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
+import { PrintClientEntity } from './entities/PrintClient.entity';
+import { PrintJobEntity } from './entities/PrintJob.entity';
+import { PrintingService } from './printing.service';
 
 @ApiTags('Printing')
 @Controller('printing')
@@ -70,7 +62,8 @@ export class PrintingController {
     )
     file: Express.Multer.File,
   ) {
-    return await this.printingService.createPrintJob(req.userId, file);
+    const username = req.user;
+    return await this.printingService.createPrintJob(username, file);
   }
 
   @ApiBearerAuth()
@@ -111,10 +104,7 @@ export class PrintingController {
     type: PrintJobEntity,
   })
   @Patch('/jobs/:id')
-  async updatePrintJob(
-    @Param('id') id: string,
-    @Body() updatePrintJobDto: UpdatePrintJobDto,
-  ) {
+  async updatePrintJob(@Param('id') id: string, @Body() updatePrintJobDto: UpdatePrintJobDto) {
     return await this.printingService.updatePrintJob(id, updatePrintJobDto);
   }
 
@@ -201,14 +191,8 @@ export class PrintingController {
     type: PrintClientEntity,
   })
   @Patch('/clients/:clientId')
-  async updatePrintClient(
-    @Param('clientId') clientId: string,
-    @Body() updatePrintClientDto: UpdatePrintClientDto,
-  ) {
-    return await this.printingService.updatePrintClient(
-      clientId,
-      updatePrintClientDto,
-    );
+  async updatePrintClient(@Param('clientId') clientId: string, @Body() updatePrintClientDto: UpdatePrintClientDto) {
+    return await this.printingService.updatePrintClient(clientId, updatePrintClientDto);
   }
 
   @ApiOperation({ summary: "Get print client's queued jobs" })
@@ -218,14 +202,8 @@ export class PrintingController {
     type: [PrintJobEntity],
   })
   @Get('/clients/:clientId/queue')
-  async getPrintClientQueue(
-    @Param('clientId') clientId: string,
-    @Query('authKey') authKey: string,
-  ) {
-    if (
-      !authKey ||
-      !(await this.printingService.checkPrintClientAuth(clientId, authKey))
-    ) {
+  async getPrintClientQueue(@Param('clientId') clientId: string, @Query('authKey') authKey: string) {
+    if (!authKey || !(await this.printingService.checkPrintClientAuth(clientId, authKey))) {
       throw new UnauthorizedException('Unauthorized');
     }
 
@@ -240,14 +218,8 @@ export class PrintingController {
     schema: { properties: { success: { type: 'boolean' } } },
   })
   @Post('/clients/:clientId/heartbeat')
-  async printClientHeartbeat(
-    @Param('clientId') clientId: string,
-    @Query('authKey') authKey: string,
-  ) {
-    if (
-      !authKey ||
-      !(await this.printingService.checkPrintClientAuth(clientId, authKey))
-    ) {
+  async printClientHeartbeat(@Param('clientId') clientId: string, @Query('authKey') authKey: string) {
+    if (!authKey || !(await this.printingService.checkPrintClientAuth(clientId, authKey))) {
       throw new UnauthorizedException('Unauthorized');
     }
 
@@ -272,10 +244,7 @@ export class PrintingController {
     @Param('jobId') jobId: string,
     @Query('authKey') authKey: string,
   ) {
-    if (
-      !authKey ||
-      !(await this.printingService.checkPrintClientAuth(clientId, authKey))
-    ) {
+    if (!authKey || !(await this.printingService.checkPrintClientAuth(clientId, authKey))) {
       console.log('Unauthorized', authKey, clientId);
       throw new UnauthorizedException('Unauthorized');
     }
@@ -295,17 +264,10 @@ export class PrintingController {
     @Query('authKey') authKey: string,
     @Body() updatePrintJobStatusDto: UpdatePrintJobStatusDto,
   ) {
-    if (
-      !authKey ||
-      !(await this.printingService.checkPrintClientAuth(clientId, authKey))
-    ) {
+    if (!authKey || !(await this.printingService.checkPrintClientAuth(clientId, authKey))) {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    return await this.printingService.updatePrintJobStatus(
-      jobId,
-      clientId,
-      updatePrintJobStatusDto,
-    );
+    return await this.printingService.updatePrintJobStatus(jobId, clientId, updatePrintJobStatusDto);
   }
 }

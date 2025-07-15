@@ -2,6 +2,16 @@
 # Create container from image mongo with exposed port 27017 internally in network utilities_network
 
 services:
+  admin_panel:
+    image: utilities/admin-panel
+    container_name: utilities_admin-panel
+    networks:
+      - utilities_network
+    env_file:
+      - .docker.env
+    ports:
+      - "8000:80"
+
   user:
     image: utilities/user
     container_name: utilities_user
@@ -51,6 +61,14 @@ services:
       - "127.0.0.1:27017:27017"
     networks:
       - utilities_network
+
+  redis:
+    image: redis
+    container_name: utilities_redis
+    networks:
+      - utilities_network
+    ports:
+      - "6379:6379"
 
 volumes:
   mongo_data:

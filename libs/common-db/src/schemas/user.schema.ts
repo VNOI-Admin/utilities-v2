@@ -1,7 +1,7 @@
 import { Role } from '@libs/common/decorators/role.decorator';
 import { generateKeyPair } from '@libs/utils/crypto/keygen';
 import type { ConfigService } from '@nestjs/config';
-import { Prop, raw, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
 import type { Model } from 'mongoose';
@@ -26,26 +26,26 @@ export type MachineUsage = {
 @Schema()
 export class User {
   @Prop({ required: true, unique: true })
-  username: string;
+  username!: string;
 
   @Prop({ required: false })
-  fullName: string;
+  fullName!: string;
 
   @Prop({ required: true })
-  password: string;
+  password!: string;
 
   @Prop()
-  refreshToken: string;
+  refreshToken?: string;
 
   @Prop({ required: true, type: String, default: Role.CONTESTANT })
-  role: Role;
+  role!: Role;
 
   // Allow null for several documents. For non-null, unique is enforced.
   @Prop({ unique: true, sparse: true })
-  vpnIpAddress: string;
+  vpnIpAddress!: string;
 
   @Prop({ required: true, default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @Prop(
     raw({
@@ -53,7 +53,7 @@ export class User {
       privateKey: { type: String, default: null },
     }),
   )
-  keyPair: KeyPairType;
+  keyPair!: KeyPairType;
 
   @Prop(
     raw({
@@ -65,9 +65,10 @@ export class User {
       lastReportedAt: { type: Date, default: null },
     }),
   )
-  machineUsage: MachineUsage;
+  machineUsage!: MachineUsage;
 
-  group: string;
+  @Prop({ required: false })
+  group!: string;
 }
 
 export const UserRawSchema = SchemaFactory.createForClass(User);
@@ -80,23 +81,19 @@ export const UserSchemaFactory = (configService: ConfigService) => {
     }
 
     if ((this.isNew && !this.vpnIpAddress) || this.isModified('role')) {
-      const users = await this.model<Model<UserDocument>>(User.name)
-        .find({ role: this.role })
-        .exec();
+      const users = await this.model<Model<UserDocument>>(User.name).find({ role: this.role }).exec();
 
       let vpnBaseSubnet: number;
 
       switch (this.role) {
         case Role.CONTESTANT:
-          vpnBaseSubnet = ip.toLong(
-            configService.get('WG_CONTESTANT_BASE_SUBNET'),
-          );
+          vpnBaseSubnet = ip.toLong(configService.get('WG_CONTESTANT_BASE_SUBNET') as string);
           break;
         case Role.COACH:
-          vpnBaseSubnet = ip.toLong(configService.get('WG_COACH_BASE_SUBNET'));
+          vpnBaseSubnet = ip.toLong(configService.get('WG_COACH_BASE_SUBNET') as string);
           break;
         case Role.ADMIN:
-          vpnBaseSubnet = ip.toLong(configService.get('WG_ADMIN_BASE_SUBNET'));
+          vpnBaseSubnet = ip.toLong(configService.get('WG_ADMIN_BASE_SUBNET') as string);
           break;
         default:
           throw new Error('Invalid role');

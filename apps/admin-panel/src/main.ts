@@ -1,14 +1,7 @@
-/**
- * main.ts
- *
- * Bootstraps Vuetify and other plugins then mounts the App`
- */
-
-// Plugins
 import { registerPlugins } from './plugins';
 
-import Toast from 'vue-toastification';
 import VueVideoPlayer from '@videojs-player/vue';
+import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 
 // Components
