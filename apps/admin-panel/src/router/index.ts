@@ -22,12 +22,15 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/overlay',
     name: 'OverlayController',
-    component: () => import('../views/overlay/Index.vue'),
+    component: () => import('../views/overlay/Controller.vue'),
   },
   {
-    path: '/single',
-    name: 'OverlaySingle',
-    component: () => import('../views/overlay/DisplaySingle.vue'),
+    path: '/overlay/display',
+    name: 'OverlayDisplay',
+    component: () => import('../views/overlay/Display.vue'),
+    meta: {
+      layout: 'overlay',
+    },
   },
   {
     path: '/coach-view',

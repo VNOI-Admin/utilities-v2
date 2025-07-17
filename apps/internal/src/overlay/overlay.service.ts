@@ -5,8 +5,9 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
-import { MultiUserStream } from './layouts/multi-user-stream';
-import { UserStream } from './layouts/user-stream';
+import { MULTI_USER_STREAM_KEY, MultiUserStream } from './layouts/multi-user-stream';
+import { USER_STREAM_KEY, UserStream } from './layouts/user-stream';
+import { OverlayLayoutResponse } from './responses/overlay-latout.response';
 
 @Injectable()
 export class OverlayService {
@@ -21,6 +22,27 @@ export class OverlayService {
     private readonly configService: ConfigService,
   ) {
     this.livestreamProxy = this.configService.get('LIVESTREAM_PROXY_URL') ?? '';
+  }
+
+  async getCurrentLayout() {
+    const layout = await this.overlayLayoutModel.findOne({
+      current: true,
+    });
+
+    if (!layout) {
+      return 'default';
+    }
+
+    return new OverlayLayoutResponse({
+      key: layout.key,
+      data: layout.data,
+      current: layout.current,
+    });
+  }
+
+  async setCurrentLayout(layout: string) {
+    await this.overlayLayoutModel.updateMany({}, { current: false });
+    await this.overlayLayoutModel.updateOne({ key: layout }, { current: true }, { upsert: true });
   }
 
   async setUserStream(body: SingleUserStreamDto) {
@@ -41,7 +63,9 @@ export class OverlayService {
       webcamUrl,
     });
 
-    await this.overlayLayoutModel.updateOne({ key: 'user-stream' }, { data: userStream.toRecord() }, { upsert: true });
+    await this.overlayLayoutModel.updateOne({ key: USER_STREAM_KEY }, { data: userStream.toRecord() }, { upsert: true });
+
+    await this.setCurrentLayout(USER_STREAM_KEY);
 
     return userStream.toRecord();
   }
@@ -115,10 +139,12 @@ export class OverlayService {
     const multiUserStream = new MultiUserStream({ users });
 
     await this.overlayLayoutModel.updateOne(
-      { key: 'multi-user-stream' },
+      { key: MULTI_USER_STREAM_KEY },
       { data: multiUserStream.toRecord() },
       { upsert: true },
     );
+
+    await this.setCurrentLayout(MULTI_USER_STREAM_KEY);
 
     return multiUserStream.toRecord();
   }

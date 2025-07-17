@@ -10,6 +10,9 @@ export class OverlayLayout {
 
   @Prop({ required: true, type: Object })
   data!: Record<string, any>;
+
+  @Prop({ default: false })
+  current!: boolean;
 }
 
 export const OverlayLayoutSchema = SchemaFactory.createForClass(OverlayLayout);

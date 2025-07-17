@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GroupModule } from './group/group.module';
 import { OverlayModule } from './overlay/overlay.module';
+import { ScrapingModule } from './scraping/scraping.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -16,6 +17,7 @@ import { UserModule } from './user/user.module';
     UserModule,
     GroupModule,
     OverlayModule,
+    ScrapingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

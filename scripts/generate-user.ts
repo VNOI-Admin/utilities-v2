@@ -14,21 +14,22 @@ const internalApi = new InternalApi({
 async function run() {
   const users = JSON.parse(readFileSync('./users.json', 'utf-8'));
 
-  await Promise.all(
-    users.map(async (user) => {
-      const username = user['username_practice'];
-      console.log(`Patch user ${username}, ${JSON.stringify(user)}`);
-      try {
-        await internalApi.user.updateUser(username, {
-          isActive: false,
+  for (const user of users) {
+    const username = user['username'];
+    console.log(`Creating user ${username}, ${JSON.stringify(user)}`);
+    try {
+        await internalApi.user.createUser({
+          username,
+          fullName: user['fullname'],
+          password: username,
+          role: user['role'],
         });
 
-        console.log(`User ${user['username_practice']} created`);
+        console.log(`User ${user['username']} created`);
       } catch (error) {
-        console.error(`Failed to create user ${user['username_practice']}: ${getErrorMessage(error)}`);
-      }
-    }),
-  );
+      console.error(`Failed to create user ${username}: ${getErrorMessage(error)}`);
+    }
+  }
 }
 
 void run();

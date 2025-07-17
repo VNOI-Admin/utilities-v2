@@ -6,6 +6,7 @@ import { MultiUserStreamDto } from './dtos/multi-user-stream.dto';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
 import { UserStream } from './layouts/user-stream';
 import { OverlayService } from './overlay.service';
+import { OverlayLayoutResponse } from './responses/overlay-latout.response';
 
 @ApiTags('Overlay')
 @Controller('overlay')
@@ -26,6 +27,22 @@ export class OverlayController {
   @Get('/source/:username')
   getStreamSourceByUsername(@Param('username') username: string) {
     return this.overlayService.getStreamSourceByUsername(username);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Get current layout',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Current layout retrieved successfully',
+    type: OverlayLayoutResponse,
+  })
+  @Get('/current')
+  getCurrentLayout() {
+    return this.overlayService.getCurrentLayout();
   }
 
   @ApiBearerAuth()

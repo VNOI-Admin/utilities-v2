@@ -24,6 +24,11 @@ const paths = [
     path: '/coach-view',
   },
   {
+    title: 'Overlay controller',
+    icon: 'mdi-view-stream',
+    path: '/overlay',
+  },
+  {
     title: 'Settings',
     icon: 'mdi-cog',
     path: '/settings',

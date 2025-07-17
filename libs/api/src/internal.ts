@@ -67,6 +67,12 @@ export interface UserStream {
   webcamUrl?: string;
 }
 
+export interface OverlayLayoutResponse {
+  key: string;
+  data: object;
+  current: boolean;
+}
+
 export interface MultiUserStreamDto {
   usernames: string[];
 }
@@ -75,6 +81,13 @@ export interface SingleUserStreamDto {
   username: string;
   stream?: boolean;
   webcam?: boolean;
+}
+
+export interface RankingEntry {
+  rank: number;
+  teamName: string;
+  points: number;
+  problems: string[];
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -428,6 +441,24 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * No description
      *
      * @tags Overlay
+     * @name GetCurrentLayout
+     * @summary Get current layout
+     * @request GET:/overlay/current
+     * @secure
+     */
+    getCurrentLayout: (params: RequestParams = {}) =>
+      this.request<OverlayLayoutResponse, any>({
+        path: `/overlay/current`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
      * @name GetMultiUserStream
      * @summary Get multiple users to user stream display
      * @request GET:/overlay/user-stream/multi
@@ -496,6 +527,25 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         body: data,
         secure: true,
         type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+  };
+  scraping = {
+    /**
+     * No description
+     *
+     * @tags Scraping
+     * @name GetVNOIRanking
+     * @summary Get VNOI contest ranking
+     * @request GET:/scraping/vnoi-ranking
+     * @secure
+     */
+    getVNOIRanking: (params: RequestParams = {}) =>
+      this.request<RankingEntry[], any>({
+        path: `/scraping/vnoi-ranking`,
+        method: 'GET',
+        secure: true,
         format: 'json',
         ...params,
       }),

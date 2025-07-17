@@ -4,6 +4,7 @@ import useLazyPromise from '~/hooks/useLazyPromise';
 import { internalApi } from '~/services/api';
 
 const toast = useToast();
+const router = useRouter();
 
 const tab = ref<OverlayKey | undefined>(undefined);
 const usernameOptions = ref<string[]>([]);
@@ -92,4 +93,6 @@ onMounted(() => {
       </v-tabs-window>
     </v-card-text>
   </v-card>
+
+  <v-btn @click="() => router.push({ name: 'OverlayDisplay' })"> Display </v-btn>
 </template>
