@@ -3,8 +3,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsUrl } from 'class-validator';
 import { ConstructorType } from '@libs/common/serializers/type';
 import { OverlayLayout } from './generic';
+import { OVERLAY_KEYS } from '@libs/common/types/overlay';
 
-export const USER_STREAM_KEY = 'USER_STREAM';
+export const USER_STREAM_KEY = OVERLAY_KEYS.USER_STREAM;
 
 export class UserStream implements OverlayLayout {
   @Expose()

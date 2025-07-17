@@ -5,8 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
+import { WebcamLayoutDto } from './dtos/webcam-layout.dto';
 import { MULTI_USER_STREAM_KEY, MultiUserStream } from './layouts/multi-user-stream';
 import { USER_STREAM_KEY, UserStream } from './layouts/user-stream';
+import { WEBCAM_LAYOUT_KEY, WebcamLayout } from './layouts/webcam-layout';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
 
 @Injectable()
@@ -70,6 +72,18 @@ export class OverlayService {
     return userStream.toRecord();
   }
 
+  async setWebcamLayout(body: WebcamLayoutDto) {
+    const webcamLayout = new WebcamLayout({
+      enabled: body.enabled,
+    });
+
+    await this.overlayLayoutModel.updateOne({ key: WEBCAM_LAYOUT_KEY }, { data: webcamLayout.toRecord() }, { upsert: true });
+
+    await this.setCurrentLayout(WEBCAM_LAYOUT_KEY);
+
+    return webcamLayout.toRecord();
+  }
+
   async getUserStream() {
     const layout = await this.overlayLayoutModel.findOne({
       key: 'user-stream',
@@ -110,6 +124,20 @@ export class OverlayService {
 
     if (!layout) {
       return [];
+    }
+
+    return layout.data;
+  }
+
+  async getWebcamLayout() {
+    const layout = await this.overlayLayoutModel.findOne({
+      key: WEBCAM_LAYOUT_KEY,
+    });
+
+    if (!layout) {
+      return new WebcamLayout({
+        enabled: false,
+      });
     }
 
     return layout.data;

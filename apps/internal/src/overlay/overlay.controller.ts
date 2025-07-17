@@ -4,7 +4,9 @@ import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MultiUserStreamDto } from './dtos/multi-user-stream.dto';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
+import { WebcamLayoutDto } from './dtos/webcam-layout.dto';
 import { UserStream } from './layouts/user-stream';
+import { WebcamLayout } from './layouts/webcam-layout';
 import { OverlayService } from './overlay.service';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
 
@@ -113,5 +115,40 @@ export class OverlayController {
   @Post('/user-stream/single')
   async setUserStream(@Body() body: SingleUserStreamDto) {
     return await this.overlayService.setUserStream(body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Get current webcam layout',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Webcam layout retrieved successfully',
+    type: WebcamLayout,
+  })
+  @Get('/webcam-layout')
+  getWebcamLayout() {
+    return this.overlayService.getWebcamLayout();
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Set current webcam layout',
+  })
+  @ApiBody({
+    type: WebcamLayoutDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Webcam layout set successfully',
+    type: WebcamLayout,
+  })
+  @Post('/webcam-layout')
+  async setWebcamLayout(@Body() body: WebcamLayoutDto) {
+    return await this.overlayService.setWebcamLayout(body);
   }
 }

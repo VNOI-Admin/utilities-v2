@@ -83,11 +83,27 @@ export interface SingleUserStreamDto {
   webcam?: boolean;
 }
 
+export interface WebcamLayoutDto {
+  enabled: boolean;
+}
+
+export interface WebcamLayout {
+  enabled: boolean;
+}
+
 export interface RankingEntry {
   rank: number;
   teamName: string;
   points: number;
   problems: string[];
+}
+
+export interface SubmissionEntry {
+  id: string;
+  status: string;
+  problemName: string;
+  problemNumber: string;
+  user: string;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -530,23 +546,68 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         format: 'json',
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name GetWebcamLayout
+     * @summary Get current webcam layout
+     * @request GET:/overlay/webcam-layout
+     * @secure
+     */
+    getWebcamLayout: (params: RequestParams = {}) =>
+      this.request<WebcamLayout, any>({
+        path: `/overlay/webcam-layout`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name SetWebcamLayout
+     * @summary Set current webcam layout
+     * @request POST:/overlay/webcam-layout
+     * @secure
+     */
+    setWebcamLayout: (data: WebcamLayoutDto, params: RequestParams = {}) =>
+      this.request<WebcamLayout, any>({
+        path: `/overlay/webcam-layout`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
   };
   scraping = {
     /**
      * No description
      *
-     * @tags Scraping
-     * @name GetVNOIRanking
-     * @summary Get VNOI contest ranking
+     * @name GetVnoiRanking
      * @request GET:/scraping/vnoi-ranking
-     * @secure
      */
-    getVNOIRanking: (params: RequestParams = {}) =>
+    getVnoiRanking: (params: RequestParams = {}) =>
       this.request<RankingEntry[], any>({
         path: `/scraping/vnoi-ranking`,
         method: 'GET',
-        secure: true,
-        format: 'json',
+        ...params,
+      }),
+    /**
+     * No description
+     *
+     * @name GetVnoiSubmissions
+     * @request GET:/scraping/vnoi-submissions
+     */
+    getVnoiSubmissions: (params: RequestParams = {}) =>
+      this.request<SubmissionEntry[], any>({
+        path: `/scraping/vnoi-submissions`,
+        method: 'GET',
         ...params,
       }),
   };

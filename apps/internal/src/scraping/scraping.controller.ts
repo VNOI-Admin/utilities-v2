@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ScrapingService, RankingEntry } from './scraping.service';
+import { ScrapingService, RankingEntry, SubmissionEntry } from './scraping.service';
 
 @Controller('scraping')
 export class ScrapingController {
@@ -8,5 +8,10 @@ export class ScrapingController {
   @Get('vnoi-ranking')
   async getVNOIRanking(): Promise<RankingEntry[]> {
     return this.scrapingService.scrapeVNOIRanking();
+  }
+
+  @Get('vnoi-submissions')
+  async getVNOISubmissions(): Promise<SubmissionEntry[]> {
+    return this.scrapingService.scrapeVNOISubmissions();
   }
 }

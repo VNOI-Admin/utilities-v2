@@ -38,6 +38,17 @@ async function saveMultiUserStream() {
   console.log('saveMultiUserStream', multiUsernames.value);
 }
 
+async function saveWebcamLayout() {
+  try {
+    await internalApi.overlay.setWebcamLayout({
+      enabled: true,
+    });
+    toast.success('Successfully enabled webcam layout');
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 watch(users, () => {
   if (users.value) {
     usernameOptions.value = users.value.map((user) => user.username);
@@ -89,6 +100,15 @@ onMounted(() => {
 
         <v-tabs-window-item :value="OVERLAY_KEYS.MULTI_USER_STREAM">
           <v-btn color="primary" @click="saveMultiUserStream"> Save </v-btn>
+        </v-tabs-window-item>
+
+        <v-tabs-window-item :value="OVERLAY_KEYS.WEBCAM_LAYOUT">
+          <v-btn
+            color="primary"
+            @click="saveWebcamLayout"
+          >
+            Enable Webcam Layout
+          </v-btn>
         </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>

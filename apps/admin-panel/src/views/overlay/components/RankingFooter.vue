@@ -14,29 +14,13 @@ onMounted(async () => {
 onMounted(() => {
   setInterval(() => {
     fetchRanking();
-  }, 10000);
+  }, 30000);
 });
-
-const handleRefresh = async () => {
-  await fetchRanking();
-};
 </script>
 
 <template>
-  <div class="ranking-box">
-    <div class="ranking-header">
-      <h3 class="ranking-title">Queue</h3>
-      <v-btn
-        icon="mdi-refresh"
-        size="small"
-        variant="text"
-        :loading="loading"
-        @click="handleRefresh"
-        class="refresh-btn"
-      />
-    </div>
-
-    <div class="ranking-content">
+  <div class="ranking-footer">
+    <div class="ranking-scroll-container">
       <div v-if="rankingData && rankingData.length > 0" class="ranking-list">
         <div
           v-for="entry in rankingData"
@@ -50,40 +34,38 @@ const handleRefresh = async () => {
       </div>
 
       <div v-else class="ranking-placeholder">
-        <div class="placeholder-icon">📊</div>
-        <div class="placeholder-text">No Data</div>
-        <div class="placeholder-subtext">No ranking data available</div>
+        <div class="placeholder-text">No ranking data available</div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.ranking-box {
+.ranking-footer {
   width: 100%;
-  height: 50%;
+  height: 30px;
   display: flex;
   flex-direction: column;
   background: #1e3a8a;
   color: white;
-  border-radius: 8px;
+  border-top: 2px solid #3b82f6;
   overflow: hidden;
-  align-self: flex-end;
-  border: 2px solid #3b82f6;
 }
 
 .ranking-header {
-  padding: 12px 16px;
-  border-bottom: 2px solid #3b82f6;
+  padding: 4px 16px;
   background: #1e40af;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1px solid #3b82f6;
+  flex-shrink: 0;
+  height: 24px;
 }
 
 .ranking-title {
   margin: 0;
-  font-size: 16px;
+  font-size: 12px;
   font-weight: 600;
   color: white;
 }
@@ -92,54 +74,50 @@ const handleRefresh = async () => {
   color: white !important;
 }
 
-.ranking-content {
+.ranking-scroll-container {
   flex: 1;
-  padding: 12px;
-  overflow-y: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  position: relative;
 }
 
 .ranking-placeholder {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 120px;
+  height: 100%;
   background: rgba(59, 130, 246, 0.1);
   border: 2px dashed #3b82f6;
   border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.placeholder-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
+  margin: 4px 8px;
 }
 
 .placeholder-text {
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.placeholder-subtext {
   font-size: 12px;
+  font-weight: 500;
   opacity: 0.7;
 }
 
 .ranking-list {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  padding: 4px 8px;
+  height: 100%;
+  gap: 8px;
 }
 
 .ranking-item {
   display: flex;
   align-items: center;
-  padding: 6px 10px;
+  padding: 4px 8px;
   background: rgba(59, 130, 246, 0.1);
-  border-radius: 6px;
-  border-left: 3px solid #3b82f6;
+  border-radius: 4px;
+  border-left: 2px solid #3b82f6;
+  height: 32px;
+  min-width: 120px;
+  flex-shrink: 0;
   transition: background-color 0.2s ease;
+  white-space: nowrap;
 }
 
 .ranking-item:hover {
@@ -148,27 +126,27 @@ const handleRefresh = async () => {
 
 .team-number {
   font-weight: 600;
-  margin-right: 10px;
-  min-width: 20px;
+  margin-right: 6px;
+  min-width: 12px;
   color: #fbbf24;
-  font-size: 14px;
+  font-size: 11px;
 }
 
 .team-name {
   flex: 1;
   font-weight: 500;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 14px;
+  font-size: 11px;
+  margin-right: 4px;
 }
 
 .team-score {
-  font-size: 11px;
+  font-size: 9px;
   background: #10b981;
   color: white;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 1px 3px;
+  border-radius: 2px;
   font-weight: 600;
   white-space: nowrap;
 }

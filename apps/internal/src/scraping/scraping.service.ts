@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
@@ -9,11 +10,27 @@ export interface RankingEntry {
   problems: string[];
 }
 
+export interface ProblemEntry {
+  number: number;
+  name: string;
+  href: string;
+}
+
+export interface SubmissionEntry {
+  id: string;
+  status: string;
+  problemName: string;
+  problemNumber: string;
+  user: string;
+}
+
 @Injectable()
 export class ScrapingService {
+  constructor(private readonly configService: ConfigService) {}
   async scrapeVNOIRanking(): Promise<RankingEntry[]> {
     try {
-      const url = 'https://oj.vnoi.info/contest/vnoicup25_r2/ranking/';
+      const contestUrl = this.configService.get<string>('VNOI_CONTEST_URL') || 'https://oj.vnoi.info/contest/vnoicup25_r2';
+      const url = `${contestUrl}/ranking/`;
 
       const response = await axios.get(url, {
         timeout: 10000,
@@ -43,8 +60,6 @@ export class ScrapingService {
         if (rows.length > 0) {
           foundRows = true;
           rows.each((index, element) => {
-            if (index >= 10) return; // Only get top 10
-
             const $row = $(element);
             const cells = $row.find('td');
 
@@ -84,6 +99,11 @@ export class ScrapingService {
         return this.getMockRankingData();
       }
 
+      // Remove the last entry from rankings if it exists
+      if (rankings.length > 0) {
+        rankings.pop();
+      }
+
       console.log(`Successfully scraped ${rankings.length} ranking entries`);
       return rankings;
     } catch (error: any) {
@@ -94,6 +114,163 @@ export class ScrapingService {
       }
       // Return mock data if scraping fails
       return this.getMockRankingData();
+    }
+  }
+
+  private async scrapeVNOIProblems(): Promise<ProblemEntry[]> {
+    try {
+      const contestUrl = this.configService.get<string>('VNOI_CONTEST_URL') || 'https://oj.vnoi.info/contest/vnoicup25_r2';
+      const url = contestUrl;
+
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        },
+      });
+
+      const $ = cheerio.load(response.data);
+      const problems: ProblemEntry[] = [];
+
+      // Try different selectors for the problem table
+      const tableSelectors = [
+        'table tbody tr',
+        '.problem-table tbody tr',
+        '.contest-problems tbody tr',
+        'table.problems tbody tr',
+        '.table tbody tr',
+      ];
+
+      for (const selector of tableSelectors) {
+        const rows = $(selector);
+
+        if (rows.length > 0) {
+          rows.each((index, element) => {
+            const $row = $(element);
+            const cells = $row.find('td');
+
+            if (cells.length >= 2) {
+              // Try to extract problem number from first column
+              const numberText = $(cells[0]).text().trim();
+              const number = Number.parseInt(numberText) || index + 1;
+
+              // Try to extract problem name and href from second column
+              const nameElement = $(cells[1]).find('a').first();
+              const name = nameElement.text().trim() || `Problem ${number}`;
+              const href = nameElement.attr('href') || '';
+
+              problems.push({
+                number,
+                name,
+                href,
+              });
+            }
+          });
+          break;
+        }
+      }
+
+      console.log(`Successfully scraped ${problems.length} problem entries`);
+      return problems;
+    } catch (error: any) {
+      console.error('Error scraping VNOI problems:', error.message);
+      return [];
+    }
+  }
+
+  private numberToLetter(number: number): string {
+    if (number <= 0) return 'A';
+    return String.fromCharCode(64 + number); // 65 is 'A' in ASCII
+  }
+
+  async scrapeVNOISubmissions(): Promise<SubmissionEntry[]> {
+    try {
+      // First, scrape the problems to get the mapping
+      const problems = await this.scrapeVNOIProblems();
+      const problemMap = new Map<string, string>();
+
+      // Create mapping from problem name/href to letter
+      problems.forEach(problem => {
+        const letter = this.numberToLetter(problem.number);
+        problemMap.set(problem.name.toLowerCase(), letter);
+        problemMap.set(problem.href.toLowerCase(), letter);
+        // Also map by problem number
+        problemMap.set(problem.number.toString(), letter);
+      });
+
+      const contestUrl = this.configService.get<string>('VNOI_CONTEST_URL') || 'https://oj.vnoi.info/contest/vnoicup25_r2';
+      const url = `${contestUrl}/submissions/`;
+
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        },
+      });
+
+      const $ = cheerio.load(response.data);
+      const submissions: SubmissionEntry[] = [];
+
+      // Find all submission rows
+      const submissionRows = $('.submission-row');
+
+      if (submissionRows.length > 0) {
+        submissionRows.each((index, element) => {
+          const $row = $(element);
+
+          // Get submission ID from the id attribute
+          const id = $row.attr('id') || `submission-${index}`;
+
+          // Get submission result status from sub-result div
+          const statusElement = $row.find('.sub-result');
+          let status = 'Unknown';
+          if (statusElement.length > 0) {
+            // Get the class name that represents the status (AC, WA, TLE, etc.)
+            const classNames = statusElement.attr('class')?.split(' ') || [];
+            const statusClass = classNames.find(cls => cls !== 'sub-result' && cls !== '');
+            status = statusClass || 'Unknown';
+          }
+
+          // Get problem name and try to map to letter
+          const problemNameElement = $row.find('.sub-info').find('.name').find('a');
+          const problemName = problemNameElement.text().trim() || `Problem ${index + 1}`;
+          const problemHref = problemNameElement.attr('href') || '';
+
+          // Try to map problem to letter
+          let problemNumber = 'A';
+          const mappedLetter = problemMap.get(problemName.toLowerCase()) ||
+                              problemMap.get(problemHref.toLowerCase()) ||
+                              this.numberToLetter(index + 1);
+          problemNumber = mappedLetter;
+
+          // Get user name
+          const user = $row.find('.user').text().trim() || `User ${index + 1}`;
+
+          submissions.push({
+            id,
+            status,
+            problemName,
+            problemNumber,
+            user,
+          });
+        });
+
+        console.log(`Successfully scraped ${submissions.length} submission entries`);
+        return submissions;
+      } else {
+        console.log('No submission rows found, using mock data');
+        return this.getMockSubmissionData();
+      }
+    } catch (error: any) {
+      console.error('Error scraping VNOI submissions:', error.message);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response headers:', error.response.headers);
+      }
+      // Return mock data if scraping fails
+      return this.getMockSubmissionData();
     }
   }
 
@@ -109,6 +286,21 @@ export class ScrapingService {
       { rank: 8, teamName: 'Team Alpha', points: 65, problems: ['A WA'] },
       { rank: 9, teamName: 'Team Beta', points: 60, problems: ['A WA'] },
       { rank: 10, teamName: 'Team Gamma', points: 55, problems: ['A WA'] },
+    ];
+  }
+
+  private getMockSubmissionData(): SubmissionEntry[] {
+    return [
+      { id: 'submission-001', status: 'AC', problemName: 'Problem A', problemNumber: 'A', user: 'user1' },
+      { id: 'submission-002', status: 'WA', problemName: 'Problem B', problemNumber: 'B', user: 'user2' },
+      { id: 'submission-003', status: 'TLE', problemName: 'Problem A', problemNumber: 'A', user: 'user3' },
+      { id: 'submission-004', status: 'AC', problemName: 'Problem C', problemNumber: 'C', user: 'user1' },
+      { id: 'submission-005', status: 'WA', problemName: 'Problem B', problemNumber: 'B', user: 'user4' },
+      { id: 'submission-006', status: 'AC', problemName: 'Problem A', problemNumber: 'A', user: 'user5' },
+      { id: 'submission-007', status: 'TLE', problemName: 'Problem C', problemNumber: 'C', user: 'user2' },
+      { id: 'submission-008', status: 'AC', problemName: 'Problem B', problemNumber: 'B', user: 'user3' },
+      { id: 'submission-009', status: 'WA', problemName: 'Problem A', problemNumber: 'A', user: 'user6' },
+      { id: 'submission-010', status: 'AC', problemName: 'Problem D', problemNumber: 'D', user: 'user1' },
     ];
   }
 }
