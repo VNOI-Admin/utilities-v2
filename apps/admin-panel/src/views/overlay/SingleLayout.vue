@@ -34,14 +34,42 @@ const webcamUrl = computed(() => {
   }
   return null;
 });
+
+// Determine display mode based on available sources
+const displayMode = computed(() => {
+  const hasStream = !!streamUrl.value;
+  const hasWebcam = !!webcamUrl.value;
+
+  if (hasStream && !hasWebcam) {
+    return 'stream-only';
+  } else if (hasWebcam && !hasStream) {
+    return 'webcam-only';
+  } else {
+    return 'both'; // both available or both null
+  }
+});
+
+// Get display name for the mode
+function getModeDisplayName(mode: string): string {
+  switch (mode) {
+    case 'stream-only':
+      return 'Stream Only';
+    case 'webcam-only':
+      return 'Webcam Only';
+    case 'both':
+      return 'Stream & Webcam';
+    default:
+      return 'Unknown';
+  }
+}
 </script>
 
 <template>
   <div class="single-layout">
     <!-- Main content area (left side) -->
     <div class="main-content">
-      <!-- Main stream video -->
-      <div class="stream-container">
+      <!-- Stream-only mode: Stream takes full main area -->
+      <div v-if="displayMode === 'stream-only'" class="stream-container">
         <video-player
           v-if="streamUrl"
           :src="streamUrl"
@@ -58,8 +86,8 @@ const webcamUrl = computed(() => {
         </div>
       </div>
 
-      <!-- Webcam overlay in top-right corner -->
-      <div class="webcam-overlay">
+      <!-- Webcam-only mode: Webcam takes full main area -->
+      <div v-else-if="displayMode === 'webcam-only'" class="webcam-container">
         <video-player
           v-if="webcamUrl"
           :src="webcamUrl"
@@ -69,16 +97,52 @@ const webcamUrl = computed(() => {
           fill
           :loop="true"
           :volume="0.6"
-          class="webcam-video"
+          class="main-webcam"
         />
         <div v-else class="webcam-placeholder">
           <div class="placeholder-text">Webcam</div>
         </div>
       </div>
+
+      <!-- Both mode: Stream as main, webcam as overlay -->
+      <div v-else class="stream-container">
+        <video-player
+          v-if="streamUrl"
+          :src="streamUrl"
+          :controls="false"
+          autoplay="any"
+          preload="auto"
+          fill
+          :loop="true"
+          :volume="0.6"
+          class="main-stream"
+        />
+        <div v-else class="stream-placeholder">
+          <div class="placeholder-text">Main Stream</div>
+        </div>
+
+        <!-- Webcam overlay in top-right corner -->
+        <div class="webcam-overlay">
+          <video-player
+            v-if="webcamUrl"
+            :src="webcamUrl"
+            :controls="false"
+            autoplay="any"
+            preload="auto"
+            fill
+            :loop="true"
+            :volume="0.6"
+            class="webcam-video"
+          />
+          <div v-else class="webcam-placeholder">
+            <div class="placeholder-text">Webcam</div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Submission queue box (right side) -->
-    <div class="ranking-section">
+    <!-- Sidebar (right side) -->
+    <div class="sidebar">
       <div class="sidebar-content">
         <!-- Sidebar Webcam -->
         <Webcam />
@@ -89,10 +153,19 @@ const webcamUrl = computed(() => {
             <div class="user-info-username">{{ user.username }}</div>
             <div class="user-info-fullname">{{ user.fullName }}</div>
             <div class="user-info-group" v-if="user.group">Group: {{ user.group }}</div>
+            <div class="user-info-mode">
+              <span class="mode-label">Mode:</span>
+              <span class="mode-value" :class="`mode-${displayMode}`">
+                {{ getModeDisplayName(displayMode) }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
-      <SubmissionQueueBox />
+      <!-- Submission Queue Box at bottom -->
+      <div class="sidebar-bottom">
+        <SubmissionQueueBox />
+      </div>
     </div>
   </div>
 </template>
@@ -119,6 +192,18 @@ const webcamUrl = computed(() => {
 }
 
 .main-stream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.webcam-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.main-webcam {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -168,7 +253,7 @@ const webcamUrl = computed(() => {
   font-weight: 500;
 }
 
-.ranking-section {
+.sidebar {
   width: 300px;
   height: 100%;
   background: #1e3a8a;
@@ -184,6 +269,12 @@ const webcamUrl = computed(() => {
   flex-direction: column;
   flex: 1;
   align-items: center;
+}
+
+.sidebar-bottom {
+  width: 100%;
+  flex-shrink: 0;
+  padding-bottom: 60px; /* Make room for the footer */
 }
 
 .sidebar-webcam {
@@ -280,6 +371,41 @@ const webcamUrl = computed(() => {
 .user-info-role, .user-info-group {
   font-size: 13px;
   color: #b3c6e0;
+}
+
+.user-info-mode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.mode-label {
+  color: #b3c6e0;
+  font-weight: 500;
+}
+
+.mode-value {
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.mode-stream-only {
+  background: #3b82f6;
+  color: white;
+}
+
+.mode-webcam-only {
+  background: #10b981;
+  color: white;
+}
+
+.mode-both {
+  background: #f59e0b;
+  color: white;
 }
 
 .camera-settings-menu {

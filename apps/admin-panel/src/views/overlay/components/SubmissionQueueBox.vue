@@ -93,15 +93,13 @@ const recentSubmissions = computed(() => {
 <style scoped>
 .submission-queue-box {
   width: 100%;
-  height: 50%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: #1e3a8a;
   color: white;
-  border-radius: 8px;
   overflow: hidden;
   align-self: flex-end;
-  border: 2px solid #3b82f6;
 }
 
 .submission-header {

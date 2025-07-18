@@ -7,7 +7,7 @@ const toast = useToast();
 const router = useRouter();
 
 const tab = ref<OverlayKey | undefined>(undefined);
-const usernameOptions = ref<string[]>([]);
+const usernameOptions = ref<{ title: string; value: string }[]>([]);
 
 const username = ref<string>('');
 
@@ -17,7 +17,7 @@ const [fetchUsers, { result: users }] = useLazyPromise(
   () =>
     internalApi.user.getUsers({
       role: 'contestant',
-      isOnline: true,
+      isOnline: false,
     }) || [],
 );
 
@@ -51,7 +51,10 @@ async function saveWebcamLayout() {
 
 watch(users, () => {
   if (users.value) {
-    usernameOptions.value = users.value.map((user) => user.username);
+    usernameOptions.value = users.value.map((user) => ({
+      title: user.fullName || user.username,
+      value: user.username
+    }));
   } else {
     usernameOptions.value = [];
   }
@@ -76,6 +79,8 @@ onMounted(() => {
           <v-select
             v-model="username"
             :items="usernameOptions"
+            item-title="title"
+            item-value="value"
             label="Username"
           ></v-select>
           <v-btn

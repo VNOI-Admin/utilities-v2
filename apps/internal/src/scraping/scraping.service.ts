@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { UserService } from '../user/user.service';
 
 export interface RankingEntry {
   rank: number;
@@ -26,7 +27,10 @@ export interface SubmissionEntry {
 
 @Injectable()
 export class ScrapingService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly userService: UserService,
+  ) {}
   async scrapeVNOIRanking(): Promise<RankingEntry[]> {
     try {
       const contestUrl = this.configService.get<string>('VNOI_CONTEST_URL') || 'https://oj.vnoi.info/contest/vnoicup25_r2';
@@ -70,7 +74,7 @@ export class ScrapingService {
               const pointsText = $row.find('td').eq(2).find('a').html()?.trim().split('<div')[0] ?? '0';
 
               const rank = Number.parseInt(rankText) || index + 1;
-              const teamName = teamNameText || `Team ${index + 1}`;
+              const scrapedTeamName = teamNameText || `Team ${index + 1}`;
               const points = Number.parseFloat(pointsText) || 0;
 
               // Extract problem statuses (assuming they're in subsequent columns)
@@ -84,7 +88,7 @@ export class ScrapingService {
 
               rankings.push({
                 rank,
-                teamName,
+                teamName: scrapedTeamName,
                 points,
                 problems,
               });
@@ -94,9 +98,8 @@ export class ScrapingService {
         }
       }
 
-      if (!foundRows) {
-        console.log('No ranking table found, using mock data');
-        return this.getMockRankingData();
+      if (rankings.length === 0) {
+        return [];
       }
 
       // Remove the last entry from rankings if it exists
@@ -105,15 +108,23 @@ export class ScrapingService {
       }
 
       console.log(`Successfully scraped ${rankings.length} ranking entries`);
-      return rankings;
+
+      // Resolve team names to full names if they match usernames
+      const resolvedRankings = await Promise.all(
+        rankings.map(async (ranking) => ({
+          ...ranking,
+          teamName: await this.resolveUsername(ranking.teamName),
+        }))
+      );
+
+      return resolvedRankings;
     } catch (error: any) {
       console.error('Error scraping VNOI ranking:', error.message);
       if (error.response) {
         console.error('Response status:', error.response.status);
         console.error('Response headers:', error.response.headers);
       }
-      // Return mock data if scraping fails
-      return this.getMockRankingData();
+      return [];
     }
   }
 
@@ -184,6 +195,16 @@ export class ScrapingService {
     return String.fromCharCode(64 + number); // 65 is 'A' in ASCII
   }
 
+  private async resolveUsername(username: string): Promise<string> {
+    try {
+      const user = await this.userService.getUser(username);
+      return user.fullName || username;
+    } catch (error) {
+      // If user not found in database, return the original username
+      return username;
+    }
+  }
+
   async scrapeVNOISubmissions(): Promise<SubmissionEntry[]> {
     try {
       // First, scrape the problems to get the mapping
@@ -246,61 +267,37 @@ export class ScrapingService {
           problemNumber = mappedLetter;
 
           // Get user name
-          const user = $row.find('.user').text().trim() || `User ${index + 1}`;
+          const scrapedUsername = $row.find('.user').text().trim() || `User ${index + 1}`;
 
           submissions.push({
             id,
             status,
             problemName,
             problemNumber,
-            user,
+            user: scrapedUsername,
           });
         });
 
         console.log(`Successfully scraped ${submissions.length} submission entries`);
-        return submissions;
-      } else {
-        console.log('No submission rows found, using mock data');
-        return this.getMockSubmissionData();
+
+        // Resolve usernames to full names
+        const resolvedSubmissions = await Promise.all(
+          submissions.map(async (submission) => ({
+            ...submission,
+            user: await this.resolveUsername(submission.user),
+          }))
+        );
+
+        return resolvedSubmissions;
       }
+      return [];
     } catch (error: any) {
       console.error('Error scraping VNOI submissions:', error.message);
       if (error.response) {
         console.error('Response status:', error.response.status);
         console.error('Response headers:', error.response.headers);
       }
-      // Return mock data if scraping fails
-      return this.getMockSubmissionData();
+      return [];
     }
-  }
-
-  private getMockRankingData(): RankingEntry[] {
-    return [
-      { rank: 1, teamName: 'Stanford', points: 100, problems: ['A AC', 'B AC', 'C AC'] },
-      { rank: 2, teamName: 'MIT', points: 95, problems: ['A AC', 'B AC', 'C WA'] },
-      { rank: 3, teamName: 'Peking U', points: 90, problems: ['A AC', 'B AC'] },
-      { rank: 4, teamName: 'Harvard', points: 85, problems: ['A AC', 'B WA'] },
-      { rank: 5, teamName: 'UJ', points: 80, problems: ['A AC'] },
-      { rank: 6, teamName: 'ENS Paris', points: 75, problems: ['A WA'] },
-      { rank: 7, teamName: 'Kazakh-British TU', points: 70, problems: ['A AC'] },
-      { rank: 8, teamName: 'Team Alpha', points: 65, problems: ['A WA'] },
-      { rank: 9, teamName: 'Team Beta', points: 60, problems: ['A WA'] },
-      { rank: 10, teamName: 'Team Gamma', points: 55, problems: ['A WA'] },
-    ];
-  }
-
-  private getMockSubmissionData(): SubmissionEntry[] {
-    return [
-      { id: 'submission-001', status: 'AC', problemName: 'Problem A', problemNumber: 'A', user: 'user1' },
-      { id: 'submission-002', status: 'WA', problemName: 'Problem B', problemNumber: 'B', user: 'user2' },
-      { id: 'submission-003', status: 'TLE', problemName: 'Problem A', problemNumber: 'A', user: 'user3' },
-      { id: 'submission-004', status: 'AC', problemName: 'Problem C', problemNumber: 'C', user: 'user1' },
-      { id: 'submission-005', status: 'WA', problemName: 'Problem B', problemNumber: 'B', user: 'user4' },
-      { id: 'submission-006', status: 'AC', problemName: 'Problem A', problemNumber: 'A', user: 'user5' },
-      { id: 'submission-007', status: 'TLE', problemName: 'Problem C', problemNumber: 'C', user: 'user2' },
-      { id: 'submission-008', status: 'AC', problemName: 'Problem B', problemNumber: 'B', user: 'user3' },
-      { id: 'submission-009', status: 'WA', problemName: 'Problem A', problemNumber: 'A', user: 'user6' },
-      { id: 'submission-010', status: 'AC', problemName: 'Problem D', problemNumber: 'D', user: 'user1' },
-    ];
   }
 }
