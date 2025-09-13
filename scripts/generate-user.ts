@@ -19,10 +19,7 @@ async function run() {
     console.log(`Creating user ${username}, ${JSON.stringify(user)}`);
     try {
         await internalApi.user.createUser({
-          username,
-          fullName: user['fullname'],
-          password: username,
-          role: user['role'],
+          ...user
         });
 
         console.log(`User ${user['username']} created`);
