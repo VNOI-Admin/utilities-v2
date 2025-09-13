@@ -34,14 +34,15 @@ export interface CreateUserDto {
   fullName: string;
   password: string;
   /** @default "contestant" */
-  role: 'contestant' | 'coach' | 'admin';
+  role: 'contestant' | 'coach' | 'admin' | 'guest';
+  isActive?: boolean;
 }
 
 export interface UpdateUserDto {
   password?: string;
   fullName?: string;
   /** @default "contestant" */
-  role?: 'contestant' | 'coach' | 'admin';
+  role?: 'contestant' | 'coach' | 'admin' | 'guest';
   group?: string;
   isActive?: boolean;
 }
@@ -83,27 +84,12 @@ export interface SingleUserStreamDto {
   webcam?: boolean;
 }
 
-export interface WebcamLayoutDto {
-  enabled: boolean;
-}
-
 export interface WebcamLayout {
   enabled: boolean;
 }
 
-export interface RankingEntry {
-  rank: number;
-  teamName: string;
-  points: number;
-  problems: string[];
-}
-
-export interface SubmissionEntry {
-  id: string;
-  status: string;
-  problemName: string;
-  problemNumber: string;
-  user: string;
+export interface WebcamLayoutDto {
+  enabled: boolean;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -267,7 +253,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         orderBy?: string;
         /** Search query */
         q?: string;
-        role?: 'contestant' | 'coach' | 'admin';
+        role?: 'contestant' | 'coach' | 'admin' | 'guest';
         /** Return current user based on access token */
         me?: boolean;
         /**
@@ -593,11 +579,12 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @request GET:/scraping/vnoi-ranking
      */
     getVnoiRanking: (params: RequestParams = {}) =>
-      this.request<RankingEntry[], any>({
+      this.request<any, any>({
         path: `/scraping/vnoi-ranking`,
         method: 'GET',
         ...params,
       }),
+
     /**
      * No description
      *
@@ -605,7 +592,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @request GET:/scraping/vnoi-submissions
      */
     getVnoiSubmissions: (params: RequestParams = {}) =>
-      this.request<SubmissionEntry[], any>({
+      this.request<any, any>({
         path: `/scraping/vnoi-submissions`,
         method: 'GET',
         ...params,
