@@ -37,4 +37,15 @@ export class VpnController {
     const callerId = req.user['sub'];
     return await this.vpnService.getWireGuardConfig(callerId, username);
   }
+
+  @ApiOperation({ summary: 'Get WireGuard guest configuration' })
+  @ApiResponse({
+    status: 200,
+    description: 'WireGuard guest configuration',
+    type: VpnConfig,
+  })
+  @Get('guest')
+  async getWireGuardGuestConfig(@Request() req: any) {
+    return await this.vpnService.getWireGuardGuestConfig();
+  }
 }

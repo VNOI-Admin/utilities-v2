@@ -1,6 +1,6 @@
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import type { OnModuleInit } from '@nestjs/common';
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -33,6 +33,36 @@ export class VpnService implements OnModuleInit {
 
     if (!user.keyPair || !user.vpnIpAddress) {
       throw new BadRequestException(`User ${caller} does not have a key pair or VPN IP address`);
+    }
+
+    return new VpnConfig({
+      config: await this.generateWireGuardUserConfig(user as UserDocument),
+    });
+  }
+
+  async getWireGuardGuestConfig(): Promise<VpnConfig> {
+    const now = new Date();
+
+    // Atomically find a free guest account and mark it active
+    const user = await this.userModel.findOneAndUpdate(
+      {
+        role: Role.GUEST,
+        isActive: false,
+        vpnIpAddress: { $ne: null },
+        'keyPair.privateKey': { $ne: null },
+        'keyPair.publicKey': { $ne: null },
+      },
+      {
+        $set: {
+          isActive: true,
+          'machineUsage.lastReportedAt': now,
+        },
+      },
+      { new: true }
+    );
+
+    if (!user) {
+      throw new ServiceUnavailableException('No available guest VPN accounts.');
     }
 
     return new VpnConfig({
