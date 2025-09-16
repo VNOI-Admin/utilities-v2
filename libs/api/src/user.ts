@@ -207,5 +207,21 @@ export class UserApi<SecurityDataType extends unknown> extends HttpClient<Securi
         format: 'json',
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags VPN
+     * @name GetWireGuardGuestConfig
+     * @summary Get WireGuard guest configuration
+     * @request GET:/vpn/guest
+     */
+    getWireGuardGuestConfig: (params: RequestParams = {}) =>
+      this.request<VpnConfig, any>({
+        path: `/vpn/guest`,
+        method: 'GET',
+        format: 'json',
+        ...params,
+      }),
   };
 }

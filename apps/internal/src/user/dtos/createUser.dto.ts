@@ -1,6 +1,6 @@
 import { Role } from '@libs/common/decorators/role.decorator';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsBoolean } from 'class-validator';
 
 export class CreateUserDto {
   @ApiProperty({ required: true })
@@ -18,4 +18,9 @@ export class CreateUserDto {
   @ApiProperty({ required: true, enum: Role, default: Role.CONTESTANT })
   @IsEnum(Role)
   role!: Role;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  isActive: boolean = true;
 }

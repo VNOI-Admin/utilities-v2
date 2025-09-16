@@ -125,6 +125,7 @@ export class UserService implements OnModuleInit {
         fullName: createUserDto.fullName,
         password: createUserDto.password,
         role: createUserDto.role,
+        isActive: createUserDto.isActive
       });
 
       return new UserEntity(user.toObject());

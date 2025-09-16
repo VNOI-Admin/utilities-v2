@@ -4,6 +4,7 @@ export enum Role {
   CONTESTANT = 'contestant', // Contestant user
   COACH = 'coach', // Coach user
   ADMIN = 'admin', // Can do anything
+  GUEST = 'guest', // Guest user for VPN access
 }
 
 // Set user as default role

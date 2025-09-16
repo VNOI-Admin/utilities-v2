@@ -95,6 +95,9 @@ export const UserSchemaFactory = (configService: ConfigService) => {
         case Role.ADMIN:
           vpnBaseSubnet = ip.toLong(configService.get('WG_ADMIN_BASE_SUBNET') as string);
           break;
+        case Role.GUEST:
+          vpnBaseSubnet = ip.toLong(configService.get('WG_GUEST_BASE_SUBNET') as string);
+          break;
         default:
           throw new Error('Invalid role');
       }
