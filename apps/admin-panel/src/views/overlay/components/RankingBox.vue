@@ -26,10 +26,10 @@ const handleRefresh = async () => {
   <div class="ranking-box">
     <div class="ranking-header">
       <h3 class="ranking-title">Queue</h3>
-      <v-btn
-        icon="mdi-refresh"
+      <Button
+        icon="pi pi-refresh"
         size="small"
-        variant="text"
+        text
         :loading="loading"
         @click="handleRefresh"
         class="refresh-btn"

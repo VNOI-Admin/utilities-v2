@@ -41,7 +41,7 @@ onMounted(async () => {
 
 <template>
   <div
-    class="d-flex align-center justify-center bg-green"
+    class="flex items-center justify-center bg-green"
     style="height: 100vh"
   >
     <div

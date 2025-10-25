@@ -22,12 +22,40 @@ const login = async () => {
 </script>
 
 <template>
-  <div class="d-flex justify-center align-center h-screen">
-    <v-form @submit.prevent v-on:submit="login">
-    <h1 class="text-3xl font-bold">Login</h1>
-    <v-text-field v-model="username" label="First name" width="500px"></v-text-field>
-    <v-text-field v-model="password" label="Password" type="password"></v-text-field>
-    <v-btn class="mt-2" type="submit" block>Submit</v-btn>
-  </v-form>
+  <div class="flex justify-center items-center h-screen">
+    <Card class="w-full max-w-md">
+      <template #title>
+        <h1 class="text-3xl font-bold">Login</h1>
+      </template>
+      <template #content>
+        <form @submit.prevent="login" class="flex flex-col gap-4">
+          <div class="flex flex-col gap-2">
+            <label for="username">Username</label>
+            <InputText
+              id="username"
+              v-model="username"
+              placeholder="Enter username"
+            />
+          </div>
+
+          <div class="flex flex-col gap-2">
+            <label for="password">Password</label>
+            <Password
+              id="password"
+              v-model="password"
+              placeholder="Enter password"
+              :feedback="false"
+              toggleMask
+            />
+          </div>
+
+          <Button
+            type="submit"
+            label="Submit"
+            class="mt-2"
+          />
+        </form>
+      </template>
+    </Card>
   </div>
 </template>
