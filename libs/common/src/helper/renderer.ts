@@ -148,7 +148,7 @@ export async function render(
     `[4:v]scale=${uniLogoSize}:${uniLogoSize}:force_original_aspect_ratio=decrease,setsar=1[uni-logo]`,
 
     // Audio
-    `[0:a][1:a]amix=inputs=2:normalize=0[outa]`,
+    '[0:a][1:a]amix=inputs=2:normalize=0[outa]',
 
     composeFilters(
       [
