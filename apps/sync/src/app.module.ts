@@ -5,14 +5,14 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { VpnModule } from './vpn/vpn.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     JwtModule.register({ global: true }),
     DatabaseModule,
-    VpnModule,
+    SchedulerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

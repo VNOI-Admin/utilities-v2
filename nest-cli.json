@@ -54,6 +54,15 @@
       "compilerOptions": {
         "tsConfigPath": "apps/internal/tsconfig.app.json"
       }
+    },
+    "sync": {
+      "type": "application",
+      "root": "apps/sync",
+      "entryFile": "main",
+      "sourceRoot": "apps/sync/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/sync/tsconfig.app.json"
+      }
     }
   }
 }
