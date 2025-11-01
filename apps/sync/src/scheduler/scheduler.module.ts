@@ -1,4 +1,9 @@
 import { User, UserSchemaFactory } from '@libs/common-db/schemas/user.schema';
+import { Contest, ContestSchema } from '@libs/common-db/schemas/contest.schema';
+import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
+import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
+import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
+import { VnojApiModule } from '@app/api/vnoj-api.module';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -6,6 +11,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { QUEUE_NAMES } from './constants';
 import { PingUsersProcessor } from './processors/ping-users.processor';
+import { SyncSubmissionsProcessor } from './processors/sync-submissions.processor';
+import { ProcessReactionsProcessor } from './processors/process-reactions.processor';
 import { SchedulerService } from './scheduler.service';
 
 @Module({
@@ -20,9 +27,17 @@ import { SchedulerService } from './scheduler.service';
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue({
-      name: QUEUE_NAMES.PING_USERS,
-    }),
+    BullModule.registerQueue(
+      {
+        name: QUEUE_NAMES.PING_USERS,
+      },
+      {
+        name: QUEUE_NAMES.SYNC_SUBMISSIONS,
+      },
+      {
+        name: QUEUE_NAMES.PROCESS_REACTIONS,
+      },
+    ),
     MongooseModule.forFeatureAsync([
       {
         name: User.name,
@@ -30,7 +45,14 @@ import { SchedulerService } from './scheduler.service';
         useFactory: UserSchemaFactory,
       },
     ]),
+    MongooseModule.forFeature([
+      { name: Contest.name, schema: ContestSchema },
+      { name: Submission.name, schema: SubmissionSchema },
+      { name: Participant.name, schema: ParticipantSchema },
+      { name: Problem.name, schema: ProblemSchema },
+    ]),
+    VnojApiModule.forRootAsync(),
   ],
-  providers: [SchedulerService, PingUsersProcessor],
+  providers: [SchedulerService, PingUsersProcessor, SyncSubmissionsProcessor, ProcessReactionsProcessor],
 })
 export class SchedulerModule {}

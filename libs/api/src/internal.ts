@@ -83,27 +83,28 @@ export interface SingleUserStreamDto {
   webcam?: boolean;
 }
 
-export interface WebcamLayoutDto {
-  enabled: boolean;
-}
-
 export interface WebcamLayout {
   enabled: boolean;
 }
 
-export interface RankingEntry {
-  rank: number;
-  teamName: string;
-  points: number;
-  problems: string[];
+export interface WebcamLayoutDto {
+  enabled: boolean;
 }
 
-export interface SubmissionEntry {
-  id: string;
-  status: string;
-  problemName: string;
-  problemNumber: string;
-  user: string;
+export interface CreateContestDto {
+  /** Contest code from VNOJ (e.g., vnoicup25_r2) */
+  code: string;
+}
+
+export interface UpdateContestDto {
+  name?: string;
+  start_time?: string;
+  end_time?: string;
+  frozen_at?: string;
+}
+
+export interface LinkParticipantDto {
+  user?: string;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -593,11 +594,12 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @request GET:/scraping/vnoi-ranking
      */
     getVnoiRanking: (params: RequestParams = {}) =>
-      this.request<RankingEntry[], any>({
+      this.request<any, any>({
         path: `/scraping/vnoi-ranking`,
         method: 'GET',
         ...params,
       }),
+
     /**
      * No description
      *
@@ -605,9 +607,176 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @request GET:/scraping/vnoi-submissions
      */
     getVnoiSubmissions: (params: RequestParams = {}) =>
-      this.request<SubmissionEntry[], any>({
+      this.request<any, any>({
         path: `/scraping/vnoi-submissions`,
         method: 'GET',
+        ...params,
+      }),
+  };
+  contest = {
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name FindAll
+     * @summary Get all contests
+     * @request GET:/contests
+     * @secure
+     */
+    findAll: (
+      query?: {
+        /** @default "all" */
+        filter?: 'ongoing' | 'past' | 'future' | 'all';
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<any, any>({
+        path: `/contests`,
+        method: 'GET',
+        query: query,
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name Create
+     * @summary Create new contest
+     * @request POST:/contests
+     * @secure
+     */
+    create: (data: CreateContestDto, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name FindOne
+     * @summary Get contest by code
+     * @request GET:/contests/{code}
+     * @secure
+     */
+    findOne: (code: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}`,
+        method: 'GET',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name Update
+     * @summary Update contest
+     * @request PATCH:/contests/{code}
+     * @secure
+     */
+    update: (code: string, data: UpdateContestDto, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name Delete
+     * @summary Delete contest
+     * @request DELETE:/contests/{code}
+     * @secure
+     */
+    delete: (code: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}`,
+        method: 'DELETE',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name GetSubmissions
+     * @summary Get submissions for contest
+     * @request GET:/contests/{code}/submissions
+     * @secure
+     */
+    getSubmissions: (code: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}/submissions`,
+        method: 'GET',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name GetParticipants
+     * @summary Get participants for contest
+     * @request GET:/contests/{code}/participants
+     * @secure
+     */
+    getParticipants: (code: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}/participants`,
+        method: 'GET',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name GetProblems
+     * @summary Get problems for contest
+     * @request GET:/contests/{code}/problems
+     * @secure
+     */
+    getProblems: (code: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}/problems`,
+        method: 'GET',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name LinkParticipant
+     * @summary Link participant to internal user
+     * @request PATCH:/contests/participants/{participantId}/link-user
+     * @secure
+     */
+    linkParticipant: (participantId: string, data: LinkParticipantDto, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/participants/${participantId}/link-user`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
         ...params,
       }),
   };

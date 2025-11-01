@@ -18,6 +18,11 @@ const menuItems = ref([
     route: '/users',
   },
   {
+    label: 'Contests',
+    icon: 'pi pi-trophy',
+    route: '/contests',
+  },
+  {
     label: 'Print Jobs',
     icon: 'pi pi-print',
     route: '/printing',

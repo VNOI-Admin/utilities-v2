@@ -42,6 +42,16 @@ const routes: RouteRecordRaw[] = [
     name: 'PrintJobs',
     component: () => import('../views/printing/Index.vue'),
   },
+  {
+    path: '/contests',
+    name: 'Contests',
+    component: () => import('../views/contests/Index.vue'),
+  },
+  {
+    path: '/contests/:code',
+    name: 'ContestDetail',
+    component: () => import('../views/contests/Detail.vue'),
+  },
 ];
 
 const router = createRouter({

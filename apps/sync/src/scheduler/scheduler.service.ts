@@ -10,6 +10,8 @@ export class SchedulerService implements OnModuleInit {
 
   constructor(
     @InjectQueue(QUEUE_NAMES.PING_USERS) private pingUsersQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.SYNC_SUBMISSIONS) private syncSubmissionsQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.PROCESS_REACTIONS) private processReactionsQueue: Queue,
   ) {}
 
   async onModuleInit() {
@@ -27,5 +29,35 @@ export class SchedulerService implements OnModuleInit {
     );
 
     this.logger.log('Ping users job scheduled to run every 1 minute');
+
+    // Add repeatable job to sync submissions every 10 seconds
+    await this.syncSubmissionsQueue.add(
+      'sync-contest-submissions',
+      {},
+      {
+        repeat: {
+          every: 10000, // Every 10 seconds
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
+
+    this.logger.log('Sync submissions job scheduled to run every 10 seconds');
+
+    // Add repeatable job to process reactions every 5 seconds
+    await this.processReactionsQueue.add(
+      'process-ac-reactions',
+      {},
+      {
+        repeat: {
+          every: 5000, // Every 5 seconds
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
+
+    this.logger.log('Process reactions job scheduled to run every 5 seconds');
   }
 }

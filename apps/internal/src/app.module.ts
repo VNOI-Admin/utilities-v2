@@ -8,6 +8,8 @@ import { GroupModule } from './group/group.module';
 import { OverlayModule } from './overlay/overlay.module';
 import { ScrapingModule } from './scraping/scraping.module';
 import { UserModule } from './user/user.module';
+import { ContestModule } from './contest/contest.module';
+import { GuardsModule } from '@libs/common/guards/guards.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { UserModule } from './user/user.module';
     GroupModule,
     OverlayModule,
     ScrapingModule,
+    GuardsModule,
+    ContestModule,
   ],
   controllers: [AppController],
   providers: [AppService],

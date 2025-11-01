@@ -14,18 +14,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "dev:main": "yarn dev --filter user --filter auth --filter admin-panel",
-    "format": "prettier --write .",
-    "lint": "turbo run lint",
-    "start": "nest start",
-    "start:dev": "nest start --watch",
-    "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/apps/core/main",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./apps/core/test/jest-e2e.json",
-    "prepare": "husky install"
+    "gen-swagger": "ts-node --transpile-only ./scripts/generate-api.ts"
   },
   "dependencies": {
     "@nestjs/bullmq": "^10.2.3",

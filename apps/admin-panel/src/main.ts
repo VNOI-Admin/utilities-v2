@@ -8,6 +8,8 @@ import Aura from '@primevue/themes/aura';
 import VueCookies from 'vue-cookies';
 import router from './router';
 
+import 'primeicons/primeicons.css';
+
 // Tailwind CSS
 import './styles/main.css';
 
