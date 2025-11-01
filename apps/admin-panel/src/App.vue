@@ -15,5 +15,7 @@ const layout = computed(() => {
 </script>
 
 <template>
-  <component :is="layout" />
+  <div class="dark bg-surface-950 min-h-screen text-surface-0">
+    <component :is="layout" />
+  </div>
 </template>

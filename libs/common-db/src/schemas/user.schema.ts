@@ -23,6 +23,11 @@ export type MachineUsage = {
   lastReportedAt: Date;
 };
 
+export type Participation = {
+  contest: string;
+  contest_username?: string;
+};
+
 @Schema()
 export class User {
   @Prop({ required: true, unique: true })
@@ -69,6 +74,18 @@ export class User {
 
   @Prop({ required: false })
   group!: string;
+
+  @Prop({
+    required: false,
+    type: [
+      {
+        contest: { type: String },
+        contest_username: { type: String, required: false },
+      },
+    ],
+    default: [],
+  })
+  participations!: Participation[];
 }
 
 export const UserRawSchema = SchemaFactory.createForClass(User);

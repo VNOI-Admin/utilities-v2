@@ -7,7 +7,7 @@ const toast = useToast();
 const router = useRouter();
 
 const tab = ref<OverlayKey | undefined>(undefined);
-const usernameOptions = ref<{ title: string; value: string }[]>([]);
+const usernameOptions = ref<{ label: string; value: string }[]>([]);
 
 const username = ref<string>('');
 
@@ -52,7 +52,7 @@ async function saveWebcamLayout() {
 watch(users, () => {
   if (users.value) {
     usernameOptions.value = users.value.map((user) => ({
-      title: user.fullName || user.username,
+      label: user.fullName || user.username,
       value: user.username
     }));
   } else {
@@ -63,61 +63,86 @@ watch(users, () => {
 onMounted(() => {
   fetchUsers();
 });
+
+const tabItems = Object.values(OVERLAY_KEYS).map((key, index) => ({
+  label: key,
+  value: index,
+  key: key
+}));
 </script>
 
 <template>
-  <v-card>
-    <v-tabs v-model="tab" bg-color="primary">
-      <v-tab v-for="key in Object.values(OVERLAY_KEYS)" :key="key" :value="key">
-        {{ key }}
-      </v-tab>
-    </v-tabs>
+  <Card>
+    <template #content>
+      <Tabs :value="0">
+        <TabList>
+          <Tab v-for="item in tabItems" :key="item.key" :value="item.value">
+            {{ item.label }}
+          </Tab>
+        </TabList>
 
-    <v-card-text>
-      <v-tabs-window v-model="tab">
-        <v-tabs-window-item :value="OVERLAY_KEYS.USER_STREAM">
-          <v-select
-            v-model="username"
-            :items="usernameOptions"
-            item-title="title"
-            item-value="value"
-            label="Username"
-          ></v-select>
-          <v-btn
-            color="primary"
-            @click="() => saveSingleUserStream(true, true)"
-          >
-            Stream & Webcam
-          </v-btn>
-          <v-btn
-            color="primary"
-            @click="() => saveSingleUserStream(true, false)"
-          >
-            Stream
-          </v-btn>
-          <v-btn
-            color="primary"
-            @click="() => saveSingleUserStream(false, true)"
-          >
-            Webcam
-          </v-btn>
-        </v-tabs-window-item>
+        <TabPanels>
+          <!-- User Stream Tab -->
+          <TabPanel :value="0">
+            <div class="flex flex-col gap-4">
+              <div class="flex flex-col gap-2">
+                <label for="username">Username</label>
+                <Select
+                  id="username"
+                  v-model="username"
+                  :options="usernameOptions"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Select username"
+                />
+              </div>
 
-        <v-tabs-window-item :value="OVERLAY_KEYS.MULTI_USER_STREAM">
-          <v-btn color="primary" @click="saveMultiUserStream"> Save </v-btn>
-        </v-tabs-window-item>
+              <div class="flex gap-2">
+                <Button
+                  label="Stream & Webcam"
+                  severity="info"
+                  @click="() => saveSingleUserStream(true, true)"
+                />
+                <Button
+                  label="Stream"
+                  severity="info"
+                  @click="() => saveSingleUserStream(true, false)"
+                />
+                <Button
+                  label="Webcam"
+                  severity="info"
+                  @click="() => saveSingleUserStream(false, true)"
+                />
+              </div>
+            </div>
+          </TabPanel>
 
-        <v-tabs-window-item :value="OVERLAY_KEYS.WEBCAM_LAYOUT">
-          <v-btn
-            color="primary"
-            @click="saveWebcamLayout"
-          >
-            Enable Webcam Layout
-          </v-btn>
-        </v-tabs-window-item>
-      </v-tabs-window>
-    </v-card-text>
-  </v-card>
+          <!-- Multi User Stream Tab -->
+          <TabPanel :value="1">
+            <Button
+              label="Save"
+              severity="info"
+              @click="saveMultiUserStream"
+            />
+          </TabPanel>
 
-  <v-btn @click="() => router.push({ name: 'OverlayDisplay' })"> Display </v-btn>
+          <!-- Webcam Layout Tab -->
+          <TabPanel :value="2">
+            <Button
+              label="Enable Webcam Layout"
+              severity="info"
+              @click="saveWebcamLayout"
+            />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </template>
+  </Card>
+
+  <div class="mt-4">
+    <Button
+      label="Display"
+      @click="() => router.push({ name: 'OverlayDisplay' })"
+    />
+  </div>
 </template>

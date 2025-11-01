@@ -64,10 +64,10 @@ const recentSubmissions = computed(() => {
   <div class="submission-queue-box">
     <div class="submission-header">
       <h3 class="submission-title">Submission Queue</h3>
-      <v-btn
-        icon="mdi-refresh"
+      <Button
+        icon="pi pi-refresh"
         size="small"
-        variant="text"
+        text
         @click="handleRefresh"
         class="refresh-btn"
       />

@@ -33,20 +33,24 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
-    path: '/coach-view',
-    name: 'CoachViewList',
-    component: () => import('../views/CoachView/Index.vue'),
-  },
-  {
-    path: '/coach-view/:username',
-    name: 'CoachViewUser',
-    component: () => import('../views/CoachView/View.vue'),
-    props: true,
-  },
-  {
     path: '/users',
     name: 'Users',
     component: () => import('../views/users/Index.vue'),
+  },
+  {
+    path: '/printing',
+    name: 'PrintJobs',
+    component: () => import('../views/printing/Index.vue'),
+  },
+  {
+    path: '/contests',
+    name: 'Contests',
+    component: () => import('../views/contests/Index.vue'),
+  },
+  {
+    path: '/contests/:code',
+    name: 'ContestDetail',
+    component: () => import('../views/contests/Detail.vue'),
   },
 ];
 

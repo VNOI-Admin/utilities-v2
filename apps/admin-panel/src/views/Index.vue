@@ -30,19 +30,36 @@ onMounted(async () => {
 </script>
 
 <template>
-  <h1>Dashboard</h1>
-  <v-divider class="mb-4"></v-divider>
-  <v-row>
-    <v-col cols="6">
-      <app-dashboard-card title="Online contestants" icon="mdi-account-group">
-        <p>{{ onlineContestants }}</p>
-      </app-dashboard-card>
-    </v-col>
+  <div>
+    <h1 class="text-3xl font-bold mb-4">Dashboard</h1>
+    <Divider class="mb-6" />
 
-    <v-col cols="6">
-      <app-dashboard-card title="Queued print jobs" icon="mdi-printer">
-        <p>{{ queuedPrintJobs }}</p>
-      </app-dashboard-card>
-    </v-col>
-  </v-row>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Online Contestants Card -->
+      <Card>
+        <template #title>
+          <div class="flex items-center gap-2">
+            <i class="pi pi-users text-xl"></i>
+            <span>Online contestants</span>
+          </div>
+        </template>
+        <template #content>
+          <p class="text-4xl font-bold">{{ onlineContestants }}</p>
+        </template>
+      </Card>
+
+      <!-- Queued Print Jobs Card -->
+      <Card>
+        <template #title>
+          <div class="flex items-center gap-2">
+            <i class="pi pi-print text-xl"></i>
+            <span>Queued print jobs</span>
+          </div>
+        </template>
+        <template #content>
+          <p class="text-4xl font-bold">{{ queuedPrintJobs }}</p>
+        </template>
+      </Card>
+    </div>
+  </div>
 </template>

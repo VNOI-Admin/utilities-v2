@@ -1,8 +1,17 @@
-import { registerPlugins } from './plugins';
-
 import VueVideoPlayer from '@videojs-player/vue';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
+
+import PrimeVue from 'primevue/config';
+import Aura from '@primevue/themes/aura';
+
+import VueCookies from 'vue-cookies';
+import router from './router';
+
+import 'primeicons/primeicons.css';
+
+// Tailwind CSS
+import './styles/main.css';
 
 // Components
 import App from './App.vue';
@@ -12,9 +21,21 @@ import { createApp } from 'vue';
 
 const app = createApp(App);
 
+app.use(PrimeVue, {
+  theme: {
+    preset: Aura,
+    options: {
+      darkModeSelector: '.dark',
+      cssLayer: false,
+    },
+  },
+});
 app.use(Toast);
 app.use(VueVideoPlayer);
-
-registerPlugins(app);
+app.use(router);
+app.use(VueCookies);
 
 app.mount('#app');
+
+// Enable dark mode by default
+document.documentElement.classList.add('dark');
