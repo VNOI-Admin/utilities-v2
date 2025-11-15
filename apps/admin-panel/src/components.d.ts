@@ -7,29 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
-    AppBackButton: typeof import('./components/AppBackButton.vue')['default']
-    AppDashboardCard: typeof import('./components/AppDashboardCard.vue')['default']
-    AppSidebar: typeof import('./components/AppSidebar.vue')['default']
-    Button: typeof import('primevue/button')['default']
-    Card: typeof import('primevue/card')['default']
-    Checkbox: typeof import('primevue/checkbox')['default']
-    Column: typeof import('primevue/column')['default']
-    DataTable: typeof import('primevue/datatable')['default']
-    Dialog: typeof import('primevue/dialog')['default']
-    Divider: typeof import('primevue/divider')['default']
-    InputText: typeof import('primevue/inputtext')['default']
-    Menu: typeof import('primevue/menu')['default']
-    Password: typeof import('primevue/password')['default']
-    ProgressBar: typeof import('primevue/progressbar')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    Select: typeof import('primevue/select')['default']
-    Tab: typeof import('primevue/tab')['default']
-    TabList: typeof import('primevue/tablist')['default']
-    TabPanel: typeof import('primevue/tabpanel')['default']
-    TabPanels: typeof import('primevue/tabpanels')['default']
-    Tabs: typeof import('primevue/tabs')['default']
-    Tag: typeof import('primevue/tag')['default']
-    UserForm: typeof import('./components/UserForm.vue')['default']
   }
 }

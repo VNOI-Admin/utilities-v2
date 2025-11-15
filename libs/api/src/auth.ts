@@ -187,6 +187,23 @@ export class AuthApi<SecurityDataType extends unknown> extends HttpClient<Securi
      * No description
      *
      * @tags Auth
+     * @name GetCurrentUser
+     * @summary Get current user information
+     * @request GET:/auth/me
+     * @secure
+     */
+    getCurrentUser: (params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/auth/me`,
+        method: 'GET',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Auth
      * @name Logout
      * @summary Logout
      * @request POST:/auth/logout

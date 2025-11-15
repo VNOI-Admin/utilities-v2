@@ -1,31 +1,41 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
     "module": "ESNext",
-    "target": "ESNext",
-    "lib": ["ESNext", "DOM"],
-    "strict": true,
-    "esModuleInterop": true,
-    "jsx": "preserve",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "moduleResolution": "Node",
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+
+    /* Linting */
+    "strict": true,
     "noUnusedLocals": true,
-    "strictNullChecks": true,
-    "allowJs": true,
-    "forceConsistentCasingInFileNames": true,
-    "types": ["node"],
-    "outDir": "./dist",
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Path aliases */
+    "baseUrl": ".",
     "paths": {
       "~/*": ["src/*"],
       "@libs/api": ["../../libs/api/src"],
-      "@libs/api/*": ["../../libs/api/src/*"],
-      "@libs/common": ["../../libs/common/src"],
-      "@libs/common/*": ["../../libs/common/src/*"],
-    },
-    "isolatedModules": true,
+      "@libs/api/*": ["../../libs/api/src/*"]
+    }
   },
-  "include": ["./src/typed-router.d.ts", "./src/**/*.ts", "./src/**/*.vue", "./src/auto-imports.d.ts", "./src/components.d.ts"],
-  "exclude": ["dist", "node_modules", "cypress"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/auto-imports.d.ts",
+    "src/components.d.ts"
+  ],
+  "exclude": ["node_modules"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -13,7 +13,7 @@
     "prebuild": "rimraf dist",
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
-    "dev:main": "yarn dev --filter user --filter auth --filter admin-panel",
+    "dev:main": "yarn dev --filter user --filter auth --filter internal --filter admin-panel",
     "gen-swagger": "ts-node --transpile-only ./scripts/generate-api.ts"
   },
   "dependencies": {

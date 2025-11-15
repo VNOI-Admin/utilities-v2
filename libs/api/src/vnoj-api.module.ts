@@ -1,12 +1,12 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { VnojApi, VNOJ_API_CLIENT } from './vnoj';
+import { VNOJApi, VNOJ_API_CLIENT } from './vnoj';
 
 @Module({})
-export class VnojApiModule {
+export class VNOJApiModule {
   static forRootAsync(): DynamicModule {
     return {
-      module: VnojApiModule,
+      module: VNOJApiModule,
       providers: [
         {
           provide: VNOJ_API_CLIENT,
@@ -14,7 +14,7 @@ export class VnojApiModule {
             const baseUrl = configService.get('VNOJ_API_BASE_URL') || 'https://oj.vnoi.info';
             const apiKey = configService.get('VNOJ_API_KEY');
 
-            const client = new VnojApi({
+            const client = new VNOJApi({
               baseURL: baseUrl,
             });
 

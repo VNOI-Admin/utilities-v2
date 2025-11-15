@@ -47,6 +47,19 @@ export class AuthService {
     return new TokensEntity(tokens);
   }
 
+  async getUserInfo(username: string) {
+    const user = await this.userModel.findOne({ username }).lean();
+
+    if (!user) {
+      throw new ForbiddenException('User not found');
+    }
+
+    return {
+      username: user.username,
+      role: user.role,
+    };
+  }
+
   async logout(username: string) {
     const user = await this.userModel.findOne({ username });
 

@@ -6,10 +6,7 @@ import { OverlayController } from './overlay.controller';
 import { OverlayService } from './overlay.service';
 
 @Module({
-  imports: [
-    UserModule,
-    MongooseModule.forFeatureAsync([{ name: OverlayLayout.name, useFactory: () => OverlayLayoutSchema }]),
-  ],
+  imports: [UserModule, MongooseModule.forFeature([{ name: OverlayLayout.name, schema: OverlayLayoutSchema }])],
   controllers: [OverlayController],
   providers: [OverlayService],
 })

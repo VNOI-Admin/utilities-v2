@@ -1,9 +1,9 @@
-import { User, UserSchemaFactory } from '@libs/common-db/schemas/user.schema';
+import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { Contest, ContestSchema } from '@libs/common-db/schemas/contest.schema';
 import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
-import { VnojApiModule } from '@app/api/vnoj-api.module';
+import { VNOJApiModule } from '@libs/api/vnoj-api.module';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -38,20 +38,14 @@ import { SchedulerService } from './scheduler.service';
         name: QUEUE_NAMES.PROCESS_REACTIONS,
       },
     ),
-    MongooseModule.forFeatureAsync([
-      {
-        name: User.name,
-        inject: [ConfigService],
-        useFactory: UserSchemaFactory,
-      },
-    ]),
     MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
       { name: Contest.name, schema: ContestSchema },
       { name: Submission.name, schema: SubmissionSchema },
       { name: Participant.name, schema: ParticipantSchema },
       { name: Problem.name, schema: ProblemSchema },
     ]),
-    VnojApiModule.forRootAsync(),
+    VNOJApiModule.forRootAsync(),
   ],
   providers: [SchedulerService, PingUsersProcessor, SyncSubmissionsProcessor, ProcessReactionsProcessor],
 })

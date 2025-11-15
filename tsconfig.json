@@ -37,10 +37,10 @@
       "@libs/utils/*": [
         "libs/utils/src/*"
       ],
-      "@app/api": [
+      "@libs/api": [
         "libs/api/src"
       ],
-      "@app/api/*": [
+      "@libs/api/*": [
         "libs/api/src/*"
       ]
     }

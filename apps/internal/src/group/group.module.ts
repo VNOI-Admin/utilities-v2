@@ -7,25 +7,9 @@ import { GroupController } from './group.controller';
 import { GroupService } from './group.service';
 
 @Module({
-  imports: [
-    UserModule,
-    MongooseModule.forFeatureAsync([
-      {
-        name: Group.name,
-        useFactory: () => GroupSchema,
-      },
-    ]),
-  ],
+  imports: [UserModule, MongooseModule.forFeature([{ name: Group.name, schema: GroupSchema }])],
   controllers: [GroupController],
   providers: [GroupService],
-  exports: [
-    GroupService,
-    MongooseModule.forFeatureAsync([
-      {
-        name: Group.name,
-        useFactory: () => GroupSchema,
-      },
-    ]),
-  ],
+  exports: [GroupService, MongooseModule.forFeature([{ name: Group.name, schema: GroupSchema }])],
 })
 export class GroupModule {}

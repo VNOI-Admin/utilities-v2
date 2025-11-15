@@ -1,12 +1,8 @@
 import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
-import {
-  Submission,
-  SubmissionStatus,
-  type SubmissionDocument,
-} from '@libs/common-db/schemas/submission.schema';
-import { type VnojApi, VNOJ_API_CLIENT } from '@app/api/vnoj';
+import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import { type VNOJApi, VNOJ_API_CLIENT } from '@libs/api/vnoj';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Inject, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -24,7 +20,7 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
-    @Inject(VNOJ_API_CLIENT) private vnojApi: VnojApi<unknown>,
+    @Inject(VNOJ_API_CLIENT) private vnojApi: VNOJApi<unknown>,
   ) {
     super();
   }
@@ -38,7 +34,7 @@ export class SyncSubmissionsProcessor extends WorkerHost {
       const ongoingContests = await this.contestModel
         .find({
           start_time: { $lte: now },
-          end_time: { $gte: now },
+          // end_time: { $gte: now },
         })
         .exec();
 
@@ -61,7 +57,9 @@ export class SyncSubmissionsProcessor extends WorkerHost {
       this.logger.log(`Syncing submissions for contest ${contest.code}`);
 
       // Determine from_timestamp based on last sync
-      const fromTimestamp = contest.last_sync_at ? contest.last_sync_at.getTime() : contest.start_time.getTime();
+      const fromTimestamp = contest.last_sync_at
+        ? contest.last_sync_at.toISOString()
+        : contest.start_time.toISOString();
 
       // Fetch submissions from VNOJ
       const vnojSubmissions = await this.vnojApi.contest.getSubmissions(contest.code, {
@@ -71,10 +69,7 @@ export class SyncSubmissionsProcessor extends WorkerHost {
       this.logger.log(`Fetched ${vnojSubmissions.length} submissions for contest ${contest.code}`);
 
       // Get current participant rankings for rank calculation
-      const participants = await this.participantModel
-        .find({ contest: contest.code })
-        .sort({ rank: 1 })
-        .exec();
+      const participants = await this.participantModel.find({ contest: contest.code }).sort({ rank: 1 }).exec();
 
       const participantMap = new Map(participants.map((p) => [p.vnoj_username, p]));
 

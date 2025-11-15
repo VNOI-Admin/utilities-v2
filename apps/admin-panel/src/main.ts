@@ -1,41 +1,47 @@
-import VueVideoPlayer from '@videojs-player/vue';
+import { createApp } from 'vue';
+import { createPinia } from 'pinia';
 import Toast from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
-
-import PrimeVue from 'primevue/config';
-import Aura from '@primevue/themes/aura';
-
-import VueCookies from 'vue-cookies';
-import router from './router';
-
-import 'primeicons/primeicons.css';
-
-// Tailwind CSS
-import './styles/main.css';
-
-// Components
 import App from './App.vue';
-
-// Composables
-import { createApp } from 'vue';
+import router from './router';
+import { useAuthStore } from './stores/auth';
+import { authService } from './services/auth';
 
 const app = createApp(App);
+const pinia = createPinia();
 
-app.use(PrimeVue, {
-  theme: {
-    preset: Aura,
-    options: {
-      darkModeSelector: '.dark',
-      cssLayer: false,
-    },
-  },
-});
-app.use(Toast);
-app.use(VueVideoPlayer);
+app.use(pinia);
 app.use(router);
-app.use(VueCookies);
+app.use(Toast, {
+  position: 'top-right',
+  timeout: 3000,
+  closeOnClick: true,
+  pauseOnFocusLoss: true,
+  pauseOnHover: true,
+  draggable: true,
+  draggablePercent: 0.6,
+  showCloseButtonOnHover: false,
+  hideProgressBar: false,
+  closeButton: 'button',
+  icon: true,
+  rtl: false,
+});
 
-app.mount('#app');
+// Initialize auth state before mounting
+async function initializeAuth() {
+  const authStore = useAuthStore();
 
-// Enable dark mode by default
-document.documentElement.classList.add('dark');
+  try {
+    // Try to fetch current user (cookies will be sent automatically)
+    const user = await authService.getCurrentUser();
+    authStore.setUser(user);
+  } catch (error) {
+    // Not authenticated or session expired
+    authStore.clearUser();
+  }
+}
+
+// Initialize and mount
+initializeAuth().finally(() => {
+  app.mount('#app');
+});

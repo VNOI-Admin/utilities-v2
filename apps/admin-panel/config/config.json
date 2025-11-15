@@ -1,8 +1,0 @@
-{
-  "VITE_APP_USER_ENDPOINT": "$VITE_APP_CORE_ENDPOINT",
-  "VITE_APP_AUTH_ENDPOINT": "$VITE_APP_SYNC_ENDPOINT",
-  "VITE_APP_INTERNAL_ENDPOINT": "$VITE_APP_INTERNAL_ENDPOINT",
-  "VITE_APP_PRINTING_ENDPOINT": "$VITE_APP_PRINTING_ENDPOINT",
-  "VITE_APP_APP_ENV": "$VITE_APP_APP_ENV",
-  "_comment": "refer https://developers.redhat.com/blog/2021/03/04/making-environment-variables-accessible-in-front-end-containers"
-}

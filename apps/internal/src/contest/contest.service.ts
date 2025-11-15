@@ -2,7 +2,7 @@ import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.s
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Submission, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
-import { type VnojProblem, type VnojParticipant, type VnojApi, VNOJ_API_CLIENT } from '@app/api/vnoj';
+import { type VnojProblem, type VnojParticipant, type VNOJApi, VNOJ_API_CLIENT } from '@libs/api/vnoj';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -19,7 +19,7 @@ export class ContestService {
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
-    @Inject(VNOJ_API_CLIENT) private vnojApi: VnojApi<unknown>,
+    @Inject(VNOJ_API_CLIENT) private vnojApi: VNOJApi<unknown>,
   ) {}
 
   async findAll(filter: ContestFilter = ContestFilter.ALL): Promise<ContestDocument[]> {

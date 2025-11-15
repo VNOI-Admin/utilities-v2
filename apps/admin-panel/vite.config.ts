@@ -1,63 +1,42 @@
-import Vue from '@vitejs/plugin-vue';
-// Plugins
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import path from 'path';
+import viteTsconfigPaths from 'vite-tsconfig-paths';
 import AutoImport from 'unplugin-auto-import/vite';
 import Components from 'unplugin-vue-components/vite';
-import { PrimeVueResolver } from '@primevue/auto-import-resolver';
 import Layouts from 'vite-plugin-vue-layouts';
-import tsConfigPaths from 'vite-tsconfig-paths';
 
-import path from 'node:path';
-// Utilities
-import { defineConfig } from 'vite';
-
-// https://vitejs.dev/config/
 export default defineConfig({
-  resolve: {
-    alias: {
-      '~/': `${path.resolve(__dirname, 'src')}/`,
-    },
-    // extensions: ['.js', '.json', '.jsx', '.mjs', '.ts', '.tsx', '.vue'],
-  },
   plugins: [
-    Layouts(),
-    tsConfigPaths(),
+    vue(),
+    viteTsconfigPaths(),
+    Layouts({
+      layoutsDirs: 'src/layouts',
+      defaultLayout: 'default',
+    }),
     AutoImport({
       imports: [
         'vue',
         'vue-router',
         '@vueuse/core',
-        { 'vue-cookies': ['VueCookies'] },
+        { 'js-cookie': ['default', 'Cookies'] },
         { 'vue-toastification': ['useToast'] },
-        { '~/hooks/routerRef': [['default', 'routerRef']] },
-        { '~/hooks/useLazyPromise': [['default', 'useLazyPromise']] },
       ],
       dts: 'src/auto-imports.d.ts',
+      dirs: ['src/hooks/**', 'src/stores/**'],
+      vueTemplate: true,
     }),
     Components({
-      resolvers: [PrimeVueResolver()],
+      dirs: ['src/components'],
       dts: 'src/components.d.ts',
     }),
-    Vue(),
   ],
-  build: {
-    outDir: 'dist',
-    target: ['esnext'],
-  },
-  optimizeDeps: {
-    // 👈 optimizedeps
-    esbuildOptions: {
-      target: 'esnext',
-      // Node.js global to browser globalThis
-      define: {
-        global: 'globalThis',
-      },
-      supported: {
-        bigint: true,
-      },
+  resolve: {
+    alias: {
+      '~/': `${path.resolve(__dirname, 'src')}/`,
     },
   },
   server: {
-    port: 3000,
+    port: 8000,
   },
-  clearScreen: false,
 });

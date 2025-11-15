@@ -4,6 +4,7 @@ import {
   Body,
   ClassSerializerInterceptor,
   Controller,
+  Get,
   Post,
   Req,
   Res,
@@ -60,6 +61,23 @@ export class AuthController {
     });
 
     response.json(new TokensEntity(tokens));
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @ApiOperation({ summary: 'Get current user information' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user information',
+  })
+  @Get('me')
+  async getCurrentUser(@Req() req: Request) {
+    const username = req.user?.['sub'];
+    const user = await this.authService.getUserInfo(username);
+    return {
+      username: user.username,
+      role: user.role,
+    };
   }
 
   @ApiBearerAuth()

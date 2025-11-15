@@ -1,10 +1,10 @@
-import Config from '../../config/config.json';
+export default function getEnv(key: string): string {
+  // In development, use import.meta.env
+  if (import.meta.env.DEV) {
+    return import.meta.env[key] || '';
+  }
 
-export default function getEnv(name: EnvNameKey) {
-  if (import.meta.env.MODE !== 'development') return Config[name as ConfigKeyTypes];
-
-  return import.meta.env[name as ConfigKeyTypes];
+  // In production, use config.json
+  // For now, fall back to import.meta.env
+  return import.meta.env[key] || '';
 }
-
-type ConfigKeyTypes = keyof typeof Config;
-type EnvNameKey = Exclude<ConfigKeyTypes, '_comment'>;

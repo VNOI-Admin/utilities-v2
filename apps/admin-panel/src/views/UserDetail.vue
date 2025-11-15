@@ -1,0 +1,294 @@
+<template>
+  <div class="min-h-screen bg-mission-black grid-background">
+    <!-- Header -->
+    <header class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-50">
+      <div class="container mx-auto px-6 py-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <router-link
+              to="/users"
+              class="px-4 py-2 border border-white/20 hover:border-mission-accent hover:text-mission-accent transition-all duration-300 uppercase text-sm tracking-wider flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span>BACK</span>
+            </router-link>
+            <div class="h-8 w-px bg-white/20"></div>
+            <div v-if="user">
+              <h1 class="text-2xl font-display font-bold flex items-center gap-2 text-glow">
+                <span class="text-mission-accent">█</span>
+                {{ user.fullName }}
+              </h1>
+              <p class="text-xs font-mono text-gray-500 mt-1">
+                @{{ user.username }}
+                <span class="mx-2">•</span>
+                <span
+                  class="px-2 py-0.5 border rounded-sm text-xs uppercase"
+                  :class="{
+                    'border-mission-red text-mission-red': user.role === 'admin',
+                    'border-mission-cyan text-mission-cyan': user.role === 'coach',
+                    'border-mission-accent text-mission-accent': user.role === 'contestant'
+                  }"
+                >
+                  {{ user.role }}
+                </span>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <!-- Status indicator -->
+            <div v-if="user" class="flex items-center gap-3 px-4 py-2 bg-mission-gray border border-white/10">
+              <span class="tech-label">STATUS</span>
+              <span
+                class="flex items-center gap-2 text-sm font-mono"
+                :class="user.machineUsage?.isOnline ? 'text-mission-accent status-live' : 'text-gray-500 status-offline'"
+              >
+                <span
+                  class="inline-block w-2 h-2 rounded-full"
+                  :class="user.machineUsage?.isOnline ? 'bg-mission-accent animate-pulse' : 'bg-gray-600'"
+                ></span>
+                {{ user.machineUsage?.isOnline ? 'ONLINE' : 'OFFLINE' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-8">
+      <!-- Loading State -->
+      <div v-if="loading" class="flex items-center justify-center py-24">
+        <div class="text-center">
+          <div class="inline-block w-12 h-12 border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p class="font-mono text-gray-500 text-sm uppercase tracking-wider">LOADING USER DATA...</p>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="flex items-center justify-center py-24">
+        <div class="mission-card p-8 max-w-md text-center border-mission-red">
+          <svg class="w-16 h-16 mx-auto mb-4 text-mission-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="font-mono text-mission-red mb-4">{{ error }}</p>
+          <router-link to="/users" class="btn-secondary inline-block">
+            RETURN TO USERS
+          </router-link>
+        </div>
+      </div>
+
+      <!-- User Detail Content -->
+      <div v-else-if="user" class="space-y-6">
+        <!-- User Information Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Basic Info Card -->
+          <div class="mission-card p-6">
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
+              <span class="text-mission-accent">●</span>
+              <h2 class="text-lg font-display font-semibold uppercase tracking-wider">User Profile</h2>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <div class="tech-label mb-1">USERNAME</div>
+                <div class="font-mono text-sm">{{ user.username }}</div>
+              </div>
+              <div>
+                <div class="tech-label mb-1">FULL NAME</div>
+                <div class="text-sm">{{ user.fullName }}</div>
+              </div>
+              <div>
+                <div class="tech-label mb-1">ROLE</div>
+                <div class="font-mono text-sm data-value">{{ user.role.toUpperCase() }}</div>
+              </div>
+              <div>
+                <div class="tech-label mb-1">GROUP</div>
+                <div class="font-mono text-sm text-gray-400">{{ user.group || 'Not assigned' }}</div>
+              </div>
+              <div>
+                <div class="tech-label mb-1">ACCOUNT STATUS</div>
+                <div
+                  class="inline-flex items-center gap-2 px-2 py-1 border rounded-sm text-xs font-mono uppercase"
+                  :class="user.isActive
+                    ? 'border-mission-accent text-mission-accent bg-mission-accent/10'
+                    : 'border-gray-600 text-gray-500'"
+                >
+                  <span class="inline-block w-1.5 h-1.5 rounded-full" :class="user.isActive ? 'bg-mission-accent' : 'bg-gray-600'"></span>
+                  {{ user.isActive ? 'ACTIVE' : 'INACTIVE' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Network Info Card -->
+          <div class="mission-card p-6">
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
+              <span class="text-mission-cyan">●</span>
+              <h2 class="text-lg font-display font-semibold uppercase tracking-wider">Network</h2>
+            </div>
+            <div class="space-y-3">
+              <div>
+                <div class="tech-label mb-1">VPN IP ADDRESS</div>
+                <div class="font-mono text-sm text-mission-cyan">{{ user.vpnIpAddress || 'Not assigned' }}</div>
+              </div>
+              <div>
+                <div class="tech-label mb-1">CONNECTION STATUS</div>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inline-block w-2 h-2 rounded-full"
+                    :class="user.machineUsage?.isOnline ? 'bg-mission-accent animate-pulse' : 'bg-gray-600'"
+                  ></span>
+                  <span
+                    class="font-mono text-sm"
+                    :class="user.machineUsage?.isOnline ? 'text-mission-accent' : 'text-gray-500'"
+                  >
+                    {{ user.machineUsage?.isOnline ? 'ONLINE' : 'OFFLINE' }}
+                  </span>
+                </div>
+              </div>
+              <div v-if="user.machineUsage?.lastReportedAt">
+                <div class="tech-label mb-1">LAST REPORTED</div>
+                <div class="font-mono text-xs text-gray-400">{{ formatDateTime(user.machineUsage.lastReportedAt) }}</div>
+              </div>
+              <div v-if="user.machineUsage?.isOnline && user.machineUsage?.ping !== undefined">
+                <div class="tech-label mb-1">LATENCY</div>
+                <div class="font-mono text-sm" :class="getPingColor(user.machineUsage.ping)">
+                  {{ user.machineUsage.ping }}ms
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Metrics Card -->
+          <div class="mission-card p-6">
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
+              <span class="text-mission-amber">●</span>
+              <h2 class="text-lg font-display font-semibold uppercase tracking-wider">System Metrics</h2>
+            </div>
+            <div v-if="user.machineUsage?.isOnline" class="space-y-4">
+              <!-- CPU Usage -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="tech-label">CPU USAGE</div>
+                  <div class="font-mono text-sm data-value">{{ user.machineUsage.cpu?.toFixed(1) || 0 }}%</div>
+                </div>
+                <div class="h-2 bg-mission-gray rounded-full overflow-hidden">
+                  <div
+                    class="h-full bg-gradient-to-r from-mission-accent to-mission-cyan transition-all duration-500"
+                    :style="{ width: `${user.machineUsage.cpu || 0}%` }"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Memory Usage -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="tech-label">MEMORY USAGE</div>
+                  <div class="font-mono text-sm data-value">{{ user.machineUsage.memory?.toFixed(1) || 0 }}%</div>
+                </div>
+                <div class="h-2 bg-mission-gray rounded-full overflow-hidden">
+                  <div
+                    class="h-full bg-gradient-to-r from-mission-cyan to-mission-amber transition-all duration-500"
+                    :style="{ width: `${user.machineUsage.memory || 0}%` }"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- Disk Usage -->
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <div class="tech-label">DISK USAGE</div>
+                  <div class="font-mono text-sm data-value">{{ user.machineUsage.disk?.toFixed(1) || 0 }}%</div>
+                </div>
+                <div class="h-2 bg-mission-gray rounded-full overflow-hidden">
+                  <div
+                    class="h-full bg-gradient-to-r from-mission-amber to-mission-red transition-all duration-500"
+                    :style="{ width: `${user.machineUsage.disk || 0}%` }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center py-8">
+              <svg class="w-12 h-12 mx-auto mb-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <p class="text-gray-600 font-mono text-xs uppercase">Machine offline</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity Timeline Card -->
+        <div class="mission-card p-6">
+          <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
+            <span class="text-mission-accent">●</span>
+            <h2 class="text-lg font-display font-semibold uppercase tracking-wider">Activity Timeline</h2>
+          </div>
+          <div class="text-center py-12 text-gray-600">
+            <svg class="w-16 h-16 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <p class="font-mono text-sm uppercase tracking-wider">Activity history coming soon</p>
+            <p class="font-mono text-xs text-gray-700 mt-1">User activity logs will be displayed here</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
+import { internalApi } from '~/services/api';
+import type { UserEntity } from '@libs/api/internal';
+import { useToast } from 'vue-toastification';
+
+const route = useRoute();
+const toast = useToast();
+
+const loading = ref(false);
+const error = ref('');
+const user = ref<UserEntity | null>(null);
+
+async function loadUser() {
+  loading.value = true;
+  error.value = '';
+
+  try {
+    const username = route.params.username as string;
+    const data = await internalApi.user.getUser(username);
+    user.value = data;
+  } catch (err: any) {
+    error.value = err.response?.data?.message || 'Failed to load user details';
+    toast.error(error.value);
+    console.error('Load user error:', err);
+  } finally {
+    loading.value = false;
+  }
+}
+
+function formatDateTime(dateString: string | Date): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ${hours % 24}h ago`;
+  if (hours > 0) return `${hours}h ${minutes % 60}m ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'Just now';
+}
+
+function getPingColor(ping: number): string {
+  if (ping < 50) return 'text-mission-accent';
+  if (ping < 100) return 'text-mission-amber';
+  return 'text-mission-red';
+}
+
+onMounted(() => {
+  loadUser();
+});
+</script>

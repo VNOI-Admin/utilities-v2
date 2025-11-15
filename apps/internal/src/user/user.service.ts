@@ -3,11 +3,15 @@ import { UpdateUserDto } from './dtos/updateUser.dto';
 
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { Role } from '@libs/common/decorators/role.decorator';
 import { UserEntity } from '@libs/common/dtos/User.entity';
 import { getErrorMessage } from '@libs/common/helper/error';
+import { generateKeyPair } from '@libs/utils/crypto/keygen';
 import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
+import * as ip from 'ip';
 import { Model, PipelineStage } from 'mongoose';
 import { GetUsersDto } from './dtos/getUsers.dto';
 
@@ -18,6 +22,7 @@ export class UserService implements OnModuleInit {
     private userModel: Model<UserDocument>,
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
+    private configService: ConfigService,
   ) {}
 
   async onModuleInit() {
@@ -120,11 +125,22 @@ export class UserService implements OnModuleInit {
 
   async createUser(createUserDto: CreateUserDto) {
     try {
+      // Hash the password
+      const hashedPassword = await argon2.hash(createUserDto.password);
+
+      // Assign VPN IP address
+      const vpnIpAddress = await this.assignVpnIpAddress(createUserDto.role);
+
+      // Generate key pair
+      const keyPair = generateKeyPair();
+
       const user = await this.userModel.create({
         username: createUserDto.username,
         fullName: createUserDto.fullName,
-        password: createUserDto.password,
+        password: hashedPassword,
         role: createUserDto.role,
+        vpnIpAddress,
+        keyPair,
       });
 
       return new UserEntity(user.toObject());
@@ -141,9 +157,19 @@ export class UserService implements OnModuleInit {
     }
 
     user.fullName = updateUserDto.fullName ?? user.fullName;
-    user.password = updateUserDto.password ?? user.password;
-    user.role = updateUserDto.role ?? user.role;
     user.isActive = updateUserDto.isActive ?? user.isActive;
+
+    // Hash password if it's being updated
+    if (updateUserDto.password) {
+      user.password = await argon2.hash(updateUserDto.password);
+    }
+
+    // If role is being changed, reassign VPN IP and generate new key pair
+    if (updateUserDto.role && updateUserDto.role !== user.role) {
+      user.role = updateUserDto.role;
+      user.vpnIpAddress = await this.assignVpnIpAddress(updateUserDto.role);
+      user.keyPair = generateKeyPair();
+    }
 
     if (updateUserDto.group) {
       const group = await this.groupModel.findOne({
@@ -175,5 +201,35 @@ export class UserService implements OnModuleInit {
     } catch (error) {
       throw new BadRequestException(`Unable to delete user: ${getErrorMessage(error)}`);
     }
+  }
+
+  private async assignVpnIpAddress(role: Role): Promise<string> {
+    const users = await this.userModel.find({ role }).exec();
+
+    let vpnBaseSubnet: number;
+
+    switch (role) {
+      case Role.CONTESTANT:
+        vpnBaseSubnet = ip.toLong(this.configService.get('WG_CONTESTANT_BASE_SUBNET') as string);
+        break;
+      case Role.COACH:
+        vpnBaseSubnet = ip.toLong(this.configService.get('WG_COACH_BASE_SUBNET') as string);
+        break;
+      case Role.ADMIN:
+        vpnBaseSubnet = ip.toLong(this.configService.get('WG_ADMIN_BASE_SUBNET') as string);
+        break;
+      default:
+        throw new Error('Invalid role');
+    }
+
+    const ipAddresses = users.map((user) => ip.toLong(user.vpnIpAddress));
+
+    for (let i = 1; i <= users.length + 1; i++) {
+      if (!ipAddresses.includes(vpnBaseSubnet + i)) {
+        return ip.fromLong(vpnBaseSubnet + i);
+      }
+    }
+
+    throw new Error('Unable to assign VPN IP address');
   }
 }

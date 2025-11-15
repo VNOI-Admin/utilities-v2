@@ -3,20 +3,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AccessTokenGuard } from './accessToken.guard';
 import { IPAddressGuard } from './ipAddress.guard';
 import { RefreshTokenGuard } from './refreshToken.guard';
-import { User, UserSchemaFactory } from '@libs/common-db/schemas/user.schema';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 
 @Module({
-  imports: [
-    MongooseModule.forFeatureAsync([
-      {
-        name: User.name,
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: UserSchemaFactory,
-      },
-    ]),
-  ],
+  imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
   providers: [AccessTokenGuard, IPAddressGuard, RefreshTokenGuard],
   exports: [AccessTokenGuard, IPAddressGuard, RefreshTokenGuard],
 })

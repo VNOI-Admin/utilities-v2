@@ -10,6 +10,8 @@ import { ScrapingModule } from './scraping/scraping.module';
 import { UserModule } from './user/user.module';
 import { ContestModule } from './contest/contest.module';
 import { GuardsModule } from '@libs/common/guards/guards.module';
+import { ContestantModule } from './contestant/contestant.module';
+import { StreamsModule } from './streams/streams.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { GuardsModule } from '@libs/common/guards/guards.module';
     ScrapingModule,
     GuardsModule,
     ContestModule,
+    ContestantModule,
+    StreamsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -196,7 +196,7 @@ export class HttpClient<SecurityDataType = unknown> {
  *
  * Client for VNOJ contest sync API
  */
-export class VnojApi<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
+export class VNOJApi<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
   contest = {
     /**
      * @name GetContestMetadata
@@ -246,7 +246,7 @@ export class VnojApi<SecurityDataType extends unknown> extends HttpClient<Securi
       contestCode: string,
       query?: {
         /** Unix timestamp in milliseconds. Returns submissions after this time */
-        from_timestamp?: number;
+        from_timestamp?: string;
       },
       params: RequestParams = {},
     ) =>

@@ -1,10 +1,5 @@
 import { Role } from '@libs/common/decorators/role.decorator';
-import { generateKeyPair } from '@libs/utils/crypto/keygen';
-import type { ConfigService } from '@nestjs/config';
 import { Prop, Schema, SchemaFactory, raw } from '@nestjs/mongoose';
-import * as argon2 from 'argon2';
-import * as ip from 'ip';
-import type { Model } from 'mongoose';
 import { type Document } from 'mongoose';
 
 export type UserDocument = User & Document;
@@ -88,49 +83,4 @@ export class User {
   participations!: Participation[];
 }
 
-export const UserRawSchema = SchemaFactory.createForClass(User);
-
-export const UserSchemaFactory = (configService: ConfigService) => {
-  const schema = UserRawSchema;
-  schema.pre('save', async function (next) {
-    if (this.isModified('password')) {
-      this.password = await argon2.hash(this.password);
-    }
-
-    if ((this.isNew && !this.vpnIpAddress) || this.isModified('role')) {
-      const users = await this.model<Model<UserDocument>>(User.name).find({ role: this.role }).exec();
-
-      let vpnBaseSubnet: number;
-
-      switch (this.role) {
-        case Role.CONTESTANT:
-          vpnBaseSubnet = ip.toLong(configService.get('WG_CONTESTANT_BASE_SUBNET') as string);
-          break;
-        case Role.COACH:
-          vpnBaseSubnet = ip.toLong(configService.get('WG_COACH_BASE_SUBNET') as string);
-          break;
-        case Role.ADMIN:
-          vpnBaseSubnet = ip.toLong(configService.get('WG_ADMIN_BASE_SUBNET') as string);
-          break;
-        default:
-          throw new Error('Invalid role');
-      }
-
-      const ipAddresses = users.map((user) => ip.toLong(user.vpnIpAddress));
-
-      for (let i = 1; i <= users.length + 1; i++) {
-        if (!ipAddresses.includes(vpnBaseSubnet + i)) {
-          const ipAddress = ip.fromLong(vpnBaseSubnet + i);
-          this.vpnIpAddress = ipAddress;
-          break;
-        }
-      }
-
-      this.keyPair = generateKeyPair();
-    }
-
-    next();
-  });
-
-  return schema;
-};
+export const UserSchema = SchemaFactory.createForClass(User);
