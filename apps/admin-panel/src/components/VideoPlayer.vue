@@ -1,5 +1,10 @@
 <template>
   <div class="video-player-container">
+    <video
+      ref="videoElement"
+      class="video-js vjs-default-skin vjs-big-play-centered"
+      playsinline
+    ></video>
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
       <p class="text-gray-500 font-mono text-sm mt-4">Loading stream...</p>
@@ -10,18 +15,12 @@
       </svg>
       <p class="text-mission-red font-mono text-sm">{{ error }}</p>
     </div>
-    <video
-      v-show="!loading && !error"
-      ref="videoElement"
-      class="video-js vjs-default-skin vjs-big-play-centered"
-    ></video>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import videojs from 'video.js';
-import 'video.js/dist/video-js.css';
 
 interface Props {
   src: string;
@@ -56,7 +55,8 @@ function initializePlayer() {
       autoplay: props.autoplay,
       muted: props.muted,
       controls: props.controls,
-      fluid: true,
+      fluid: false,
+      responsive: true,
       aspectRatio: '16:9',
       preload: 'auto',
       liveui: true,
@@ -79,21 +79,19 @@ function initializePlayer() {
       error.value = null;
     });
 
-    player.on('error', (e) => {
+    player.on('error', () => {
       const playerError = player?.error();
-      console.error('Video.js error:', playerError);
       error.value = playerError?.message || 'Failed to load stream';
       loading.value = false;
 
       // Attempt to retry after error
       setTimeout(() => {
         if (player && props.src) {
-          player.src({ src: props.src, type: 'application/x-mpegURL' });
-          player.load();
+          const retryPlayer = player;
+          retryPlayer.src({ src: props.src, type: 'application/x-mpegURL' });
+          retryPlayer.load();
           if (props.autoplay) {
-            player.play().catch((err) => {
-              console.error('Autoplay failed:', err);
-            });
+            retryPlayer.play()?.catch(() => {});
           }
         }
       }, 5000);
@@ -104,25 +102,29 @@ function initializePlayer() {
       error.value = null;
     });
 
-    player.on('waiting', () => {
-      // Don't show loading for brief buffering
+    player.on('canplay', () => {
+      loading.value = false;
     });
 
+    // Fallback: Clear loading state after 5 seconds regardless
+    setTimeout(() => {
+      if (loading.value) {
+        loading.value = false;
+      }
+    }, 5000);
+
     // Force play if autoplay is enabled
-    if (props.autoplay) {
-      player.ready(() => {
-        player?.play().catch((err) => {
-          console.error('Autoplay failed:', err);
+    if (props.autoplay && player) {
+      const playerInstance = player;
+      playerInstance.ready(() => {
+        playerInstance.play()?.catch(() => {
           // Browser might block autoplay, unmute and try again
-          if (player) {
-            player.muted(true);
-            player.play().catch(console.error);
-          }
+          playerInstance.muted(true);
+          playerInstance.play()?.catch(() => {});
         });
       });
     }
   } catch (err) {
-    console.error('Failed to initialize player:', err);
     error.value = 'Failed to initialize video player';
     loading.value = false;
   }
@@ -158,6 +160,7 @@ watch(() => props.src, (newSrc, oldSrc) => {
 .video-player-container {
   position: relative;
   width: 100%;
+  min-height: 300px;
   background: #000;
   border-radius: 0.5rem;
   overflow: hidden;
@@ -171,9 +174,10 @@ watch(() => props.src, (newSrc, oldSrc) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.8);
-  z-index: 10;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 100;
   min-height: 200px;
+  pointer-events: none;
 }
 
 .loading-spinner {
@@ -194,6 +198,12 @@ watch(() => props.src, (newSrc, oldSrc) => {
 .video-js {
   width: 100%;
   height: 100%;
+  min-height: 300px;
+}
+
+/* Ensure video is visible */
+video {
+  display: block !important;
 }
 
 /* Hide controls when controls prop is false */
