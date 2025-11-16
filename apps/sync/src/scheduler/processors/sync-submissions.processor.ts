@@ -68,23 +68,25 @@ export class SyncSubmissionsProcessor extends WorkerHost {
 
       this.logger.log(`Fetched ${vnojSubmissions.length} submissions for contest ${contest.code}`);
 
-      // Get current participant rankings for rank calculation
-      const participants = await this.participantModel.find({ contest: contest.code }).sort({ rank: 1 }).exec();
-
-      const participantMap = new Map(participants.map((p) => [p.vnoj_username, p]));
+      // Track the latest submission timestamp
+      let latestSubmissionTimestamp: Date | null = null;
 
       // Process each submission
       for (const vnojSub of vnojSubmissions) {
-        // Get participant's old rank
-        const participant = participantMap.get(vnojSub.author);
-        const oldRank = participant?.rank || 0;
-
         // Map VNOJ result to our SubmissionStatus enum
         const submissionStatus = this.mapVnojResultToStatus(vnojSub.submissionStatus);
+        if (submissionStatus === SubmissionStatus.UNKNOWN) {
+          console.warn(`Unknown submission status '${vnojSub.submissionStatus}' for submission ID ${vnojSub.id}`);
+        }
 
         // Calculate penalty (time from contest start in minutes)
         const submittedAt = new Date(vnojSub.submittedAt);
         const penaltyMinutes = Math.floor((submittedAt.getTime() - contest.start_time.getTime()) / 60000);
+
+        // Track the latest submission timestamp
+        if (!latestSubmissionTimestamp || submittedAt > latestSubmissionTimestamp) {
+          latestSubmissionTimestamp = submittedAt;
+        }
 
         // Create or update submission
         await this.submissionModel.findOneAndUpdate(
@@ -103,8 +105,8 @@ export class SyncSubmissionsProcessor extends WorkerHost {
             data: {
               score: 0, // VNOJ doesn't provide score in submission
               penalty: penaltyMinutes,
-              old_rank: oldRank,
-              new_rank: oldRank, // Will be updated after recalculating rankings
+              old_rank: 0,
+              new_rank: 0, // Will be updated after recalculating rankings
               reaction: undefined,
             },
           },
@@ -115,14 +117,13 @@ export class SyncSubmissionsProcessor extends WorkerHost {
         );
       }
 
-      // Update participant rankings after processing submissions
-      if (vnojSubmissions.length > 0) {
-        await this.updateParticipantRankings(contest.code);
+      // Update last sync time to the timestamp of the last submission synced
+      // This prevents missing submissions if the API caps the response
+      if (latestSubmissionTimestamp) {
+        contest.last_sync_at = latestSubmissionTimestamp;
+        await contest.save();
+        this.logger.log(`Updated last_sync_at to ${latestSubmissionTimestamp.toISOString()} for contest ${contest.code}`);
       }
-
-      // Update last sync time
-      contest.last_sync_at = new Date();
-      await contest.save();
 
       this.logger.log(`Completed syncing submissions for contest ${contest.code}`);
     } catch (error) {
@@ -131,70 +132,21 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     }
   }
 
-  private async updateParticipantRankings(contestCode: string): Promise<void> {
-    try {
-      // Fetch latest rankings from VNOJ
-      const vnojParticipants = await this.vnojApi.contest.getParticipants(contestCode);
-
-      // Update each participant
-      for (const vnojParticipant of vnojParticipants) {
-        const existingParticipant = await this.participantModel.findOne({
-          vnoj_username: vnojParticipant.user,
-          contest: contestCode,
-        });
-
-        const oldRank = existingParticipant?.rank || 0;
-
-        await this.participantModel.findOneAndUpdate(
-          {
-            vnoj_username: vnojParticipant.user,
-            contest: contestCode,
-          },
-          {
-            rank: vnojParticipant.rank,
-          },
-          {
-            upsert: true,
-            new: true,
-          },
-        );
-
-        // Update new_rank in submissions for this participant
-        if (oldRank !== vnojParticipant.rank) {
-          await this.submissionModel.updateMany(
-            {
-              author: vnojParticipant.user,
-              contest_code: contestCode,
-              'data.old_rank': oldRank,
-            },
-            {
-              $set: {
-                'data.new_rank': vnojParticipant.rank,
-              },
-            },
-          );
-        }
-      }
-
-      this.logger.log(`Updated rankings for contest ${contestCode}`);
-    } catch (error) {
-      this.logger.error(`Error updating rankings for contest ${contestCode}:`, error);
-      throw error;
-    }
-  }
-
   private mapVnojResultToStatus(result: string): SubmissionStatus {
     const statusMap: Record<string, SubmissionStatus> = {
       AC: SubmissionStatus.AC,
       WA: SubmissionStatus.WA,
-      TLE: SubmissionStatus.TLE,
-      MLE: SubmissionStatus.MLE,
+      RTE: SubmissionStatus.RTE,
       RE: SubmissionStatus.RE,
-      CE: SubmissionStatus.CE,
-      PE: SubmissionStatus.PE,
+      IR: SubmissionStatus.IR,
+      OLE: SubmissionStatus.OLE,
+      MLE: SubmissionStatus.MLE,
+      TLE: SubmissionStatus.TLE,
       IE: SubmissionStatus.IE,
+      AB: SubmissionStatus.AB,
+      CE: SubmissionStatus.CE,
     };
 
-    return statusMap[result] || SubmissionStatus.PENDING;
+    return statusMap[result] || SubmissionStatus.UNKNOWN;
   }
 }

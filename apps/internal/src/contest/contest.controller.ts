@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard'
 
 import { ContestService } from './contest.service';
@@ -17,6 +17,7 @@ import { CreateContestDto } from './dtos/createContest.dto';
 import { UpdateContestDto } from './dtos/updateContest.dto';
 import { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { ContestFilter, GetContestsDto } from './dtos/getContests.dto';
+import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
 
 @ApiTags('Contest')
 @ApiBearerAuth()
@@ -57,8 +58,9 @@ export class ContestController {
 
   @Get(':code/submissions')
   @ApiOperation({ summary: 'Get submissions for contest' })
-  async getSubmissions(@Param('code') code: string) {
-    return this.contestService.getSubmissions(code);
+  @ApiOkResponse({ type: PaginatedSubmissionsResponse })
+  async getSubmissions(@Param('code') code: string, @Query() query: GetSubmissionsDto) {
+    return this.contestService.getSubmissions(code, query);
   }
 
   @Get(':code/participants')
@@ -77,5 +79,11 @@ export class ContestController {
   @ApiOperation({ summary: 'Link participant to internal user' })
   async linkParticipant(@Param('participantId') participantId: string, @Body() linkDto: LinkParticipantDto) {
     return this.contestService.linkParticipant(participantId, linkDto);
+  }
+
+  @Post(':code/sync-participants')
+  @ApiOperation({ summary: 'Sync participants from VNOJ API' })
+  async syncParticipants(@Param('code') code: string) {
+    return this.contestService.syncParticipants(code);
   }
 }

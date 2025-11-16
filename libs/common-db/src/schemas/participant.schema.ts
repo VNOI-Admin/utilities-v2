@@ -5,20 +5,19 @@ export type ParticipantDocument = Participant & Document;
 
 @Schema()
 export class Participant {
+  // VNOJ username of the participant
   @Prop({ required: true })
-  vnoj_username!: string;
+  username!: string;
 
-  @Prop({ required: true, type: MongooseSchema.Types.String, ref: 'Contest' })
+  @Prop({ required: true })
   contest!: string;
 
-  @Prop({ required: false, type: MongooseSchema.Types.String, ref: 'User' })
-  linked_user?: string;
-
-  @Prop({ required: true, default: 0 })
-  rank!: number;
+  // Mapped user ID in our system
+  @Prop({ required: false })
+  mapToUser?: string;
 }
 
 export const ParticipantSchema = SchemaFactory.createForClass(Participant);
 
 // Create compound index for uniqueness
-ParticipantSchema.index({ vnoj_username: 1, contest: 1 }, { unique: true });
+ParticipantSchema.index({ username: 1, contest: 1 }, { unique: true });

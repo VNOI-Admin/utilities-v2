@@ -44,8 +44,6 @@ export class ProcessReactionsProcessor extends WorkerHost {
 
   private async generateReaction(submission: SubmissionDocument): Promise<void> {
     try {
-      this.logger.log(`Generating reaction for submission ${submission._id}`);
-
       // TODO: Implement actual video generation and upload to S3
       // For now, this is a placeholder that will be implemented later
       // Steps to implement:
@@ -61,8 +59,6 @@ export class ProcessReactionsProcessor extends WorkerHost {
       submission.data.reaction = null as any; // Mark as processed but no video available yet
 
       await submission.save();
-
-      this.logger.log(`Marked submission ${submission._id} as processed (placeholder)`);
     } catch (error) {
       this.logger.error(`Error generating reaction for submission ${submission._id}:`, error);
       // Don't throw - continue processing other submissions

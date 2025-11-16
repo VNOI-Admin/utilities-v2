@@ -786,5 +786,22 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         type: ContentType.Json,
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name SyncParticipants
+     * @summary Sync participants from VNOJ API
+     * @request POST:/contests/{code}/sync-participants
+     * @secure
+     */
+    syncParticipants: (code: string, params: RequestParams = {}) =>
+      this.request<{ added: number; skipped: number; total: number }, any>({
+        path: `/contests/${code}/sync-participants`,
+        method: 'POST',
+        secure: true,
+        ...params,
+      }),
   };
 }

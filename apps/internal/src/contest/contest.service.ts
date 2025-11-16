@@ -11,6 +11,7 @@ import { ContestFilter } from './dtos/getContests.dto';
 import type { CreateContestDto } from './dtos/createContest.dto';
 import type { UpdateContestDto } from './dtos/updateContest.dto';
 import type { LinkParticipantDto } from './dtos/linkParticipant.dto';
+import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
 
 @Injectable()
 export class ContestService {
@@ -103,9 +104,8 @@ export class ContestService {
         await Promise.all(
           participants.map((participant: VnojParticipant) =>
             this.participantModel.create({
-              vnoj_username: participant.user,
+              username: participant.user,
               contest: participant.contest,
-              rank: participant.rank,
             }),
           ),
         );
@@ -149,12 +149,50 @@ export class ContestService {
     return { success: true };
   }
 
-  async getSubmissions(code: string): Promise<SubmissionDocument[]> {
-    return this.submissionModel.find({ contest_code: code }).sort({ submittedAt: -1 }).exec();
+  async getSubmissions(code: string, query: GetSubmissionsDto): Promise<PaginatedSubmissionsResponse> {
+    const { page = 1, limit = 100, search, status } = query;
+
+    // Build query filter
+    const filter: Record<string, unknown> = { contest_code: code };
+
+    // Add search filter (search in author or problem_code)
+    if (search) {
+      filter.$or = [
+        { author: { $regex: search, $options: 'i' } },
+        { problem_code: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Add status filter
+    if (status) {
+      filter.submissionStatus = status;
+    }
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+
+    // Execute query with pagination
+    const [data, total] = await Promise.all([
+      this.submissionModel.find(filter).sort({ submittedAt: -1 }).skip(skip).limit(limit).exec(),
+      this.submissionModel.countDocuments(filter).exec(),
+    ]);
+
+    // Calculate total pages
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
+    };
   }
 
   async getParticipants(code: string): Promise<ParticipantDocument[]> {
-    return this.participantModel.find({ contest: code }).sort({ rank: 1 }).populate('linked_user').exec();
+    return this.participantModel.find({ contest: code }).sort({ rank: 1 }).exec();
   }
 
   async getProblems(code: string): Promise<ProblemDocument[]> {
@@ -163,7 +201,7 @@ export class ContestService {
 
   async linkParticipant(participantId: string, linkDto: LinkParticipantDto): Promise<ParticipantDocument> {
     const participant = await this.participantModel
-      .findByIdAndUpdate(participantId, { linked_user: linkDto.user }, { new: true })
+      .findByIdAndUpdate(participantId, { mapToUser: linkDto.user }, { new: true })
       .exec();
 
     if (!participant) {
@@ -171,5 +209,53 @@ export class ContestService {
     }
 
     return participant;
+  }
+
+  async syncParticipants(code: string): Promise<{ added: number; skipped: number; total: number }> {
+    // Verify contest exists
+    await this.findOne(code);
+
+    try {
+      // Fetch participants from VNOJ API
+      const vnojParticipants = await this.vnojApi.contest.getParticipants(code);
+
+      let added = 0;
+      let skipped = 0;
+
+      // Process each participant
+      for (const vnojParticipant of vnojParticipants) {
+        // Check if participant already exists
+        const existingParticipant = await this.participantModel
+          .findOne({
+            username: vnojParticipant.user,
+            contest: code,
+          })
+          .exec();
+
+        if (existingParticipant) {
+          // Participant already exists, skip
+          skipped++;
+        } else {
+          // Create new participant
+          await this.participantModel.create({
+            username: vnojParticipant.user,
+            contest: code,
+          });
+          added++;
+        }
+      }
+
+      return {
+        added,
+        skipped,
+        total: vnojParticipants.length,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to sync participants:', error);
+      throw new BadRequestException(
+        `Failed to fetch participants from VNOJ API. Error: ${errorMessage}`,
+      );
+    }
   }
 }

@@ -6,13 +6,16 @@ export type SubmissionDocument = Submission & Document;
 export enum SubmissionStatus {
   AC = 'AC',
   WA = 'WA',
-  TLE = 'TLE',
-  MLE = 'MLE',
+  RTE = 'RTE',
   RE = 'RE',
-  CE = 'CE',
-  PE = 'PE',
+  IR = 'IR',
+  OLE = 'OLE',
+  MLE = 'MLE',
+  TLE = 'TLE',
   IE = 'IE',
-  PENDING = 'PENDING',
+  AB = 'AB',
+  CE = 'CE',
+  UNKNOWN = 'UNKNOWN',
 }
 
 @Schema({ _id: false })
