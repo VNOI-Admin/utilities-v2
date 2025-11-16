@@ -43,6 +43,7 @@ export class AuthController {
     const tokens = await this.authService.login(data);
     const accessTokenExpiresIn = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME');
     const refreshTokenExpiresIn = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME');
+    const secureCookies = (this.configService.get<string>('SECURE_COOKIES') ?? 'true') === 'true';
 
     const accessTokenMaxAge = accessTokenExpiresIn ? ms(accessTokenExpiresIn) : undefined;
     const refreshTokenMaxAge = refreshTokenExpiresIn ? ms(refreshTokenExpiresIn) : undefined;
@@ -51,13 +52,13 @@ export class AuthController {
       httpOnly: true,
       sameSite: 'strict',
       maxAge: accessTokenMaxAge,
-      secure: true,
+      secure: secureCookies,
     });
     response.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       sameSite: 'strict',
       maxAge: refreshTokenMaxAge,
-      secure: true,
+      secure: secureCookies,
     });
 
     response.json(new TokensEntity(tokens));
@@ -109,6 +110,7 @@ export class AuthController {
 
     const accessTokenExpiresIn = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME');
     const refreshTokenExpiresIn = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME');
+    const secureCookies = this.configService.get<string>('SECURE_COOKIES') === 'true';
 
     const accessTokenMaxAge = accessTokenExpiresIn ? ms(accessTokenExpiresIn) : undefined;
     const refreshTokenMaxAge = refreshTokenExpiresIn ? ms(refreshTokenExpiresIn) : undefined;
@@ -117,14 +119,14 @@ export class AuthController {
       httpOnly: true,
       sameSite: 'strict',
       maxAge: accessTokenMaxAge,
-      secure: true,
+      secure: secureCookies,
     });
 
     response.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       sameSite: 'strict',
       maxAge: refreshTokenMaxAge,
-      secure: true,
+      secure: secureCookies,
     });
 
     response.json(new TokensEntity(tokens));
