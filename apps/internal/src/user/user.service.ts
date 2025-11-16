@@ -2,7 +2,7 @@ import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
 
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
-import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { MachineUsage, User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Role } from '@libs/common/decorators/role.decorator';
 import { UserEntity } from '@libs/common/dtos/User.entity';
 import { getErrorMessage } from '@libs/common/helper/error';
@@ -44,7 +44,7 @@ export class UserService implements OnModuleInit {
   }
 
   async getUsers(caller: string, query: GetUsersDto) {
-    const { q, role, me, isActive, isOnline, orderBy } = query;
+    const { q, role, me, isActive, isOnline, orderBy, withStream } = query;
 
     const pipeline: PipelineStage[] = [];
 
@@ -106,7 +106,19 @@ export class UserService implements OnModuleInit {
 
     const users = await this.userModel.aggregate(pipeline).exec();
 
-    return users.map((user) => new UserEntity(user));
+    const livestreamProxy = this.configService.get('LIVESTREAM_PROXY_URL');
+
+    return users.map((user) => {
+      const userEntity = new UserEntity(user);
+
+      // Add stream URLs if requested
+      if (withStream && user.vpnIpAddress && livestreamProxy) {
+        userEntity.streamUrl = `${livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
+        userEntity.webcamUrl = `${livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
+      }
+
+      return userEntity;
+    });
   }
 
   async getUser(username: string) {
@@ -141,6 +153,7 @@ export class UserService implements OnModuleInit {
         role: createUserDto.role,
         vpnIpAddress,
         keyPair,
+        machineUsage: new MachineUsage(),
       });
 
       return new UserEntity(user.toObject());

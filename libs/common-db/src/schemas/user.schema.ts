@@ -9,21 +9,28 @@ export type KeyPairType = {
   privateKey: string;
 };
 
-export type MachineUsage = {
-  cpu: number;
-  memory: number;
-  disk: number;
-  ping: number;
-  isOnline: boolean;
-  lastReportedAt: Date;
-};
+@Schema({ _id: false })
+export class MachineUsage {
+  @Prop({ required: true, default: 0 })
+  cpu!: number;
 
-export type Participation = {
-  contest: string;
-  contest_username?: string;
-};
+  @Prop({ required: true, default: 0 })
+  memory!: number;
 
-@Schema()
+  @Prop({ required: true, default: 0 })
+  disk!: number;
+
+  @Prop({ required: true, default: 0 })
+  ping!: number;
+
+  @Prop({ required: true, default: false })
+  isOnline!: boolean;
+
+  @Prop({ required: false })
+  lastReportedAt!: Date;
+}
+
+@Schema({ autoCreate: true, autoIndex: true })
 export class User {
   @Prop({ required: true, unique: true })
   username!: string;
@@ -55,32 +62,11 @@ export class User {
   )
   keyPair!: KeyPairType;
 
-  @Prop(
-    raw({
-      cpu: { type: Number, default: 0 },
-      memory: { type: Number, default: 0 },
-      disk: { type: Number, default: 0 },
-      ping: { type: Number, default: 0 },
-      isOnline: { type: Boolean, default: false },
-      lastReportedAt: { type: Date, default: null },
-    }),
-  )
+  @Prop({ type: MachineUsage })
   machineUsage!: MachineUsage;
 
   @Prop({ required: false })
   group!: string;
-
-  @Prop({
-    required: false,
-    type: [
-      {
-        contest: { type: String },
-        contest_username: { type: String, required: false },
-      },
-    ],
-    default: [],
-  })
-  participations!: Participation[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

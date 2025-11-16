@@ -45,13 +45,13 @@ const router = createRouter({
     {
       path: '/coach-view',
       name: 'CoachView',
-      component: () => import('~/views/Contestants.vue'),
+      component: () => import('~/views/CoachView.vue'),
       meta: { requiresAuth: true, allowedRoles: ['coach', 'admin'] },
     },
     {
-      path: '/coach-view/:id',
-      name: 'ContestantViewer',
-      component: () => import('~/views/ContestantViewer.vue'),
+      path: '/coach-view/:username',
+      name: 'CoachViewDetail',
+      component: () => import('~/views/CoachViewDetail.vue'),
       meta: { requiresAuth: true, allowedRoles: ['coach', 'admin'] },
     },
     {

@@ -15,13 +15,23 @@ export enum SubmissionStatus {
   PENDING = 'PENDING',
 }
 
-export type SubmissionData = {
-  score: number;
-  penalty: number;
-  old_rank: number;
-  new_rank: number;
+@Schema({ _id: false })
+export class SubmissionData {
+  @Prop({ required: true, default: 0 })
+  score!: number;
+
+  @Prop({ required: true, default: 0 })
+  penalty!: number;
+
+  @Prop({ required: true, default: 0 })
+  old_rank!: number;
+
+  @Prop({ required: true, default: 0 })
+  new_rank!: number;
+
+  @Prop({ required: false })
   reaction?: string;
-};
+}
 
 @Schema()
 export class Submission {
@@ -34,24 +44,16 @@ export class Submission {
   @Prop({ required: true })
   author!: string;
 
-  @Prop({ required: true, type: String, enum: Object.values(SubmissionStatus) })
+  @Prop({ required: true, enum: Object.values(SubmissionStatus) })
   submissionStatus!: SubmissionStatus;
 
-  @Prop({ required: true, type: MongooseSchema.Types.String, ref: 'Contest' })
+  @Prop({ required: true })
   contest_code!: string;
 
-  @Prop({ required: true, type: MongooseSchema.Types.String, ref: 'Problem' })
+  @Prop({ required: true })
   problem_code!: string;
 
-  @Prop(
-    raw({
-      score: { type: Number, default: 0 },
-      penalty: { type: Number, default: 0 },
-      old_rank: { type: Number, default: 0 },
-      new_rank: { type: Number, default: 0 },
-      reaction: { type: String, default: undefined },
-    }),
-  )
+  @Prop({ type: SubmissionData })
   data!: SubmissionData;
 
   @Prop({ required: false })

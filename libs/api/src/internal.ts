@@ -27,6 +27,8 @@ export interface UserEntity {
   role: string;
   machineUsage: MachineUsageEntity;
   group: string;
+  streamUrl?: string;
+  webcamUrl?: string;
 }
 
 export interface CreateUserDto {
@@ -105,80 +107,6 @@ export interface UpdateContestDto {
 
 export interface LinkParticipantDto {
   user?: string;
-}
-
-export interface CreateContestantDto {
-  /** Contestant name */
-  name: string;
-  /** Unique contestant identifier */
-  contestantId: string;
-  /** HLS stream URL for main screen */
-  streamUrl?: string;
-  /** HLS stream URL for webcam */
-  webcamUrl?: string;
-  /**
-   * Stream status
-   * @default "offline"
-   */
-  status?: 'offline' | 'online' | 'error';
-  /** Additional metadata */
-  metadata?: object;
-  /** Thumbnail preview URL */
-  thumbnailUrl?: string;
-}
-
-export interface ContestantResponseDto {
-  _id: string;
-  name: string;
-  contestantId: string;
-  streamUrl?: string;
-  webcamUrl?: string;
-  status: 'offline' | 'online' | 'error';
-  metadata?: object;
-  thumbnailUrl?: string;
-  /** @format date-time */
-  lastActiveAt?: string;
-  /** @format date-time */
-  createdAt: string;
-  /** @format date-time */
-  updatedAt: string;
-}
-
-export interface UpdateContestantDto {
-  /** Contestant name */
-  name?: string;
-  /** Unique contestant identifier */
-  contestantId?: string;
-  /** HLS stream URL for main screen */
-  streamUrl?: string;
-  /** HLS stream URL for webcam */
-  webcamUrl?: string;
-  /**
-   * Stream status
-   * @default "offline"
-   */
-  status?: 'offline' | 'online' | 'error';
-  /** Additional metadata */
-  metadata?: object;
-  /** Thumbnail preview URL */
-  thumbnailUrl?: string;
-}
-
-export interface StreamResponseDto {
-  contestantId: string;
-  contestantName: string;
-  /** HLS stream URL for main screen */
-  streamUrl?: string;
-  /** HLS stream URL for webcam */
-  webcamUrl?: string;
-  status: 'offline' | 'online' | 'error';
-  /** @format date-time */
-  lastActiveAt?: string;
-}
-
-export interface UpdateStreamStatusDto {
-  /** New stream status */
-  status: 'offline' | 'online' | 'error';
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -352,6 +280,11 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         isActive?: boolean;
         /** Return only online users */
         isOnline?: boolean;
+        /**
+         * Include stream URLs (streamUrl and webcamUrl) in response
+         * @default false
+         */
+        withStream?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -851,139 +784,6 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         body: data,
         secure: true,
         type: ContentType.Json,
-        ...params,
-      }),
-  };
-  contestants = {
-    /**
-     * No description
-     *
-     * @tags Contestants
-     * @name Create
-     * @summary Create a new contestant (admin only)
-     * @request POST:/contestants
-     * @secure
-     */
-    create: (data: CreateContestantDto, params: RequestParams = {}) =>
-      this.request<ContestantResponseDto, any>({
-        path: `/contestants`,
-        method: 'POST',
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Contestants
-     * @name FindAll
-     * @summary Get all contestants
-     * @request GET:/contestants
-     * @secure
-     */
-    findAll: (params: RequestParams = {}) =>
-      this.request<ContestantResponseDto[], any>({
-        path: `/contestants`,
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Contestants
-     * @name FindOne
-     * @summary Get contestant by ID
-     * @request GET:/contestants/{id}
-     * @secure
-     */
-    findOne: (id: string, params: RequestParams = {}) =>
-      this.request<ContestantResponseDto, any>({
-        path: `/contestants/${id}`,
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Contestants
-     * @name Update
-     * @summary Update contestant (admin only)
-     * @request PATCH:/contestants/{id}
-     * @secure
-     */
-    update: (id: string, data: UpdateContestantDto, params: RequestParams = {}) =>
-      this.request<ContestantResponseDto, any>({
-        path: `/contestants/${id}`,
-        method: 'PATCH',
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Contestants
-     * @name Remove
-     * @summary Delete contestant (admin only)
-     * @request DELETE:/contestants/{id}
-     * @secure
-     */
-    remove: (id: string, params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/contestants/${id}`,
-        method: 'DELETE',
-        secure: true,
-        ...params,
-      }),
-  };
-  streams = {
-    /**
-     * No description
-     *
-     * @tags Streams
-     * @name GetStreams
-     * @summary Get stream URLs for a contestant
-     * @request GET:/streams/{contestantId}
-     * @secure
-     */
-    getStreams: (contestantId: string, params: RequestParams = {}) =>
-      this.request<StreamResponseDto, any>({
-        path: `/streams/${contestantId}`,
-        method: 'GET',
-        secure: true,
-        format: 'json',
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Streams
-     * @name UpdateStatus
-     * @summary Update stream status
-     * @request POST:/streams/{contestantId}/status
-     * @secure
-     */
-    updateStatus: (contestantId: string, data: UpdateStreamStatusDto, params: RequestParams = {}) =>
-      this.request<StreamResponseDto, any>({
-        path: `/streams/${contestantId}/status`,
-        method: 'POST',
-        body: data,
-        secure: true,
-        type: ContentType.Json,
-        format: 'json',
         ...params,
       }),
   };

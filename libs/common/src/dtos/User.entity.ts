@@ -67,6 +67,14 @@ export class UserEntity {
   @ApiProperty()
   group: string;
 
+  @Expose()
+  @ApiProperty({ required: false })
+  streamUrl?: string;
+
+  @Expose()
+  @ApiProperty({ required: false })
+  webcamUrl?: string;
+
   constructor(data: ConstructorType<UserEntity>) {
     this.username = data.username;
     this.fullName = data.fullName;
@@ -75,5 +83,7 @@ export class UserEntity {
     this.role = data.role;
     this.machineUsage = new MachineUsageEntity(data.machineUsage);
     this.group = data.group;
+    this.streamUrl = data.streamUrl;
+    this.webcamUrl = data.webcamUrl;
   }
 }

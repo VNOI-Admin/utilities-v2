@@ -33,4 +33,10 @@ export class GetUsersDto extends SortDto {
   @IsOptional()
   @IsBoolean()
   isOnline?: boolean;
+
+  @ApiProperty({ required: false, description: 'Include stream URLs (streamUrl and webcamUrl) in response', default: false })
+  @ToBoolean()
+  @IsOptional()
+  @IsBoolean()
+  withStream?: boolean;
 }

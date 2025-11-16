@@ -10,12 +10,12 @@
 
     <!-- Metrics Grid -->
     <div v-if="!loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <!-- Online Contestants -->
+      <!-- Online Users -->
       <div class="mission-card p-6 glow-border group hover:border-mission-accent/50 transition-all duration-300">
         <div class="flex items-start justify-between mb-4">
           <div class="p-3 bg-mission-accent/10 rounded border border-mission-accent/30">
             <svg class="w-6 h-6 text-mission-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <span class="inline-flex items-center gap-1 text-xs font-mono text-mission-accent">
@@ -23,8 +23,8 @@
             LIVE
           </span>
         </div>
-        <div class="tech-label mb-1">ONLINE CONTESTANTS</div>
-        <div class="text-4xl font-display font-bold text-mission-accent mb-1">{{ onlineContestants }}</div>
+        <div class="tech-label mb-1">ONLINE USERS</div>
+        <div class="text-4xl font-display font-bold text-mission-accent mb-1">{{ onlineUsers }}</div>
         <div class="text-xs text-gray-600 font-mono">ACTIVE CONNECTIONS</div>
       </div>
 
@@ -84,13 +84,13 @@
     <div class="mission-card p-6">
       <div class="tech-label mb-4">QUICK ACTIONS</div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <router-link to="/contestants" class="flex items-center gap-3 p-4 bg-mission-gray hover:bg-white/5 border border-white/10 hover:border-mission-accent/50 transition-all duration-300 group">
+        <router-link to="/users" class="flex items-center gap-3 p-4 bg-mission-gray hover:bg-white/5 border border-white/10 hover:border-mission-accent/50 transition-all duration-300 group">
           <svg class="w-5 h-5 text-gray-500 group-hover:text-mission-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
           <div>
-            <div class="text-sm font-medium text-white uppercase">Monitor Contestants</div>
-            <div class="text-xs text-gray-600 font-mono">View live streams</div>
+            <div class="text-sm font-medium text-white uppercase">Manage Users</div>
+            <div class="text-xs text-gray-600 font-mono">View all users</div>
           </div>
         </router-link>
 
@@ -123,7 +123,7 @@ import { ref, onMounted } from 'vue';
 import { internalClient, printingClient } from '~/services/api';
 
 const loading = ref(true);
-const onlineContestants = ref(0);
+const onlineUsers = ref(0);
 const queuedPrintJobs = ref(0);
 const totalUsers = ref(0);
 const activeContests = ref(0);
@@ -131,11 +131,11 @@ const activeContests = ref(0);
 async function loadMetrics() {
   loading.value = true;
   try {
-    // Fetch online contestants
-    const contestantsRes = await internalClient.get('/user/users', {
-      params: { isOnline: true, role: 'contestant' }
+    // Fetch online users
+    const onlineUsersRes = await internalClient.get('/user/users', {
+      params: { isOnline: true }
     });
-    onlineContestants.value = contestantsRes.data?.length || 0;
+    onlineUsers.value = onlineUsersRes.data?.length || 0;
 
     // Fetch queued print jobs
     const printJobsRes = await printingClient.get('/printing/print-jobs', {
