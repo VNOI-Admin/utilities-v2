@@ -1,29 +1,30 @@
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
-import { PrintJob, PrintStatus, type PrintJobDocument } from '@libs/common-db/schemas/printJob.schema';
-import { PrintClient, type PrintClientDocument } from '@libs/common-db/schemas/printClient.schema';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Job } from 'bullmq';
 import { Model } from 'mongoose';
-import * as uuid from 'uuid';
+import axios from 'axios';
+import FormData from 'form-data';
 
 import { QUEUE_NAMES } from '../constants';
 
 @Processor(QUEUE_NAMES.SEND_BALLOONS)
 export class SendBalloonsProcessor extends WorkerHost {
   private readonly logger = new Logger(SendBalloonsProcessor.name);
+  private readonly printingServiceUrl: string;
 
   constructor(
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(PrintJob.name) private printJobModel: Model<PrintJobDocument>,
-    @InjectModel(PrintClient.name) private printClientModel: Model<PrintClientDocument>,
+    private configService: ConfigService,
   ) {
     super();
+    this.printingServiceUrl = this.configService.get<string>('PRINTING_SERVICE_ENDPOINT') || 'http://localhost:8004';
   }
 
   async process(job: Job): Promise<void> {
@@ -100,21 +101,21 @@ export class SendBalloonsProcessor extends WorkerHost {
       // Create print job content
       const printContent = `send balloon of problem ${problemName} to team ${teamName}`;
 
-      // Get a free print client
-      const clientId = await this.getFreePrintClient();
-
-      // Create print job
-      const uniqueId = uuid.v4();
-      const printJob = await this.printJobModel.create({
-        jobId: uniqueId,
-        username: submissionData.author,
-        requestedAt: new Date(),
+      // Create FormData for multipart/form-data request
+      const formData = new FormData();
+      const buffer = Buffer.from(printContent, 'utf-8');
+      formData.append('file', buffer, {
         filename: `balloon-${problemName}-${teamName}.txt`,
-        content: Buffer.from(printContent).toString('base64'),
-        clientId: clientId,
+        contentType: 'text/plain',
       });
 
-      await printJob.save();
+      // Send HTTP request to printing service
+      await axios.post(`${this.printingServiceUrl}/printing/jobs`, formData, {
+        headers: {
+          ...formData.getHeaders(),
+          'x-user': submissionData.author,
+        },
+      });
 
       // Mark submission as balloon_sent
       submission.balloon_sent = true;
@@ -125,37 +126,6 @@ export class SendBalloonsProcessor extends WorkerHost {
       this.logger.error(`Error sending balloon for submission ${submissionData.submission_id}:`, error);
       // Don't throw - continue processing other submissions
     }
-  }
-
-  private async getFreePrintClient(): Promise<string | null> {
-    const availablePrintClients = await this.printClientModel.find({
-      isActive: true,
-      isOnline: true,
-    });
-
-    // Get the most free print client by counting the number of queued jobs
-    const printJobs = await this.printJobModel
-      .find({ status: PrintStatus.QUEUED })
-      .lean();
-
-    const sortedPrintClients = availablePrintClients
-      .map((client) => {
-        const queuedJobs = printJobs.filter(
-          (job) => job.clientId === client.clientId,
-        );
-        return {
-          ...client.toObject(),
-          queuedJobs: queuedJobs.length,
-        };
-      })
-      .sort((a, b) => a.queuedJobs - b.queuedJobs);
-
-    let clientId: string | null = null;
-    if (sortedPrintClients.length > 0) {
-      clientId = sortedPrintClients[0].clientId;
-    }
-
-    return clientId;
   }
 }
 

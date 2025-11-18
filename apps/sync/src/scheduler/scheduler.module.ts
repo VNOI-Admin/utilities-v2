@@ -3,8 +3,6 @@ import { Contest, ContestSchema } from '@libs/common-db/schemas/contest.schema';
 import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
-import { PrintJob, PrintJobSchema } from '@libs/common-db/schemas/printJob.schema';
-import { PrintClient, PrintClientSchema } from '@libs/common-db/schemas/printClient.schema';
 import { VNOJApiModule } from '@libs/api/vnoj-api.module';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
@@ -50,8 +48,6 @@ import { SchedulerService } from './scheduler.service';
       { name: Submission.name, schema: SubmissionSchema },
       { name: Participant.name, schema: ParticipantSchema },
       { name: Problem.name, schema: ProblemSchema },
-      { name: PrintJob.name, schema: PrintJobSchema },
-      { name: PrintClient.name, schema: PrintClientSchema },
     ]),
     VNOJApiModule.forRootAsync(),
   ],
