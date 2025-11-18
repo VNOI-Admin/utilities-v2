@@ -15,11 +15,7 @@ import { QUEUE_NAMES } from './constants';
 import { PingUsersProcessor } from './processors/ping-users.processor';
 import { SyncSubmissionsProcessor } from './processors/sync-submissions.processor';
 import { ProcessReactionsProcessor } from './processors/process-reactions.processor';
-<<<<<<< Updated upstream
-=======
-import { SyncMachineUsageProcessor } from './processors/sync-machine-usage.processor';
 import { SendBalloonsProcessor } from './processors/send-balloons.processor';
->>>>>>> Stashed changes
 import { SchedulerService } from './scheduler.service';
 
 @Module({
@@ -44,15 +40,9 @@ import { SchedulerService } from './scheduler.service';
       {
         name: QUEUE_NAMES.PROCESS_REACTIONS,
       },
-<<<<<<< Updated upstream
-=======
-      {
-        name: QUEUE_NAMES.SYNC_MACHINE_USAGE,
-      },
       {
         name: QUEUE_NAMES.SEND_BALLOONS,
       },
->>>>>>> Stashed changes
     ),
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
@@ -65,10 +55,6 @@ import { SchedulerService } from './scheduler.service';
     ]),
     VNOJApiModule.forRootAsync(),
   ],
-<<<<<<< Updated upstream
-  providers: [SchedulerService, PingUsersProcessor, SyncSubmissionsProcessor, ProcessReactionsProcessor],
-=======
-  providers: [SchedulerService, PingUsersProcessor, SyncSubmissionsProcessor, ProcessReactionsProcessor, SyncMachineUsageProcessor, SendBalloonsProcessor],
->>>>>>> Stashed changes
+  providers: [SchedulerService, PingUsersProcessor, SyncSubmissionsProcessor, ProcessReactionsProcessor, SendBalloonsProcessor],
 })
 export class SchedulerModule {}
