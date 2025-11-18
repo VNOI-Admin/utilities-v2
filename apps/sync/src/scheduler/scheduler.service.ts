@@ -74,6 +74,6 @@ export class SchedulerService implements OnModuleInit {
       },
     );
 
-    this.logger.log('Sync machine usage job scheduled to run every 30 seconds');
+    this.logger.log('Sync machine usage job scheduled to run every 10 seconds');
   }
 }
