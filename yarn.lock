@@ -2859,6 +2859,7 @@ __metadata:
     autoprefixer: "npm:^10.4.17"
     axios: "npm:^1.6.8"
     js-cookie: "npm:^3.0.5"
+    lucide-vue-next: "npm:^0.554.0"
     pinia: "npm:^2.1.7"
     postcss: "npm:^8.4.33"
     tailwindcss: "npm:^3.4.1"
@@ -6758,6 +6759,15 @@ __metadata:
   dependencies:
     yallist: "npm:^3.0.2"
   checksum: 10c0/89b2ef2ef45f543011e38737b8a8622a2f8998cddf0e5437174ef8f1f70a8b9d14a918ab3e232cb3ba343b7abddffa667f0b59075b2b80e6b4d63c3de6127482
+  languageName: node
+  linkType: hard
+
+"lucide-vue-next@npm:^0.554.0":
+  version: 0.554.0
+  resolution: "lucide-vue-next@npm:0.554.0"
+  peerDependencies:
+    vue: ">=3.0.1"
+  checksum: 10c0/13d8e04bdae28a1a8d5b369bbabd516f8b922dc7277790217b498173874330fcb322efa79a3d6cfc1b513d9e4cf9d40eda68181bc2092e2b88fb485d214108b6
   languageName: node
   linkType: hard
 

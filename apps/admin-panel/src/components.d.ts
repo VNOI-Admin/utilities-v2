@@ -7,8 +7,24 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    BackButton: typeof import('./components/BackButton.vue')['default']
+    EmptyState: typeof import('./components/EmptyState.vue')['default']
+    FilterButtonGroup: typeof import('./components/FilterButtonGroup.vue')['default']
+    InfoCard: typeof import('./components/InfoCard.vue')['default']
+    LoadingSpinner: typeof import('./components/LoadingSpinner.vue')['default']
+    LogOut: typeof import('lucide-vue-next')['LogOut']
+    MetricBar: typeof import('./components/MetricBar.vue')['default']
+    MissionModal: typeof import('./components/MissionModal.vue')['default']
+    MissionSelect: typeof import('./components/MissionSelect.vue')['default']
+    MissionTable: typeof import('./components/MissionTable.vue')['default']
+    PageHeader: typeof import('./components/PageHeader.vue')['default']
+    RefreshButton: typeof import('./components/RefreshButton.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SearchInput: typeof import('./components/SearchInput.vue')['default']
+    StatCounter: typeof import('./components/StatCounter.vue')['default']
+    StatusBadge: typeof import('./components/StatusBadge.vue')['default']
+    ToggleButton: typeof import('./components/ToggleButton.vue')['default']
     VideoPlayer: typeof import('./components/VideoPlayer.vue')['default']
   }
 }

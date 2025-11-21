@@ -9,9 +9,7 @@
               to="/users"
               class="px-4 py-2 border border-white/20 hover:border-mission-accent hover:text-mission-accent transition-all duration-300 uppercase text-sm tracking-wider flex items-center gap-2"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
+              <ArrowLeft :size="16" :stroke-width="2" />
               <span>BACK</span>
             </router-link>
             <div class="h-8 w-px bg-white/20"></div>
@@ -69,9 +67,7 @@
       <!-- Error State -->
       <div v-else-if="error" class="flex items-center justify-center py-24">
         <div class="mission-card p-8 max-w-md text-center border-mission-red">
-          <svg class="w-16 h-16 mx-auto mb-4 text-mission-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <AlertCircle :size="64" class="mx-auto mb-4 text-mission-red" :stroke-width="2" />
           <p class="font-mono text-mission-red mb-4">{{ error }}</p>
           <router-link to="/users" class="btn-secondary inline-block">
             RETURN TO USERS
@@ -210,9 +206,7 @@
               </div>
             </div>
             <div v-else class="text-center py-8">
-              <svg class="w-12 h-12 mx-auto mb-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+              <Monitor :size="48" class="mx-auto mb-2 text-gray-600" :stroke-width="2" />
               <p class="text-gray-600 font-mono text-xs uppercase">Machine offline</p>
             </div>
           </div>
@@ -225,9 +219,7 @@
             <h2 class="text-lg font-display font-semibold uppercase tracking-wider">Activity Timeline</h2>
           </div>
           <div class="text-center py-12 text-gray-600">
-            <svg class="w-16 h-16 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
+            <BarChart3 :size="64" class="mx-auto mb-3 text-gray-600" :stroke-width="2" />
             <p class="font-mono text-sm uppercase tracking-wider">Activity history coming soon</p>
             <p class="font-mono text-xs text-gray-700 mt-1">User activity logs will be displayed here</p>
           </div>
@@ -243,6 +235,7 @@ import { useRoute } from 'vue-router';
 import { internalApi } from '~/services/api';
 import type { UserEntity } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
+import { ArrowLeft, AlertCircle, Monitor, BarChart3 } from 'lucide-vue-next';
 
 const route = useRoute();
 const toast = useToast();

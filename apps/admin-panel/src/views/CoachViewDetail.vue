@@ -8,9 +8,7 @@
             @click="router.push({ name: 'CoachView' })"
             class="btn-secondary flex items-center gap-2"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
+            <ArrowLeft :size="16" :stroke-width="2" />
             <span>BACK</span>
           </button>
 
@@ -34,9 +32,7 @@
             class="btn-secondary flex items-center gap-2"
             title="Swap Streams"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-            </svg>
+            <ArrowDownUp :size="16" :stroke-width="2" />
             <span>SWAP</span>
           </button>
           <button
@@ -44,9 +40,7 @@
             class="btn-secondary flex items-center gap-2"
             title="Fullscreen"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-            </svg>
+            <Maximize :size="16" :stroke-width="2" />
             <span>FULLSCREEN</span>
           </button>
         </div>
@@ -63,9 +57,7 @@
 
       <!-- Error State -->
       <div v-else-if="error" class="mission-card p-12 text-center">
-        <svg class="w-16 h-16 mx-auto mb-4 text-mission-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
+        <AlertCircle :size="64" class="mx-auto mb-4 text-mission-red" :stroke-width="2" />
         <p class="text-mission-red font-mono mb-4">{{ error }}</p>
         <button @click="loadUser" class="btn-primary">RETRY</button>
       </div>
@@ -94,9 +86,7 @@
                 :controls="false"
               />
               <div v-else class="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
-                <svg class="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
+                <Eye :size="64" class="mb-4" :stroke-width="2" />
                 <p class="font-mono text-sm uppercase">FEED UNAVAILABLE</p>
               </div>
             </div>
@@ -177,6 +167,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { internalApi } from '~/services/api';
 import VideoPlayer from '~/components/VideoPlayer.vue';
+import { ArrowLeft, ArrowDownUp, Maximize, AlertCircle, Eye } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();

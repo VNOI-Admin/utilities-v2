@@ -14,9 +14,7 @@
       <div class="mission-card p-6 glow-border group hover:border-mission-accent/50 transition-all duration-300">
         <div class="flex items-start justify-between mb-4">
           <div class="p-3 bg-mission-accent/10 rounded border border-mission-accent/30">
-            <svg class="w-6 h-6 text-mission-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Users :size="24" :stroke-width="2" class="text-mission-accent" />
           </div>
           <span class="inline-flex items-center gap-1 text-xs font-mono text-mission-accent">
             <span class="inline-block w-1.5 h-1.5 bg-mission-accent rounded-full animate-pulse-slow"></span>
@@ -32,9 +30,7 @@
       <div class="mission-card p-6 group hover:border-mission-amber/50 transition-all duration-300">
         <div class="flex items-start justify-between mb-4">
           <div class="p-3 bg-mission-amber/10 rounded border border-mission-amber/30">
-            <svg class="w-6 h-6 text-mission-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
+            <Printer :size="24" :stroke-width="2" class="text-mission-amber" />
           </div>
           <span class="inline-flex items-center gap-1 text-xs font-mono text-mission-amber">
             <span class="inline-block w-1.5 h-1.5 bg-mission-amber rounded-full"></span>
@@ -50,9 +46,7 @@
       <div class="mission-card p-6 group hover:border-mission-cyan/50 transition-all duration-300">
         <div class="flex items-start justify-between mb-4">
           <div class="p-3 bg-mission-cyan/10 rounded border border-mission-cyan/30">
-            <svg class="w-6 h-6 text-mission-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
+            <Users :size="24" :stroke-width="2" class="text-mission-cyan" />
           </div>
         </div>
         <div class="tech-label mb-1">TOTAL USERS</div>
@@ -64,9 +58,7 @@
       <div class="mission-card p-6 group hover:border-white/30 transition-all duration-300">
         <div class="flex items-start justify-between mb-4">
           <div class="p-3 bg-white/10 rounded border border-white/30">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
+            <Award :size="24" :stroke-width="2" class="text-white" />
           </div>
         </div>
         <div class="tech-label mb-1">ACTIVE CONTESTS</div>
@@ -85,9 +77,7 @@
       <div class="tech-label mb-4">QUICK ACTIONS</div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <router-link to="/users" class="flex items-center gap-3 p-4 bg-mission-gray hover:bg-white/5 border border-white/10 hover:border-mission-accent/50 transition-all duration-300 group">
-          <svg class="w-5 h-5 text-gray-500 group-hover:text-mission-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
+          <Users :size="20" :stroke-width="2" class="text-gray-500 group-hover:text-mission-accent transition-colors" />
           <div>
             <div class="text-sm font-medium text-white uppercase">Manage Users</div>
             <div class="text-xs text-gray-600 font-mono">View all users</div>
@@ -95,9 +85,7 @@
         </router-link>
 
         <router-link to="/contests" class="flex items-center gap-3 p-4 bg-mission-gray hover:bg-white/5 border border-white/10 hover:border-mission-accent/50 transition-all duration-300 group">
-          <svg class="w-5 h-5 text-gray-500 group-hover:text-mission-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-          </svg>
+          <Award :size="20" :stroke-width="2" class="text-gray-500 group-hover:text-mission-accent transition-colors" />
           <div>
             <div class="text-sm font-medium text-white uppercase">Manage Contests</div>
             <div class="text-xs text-gray-600 font-mono">View and sync contests</div>
@@ -105,9 +93,7 @@
         </router-link>
 
         <router-link to="/overlay" class="flex items-center gap-3 p-4 bg-mission-gray hover:bg-white/5 border border-white/10 hover:border-mission-accent/50 transition-all duration-300 group">
-          <svg class="w-5 h-5 text-gray-500 group-hover:text-mission-accent transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
+          <Monitor :size="20" :stroke-width="2" class="text-gray-500 group-hover:text-mission-accent transition-colors" />
           <div>
             <div class="text-sm font-medium text-white uppercase">Overlay Control</div>
             <div class="text-xs text-gray-600 font-mono">Configure display</div>
@@ -120,6 +106,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { Users, Printer, Award, Monitor } from 'lucide-vue-next';
 import { internalClient, printingClient } from '~/services/api';
 
 const loading = ref(true);

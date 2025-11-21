@@ -19,9 +19,6 @@ export class Contest {
 
   @Prop({ required: false })
   frozen_at?: Date;
-
-  @Prop({ required: false })
-  last_sync_at?: Date;
 }
 
 export const ContestSchema = SchemaFactory.createForClass(Contest);

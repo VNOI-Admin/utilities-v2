@@ -3,22 +3,15 @@
     <!-- Header -->
     <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-8 py-6">
       <div class="flex items-center justify-between mb-4">
-        <div>
-          <h1 class="text-4xl font-display font-bold text-glow flex items-center gap-3">
-            <span class="text-mission-accent">█</span>
-            CONTEST_ARENA
-          </h1>
-          <p class="text-sm font-mono text-gray-500 mt-2 uppercase tracking-wider">
-            COMPETITION CONTROL / VNOJ SYNC INTERFACE
-          </p>
-        </div>
+        <PageHeader
+          title="CONTEST_ARENA"
+          subtitle="COMPETITION CONTROL / VNOJ SYNC INTERFACE"
+        />
         <button
           @click="showCreateModal = true"
           class="btn-primary flex items-center gap-2"
         >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
+          <Plus :size="20" :stroke-width="2" />
           <span>CREATE CONTEST</span>
         </button>
       </div>
@@ -26,62 +19,28 @@
       <!-- Filter Bar -->
       <div class="flex items-center gap-4 flex-wrap">
         <!-- Search -->
-        <div class="flex-1 min-w-[300px] relative group">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="SEARCH CONTEST CODE OR NAME..."
-            class="input-mission w-full pl-10"
-          />
-          <svg
-            class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-mission-accent transition-colors"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
+        <SearchInput
+          v-model="searchQuery"
+          placeholder="SEARCH CONTEST CODE OR NAME..."
+        />
 
         <!-- Status Filter -->
-        <div class="flex items-center gap-2">
-          <span class="tech-label">STATUS:</span>
-          <button
-            v-for="filter in ['all', 'ongoing', 'future', 'past']"
-            :key="filter"
-            @click="selectedFilter = filter"
-            class="px-4 py-2 border font-mono text-xs uppercase tracking-wider transition-all duration-300 relative overflow-hidden group"
-            :class="selectedFilter === filter
-              ? 'border-mission-accent text-mission-accent bg-mission-accent/10 shadow-[0_0_10px_rgba(0,255,157,0.3)]'
-              : 'border-white/20 text-gray-400 hover:border-white/40'"
-          >
-            <span v-if="selectedFilter === filter" class="absolute inset-0 bg-mission-accent/5 animate-pulse"></span>
-            {{ filter }}
-          </button>
-        </div>
+        <FilterButtonGroup
+          v-model="selectedFilter"
+          :options="['all', 'ongoing', 'future', 'past']"
+          label="STATUS:"
+        />
 
         <!-- Stats -->
         <div class="ml-auto flex items-center gap-4">
-          <div class="flex items-center gap-2">
-            <span class="tech-label">TOTAL:</span>
-            <span class="data-value text-lg">{{ filteredContests.length }}</span>
-          </div>
-          <button
+          <StatCounter
+            label="TOTAL:"
+            :value="filteredContests.length"
+          />
+          <RefreshButton
+            :loading="loading"
             @click="refreshContests"
-            :disabled="loading"
-            class="btn-secondary flex items-center gap-2"
-          >
-            <svg
-              class="w-4 h-4"
-              :class="{ 'animate-spin': loading }"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span>SYNC</span>
-          </button>
+          />
         </div>
       </div>
     </div>
@@ -97,17 +56,12 @@
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="filteredContests.length === 0" class="text-center py-24">
-        <div class="inline-block p-8 mission-card">
-          <svg class="w-20 h-20 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-          </svg>
-          <p class="text-gray-500 font-mono text-sm uppercase tracking-wider">NO CONTESTS FOUND</p>
-          <p class="text-gray-600 font-mono text-xs mt-2">
-            {{ searchQuery ? 'Try adjusting your search or filters' : 'Create your first contest to get started' }}
-          </p>
-        </div>
-      </div>
+      <EmptyState
+        v-else-if="filteredContests.length === 0"
+        title="NO CONTESTS FOUND"
+        :subtitle="searchQuery ? 'Try adjusting your search or filters' : 'Create your first contest to get started'"
+        icon="contests"
+      />
 
       <!-- Contests Table -->
       <div v-else class="mission-card overflow-hidden">
@@ -183,18 +137,14 @@
             <!-- Stats -->
             <div class="col-span-1 flex items-center justify-center gap-2">
               <div class="flex items-center gap-1 text-xs font-mono">
-                <svg class="w-3 h-3 text-mission-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
+                <Users :size="12" class="text-mission-cyan" stroke-width="2" />
                 <span class="text-gray-500">—</span>
               </div>
             </div>
 
             <!-- Hover arrow -->
             <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-0 translate-x-2">
-              <svg class="w-5 h-5 text-mission-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-              </svg>
+              <ChevronRight :size="20" class="text-mission-accent" stroke-width="2" />
             </div>
 
             <!-- Bottom glow line -->
@@ -224,9 +174,7 @@
                   @click="closeCreateModal"
                   class="text-gray-400 hover:text-mission-red transition-colors"
                 >
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X :size="24" stroke-width="2" />
                 </button>
               </div>
             </div>
@@ -261,15 +209,12 @@
                   :disabled="creating"
                   class="btn-primary flex-1 flex items-center justify-center gap-2"
                 >
-                  <svg
+                  <Loader2
                     v-if="creating"
-                    class="w-5 h-5 animate-spin"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
+                    :size="20"
+                    class="animate-spin"
+                    stroke-width="2"
+                  />
                   <span>{{ creating ? 'SYNCING FROM VNOJ...' : 'SYNC CONTEST' }}</span>
                 </button>
                 <button
@@ -291,6 +236,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { Plus, Users, ChevronRight, X, Loader2 } from 'lucide-vue-next';
 import { useContestsStore } from '~/stores/contests';
 import type { ContestFilter, ContestEntity } from '~/stores/contests';
 import { internalApi } from '~/services/api';

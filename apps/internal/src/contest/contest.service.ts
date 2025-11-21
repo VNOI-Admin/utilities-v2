@@ -2,7 +2,9 @@ import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.s
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Submission, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { type VnojProblem, type VnojParticipant, type VNOJApi, VNOJ_API_CLIENT } from '@libs/api/vnoj';
+import { Role } from '@libs/common/decorators/role.decorator';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -12,6 +14,9 @@ import type { CreateContestDto } from './dtos/createContest.dto';
 import type { UpdateContestDto } from './dtos/updateContest.dto';
 import type { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
+import { AddParticipantDto, AddParticipantMode, AddParticipantResponseDto } from './dtos/addParticipant.dto';
+import { UserService } from '../user/user.service';
+import { CreateUserDto } from '../user/dtos/createUser.dto';
 
 @Injectable()
 export class ContestService {
@@ -20,7 +25,9 @@ export class ContestService {
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(VNOJ_API_CLIENT) private vnojApi: VNOJApi<unknown>,
+    private userService: UserService,
   ) {}
 
   async findAll(filter: ContestFilter = ContestFilter.ALL): Promise<ContestDocument[]> {
@@ -141,12 +148,31 @@ export class ContestService {
     return contest;
   }
 
-  async delete(code: string): Promise<{ success: boolean }> {
-    const result = await this.contestModel.deleteOne({ code }).exec();
-    if (result.deletedCount === 0) {
+  async delete(code: string): Promise<{ success: boolean; deletedCounts: { problems: number; submissions: number; participants: number } }> {
+    // Verify contest exists
+    const contest = await this.contestModel.findOne({ code }).exec();
+    if (!contest) {
       throw new NotFoundException(`Contest with code ${code} not found`);
     }
-    return { success: true };
+
+    // Delete all related entities
+    const [problemsResult, submissionsResult, participantsResult] = await Promise.all([
+      this.problemModel.deleteMany({ contest: code }).exec(),
+      this.submissionModel.deleteMany({ contest_code: code }).exec(),
+      this.participantModel.deleteMany({ contest: code }).exec(),
+    ]);
+
+    // Delete the contest itself
+    await this.contestModel.deleteOne({ code }).exec();
+
+    return {
+      success: true,
+      deletedCounts: {
+        problems: problemsResult.deletedCount || 0,
+        submissions: submissionsResult.deletedCount || 0,
+        participants: participantsResult.deletedCount || 0,
+      },
+    };
   }
 
   async getSubmissions(code: string, query: GetSubmissionsDto): Promise<PaginatedSubmissionsResponse> {
@@ -256,6 +282,309 @@ export class ContestService {
       throw new BadRequestException(
         `Failed to fetch participants from VNOJ API. Error: ${errorMessage}`,
       );
+    }
+  }
+
+  async addParticipants(code: string, dto: AddParticipantDto): Promise<AddParticipantResponseDto> {
+    // Verify contest exists
+    await this.findOne(code);
+
+    const response: AddParticipantResponseDto = {
+      added: 0,
+      skipped: 0,
+      total: 0,
+      errors: [],
+    };
+
+    try {
+      switch (dto.mode) {
+        case AddParticipantMode.EXISTING_USER:
+          await this.addParticipantWithExistingUser(code, dto, response);
+          break;
+        case AddParticipantMode.CSV_IMPORT:
+          await this.addParticipantsFromCsv(code, dto, response);
+          break;
+        case AddParticipantMode.CREATE_USER:
+          await this.addParticipantWithNewUser(code, dto, response);
+          break;
+        default:
+          throw new BadRequestException('Invalid mode');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new BadRequestException(`Failed to add participants: ${errorMessage}`);
+    }
+
+    return response;
+  }
+
+  private async addParticipantWithExistingUser(
+    code: string,
+    dto: AddParticipantDto,
+    response: AddParticipantResponseDto,
+  ): Promise<void> {
+    if (!dto.participantUsername || !dto.userId) {
+      throw new BadRequestException('participantUsername and userId are required for existing_user mode');
+    }
+
+    // Verify user exists by username
+    const user = await this.userModel.findOne({ username: dto.userId }).exec();
+    if (!user) {
+      throw new BadRequestException(`User ${dto.userId} not found`);
+    }
+
+    response.total = 1;
+
+    // Check if participant already exists
+    const existingParticipant = await this.participantModel
+      .findOne({
+        username: dto.participantUsername,
+        contest: code,
+      })
+      .exec();
+
+    if (existingParticipant) {
+      response.skipped = 1;
+      response.errors.push(`Participant ${dto.participantUsername} already exists`);
+      return;
+    }
+
+    // Create new participant with username (not ObjectId)
+    await this.participantModel.create({
+      username: dto.participantUsername,
+      contest: code,
+      mapToUser: dto.userId, // Use username directly
+    });
+
+    response.added = 1;
+  }
+
+  private async addParticipantsFromCsv(
+    code: string,
+    dto: AddParticipantDto,
+    response: AddParticipantResponseDto,
+  ): Promise<void> {
+    if (!dto.csvData) {
+      throw new BadRequestException('csvData is required for csv_import mode');
+    }
+
+    // Parse CSV data
+    const lines = dto.csvData.trim().split('\n');
+    response.total = lines.length;
+
+    for (const line of lines) {
+      const [participantUsername, backendUsername] = line.split(',').map((s) => s.trim());
+
+      if (!participantUsername || !backendUsername) {
+        response.errors.push(`Invalid CSV line: ${line}`);
+        response.skipped++;
+        continue;
+      }
+
+      try {
+        // Find user by username
+        const user = await this.userModel.findOne({ username: backendUsername }).exec();
+        if (!user) {
+          response.errors.push(`User ${backendUsername} not found for participant ${participantUsername}`);
+          response.skipped++;
+          continue;
+        }
+
+        // Check if participant already exists
+        const existingParticipant = await this.participantModel
+          .findOne({
+            username: participantUsername,
+            contest: code,
+          })
+          .exec();
+
+        if (existingParticipant) {
+          response.errors.push(`Participant ${participantUsername} already exists`);
+          response.skipped++;
+          continue;
+        }
+
+        // Create new participant with username (not ObjectId)
+        await this.participantModel.create({
+          username: participantUsername,
+          contest: code,
+          mapToUser: backendUsername, // Use username directly
+        });
+
+        response.added++;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        response.errors.push(`Error processing ${participantUsername}: ${errorMessage}`);
+        response.skipped++;
+      }
+    }
+  }
+
+  private async addParticipantWithNewUser(
+    code: string,
+    dto: AddParticipantDto,
+    response: AddParticipantResponseDto,
+  ): Promise<void> {
+    if (!dto.participantUsername || !dto.backendUsername || !dto.password || !dto.fullName) {
+      throw new BadRequestException(
+        'participantUsername, backendUsername, password, and fullName are required for create_user mode',
+      );
+    }
+
+    response.total = 1;
+
+    // Check if user already exists
+    const existingUser = await this.userModel.findOne({ username: dto.backendUsername }).exec();
+    if (existingUser) {
+      throw new BadRequestException(`User ${dto.backendUsername} already exists`);
+    }
+
+    // Check if participant already exists
+    const existingParticipant = await this.participantModel
+      .findOne({
+        username: dto.participantUsername,
+        contest: code,
+      })
+      .exec();
+
+    if (existingParticipant) {
+      response.skipped = 1;
+      response.errors.push(`Participant ${dto.participantUsername} already exists`);
+      return;
+    }
+
+    // Create new user using UserService
+    const createUserDto: CreateUserDto = {
+      username: dto.backendUsername,
+      fullName: dto.fullName,
+      password: dto.password,
+      role: Role.CONTESTANT,
+    };
+
+    await this.userService.createUser(createUserDto);
+
+    // Create new participant with username (not ObjectId)
+    await this.participantModel.create({
+      username: dto.participantUsername,
+      contest: code,
+      mapToUser: dto.backendUsername, // Use username directly
+    });
+
+    response.added = 1;
+  }
+
+  async removeParticipant(participantId: string): Promise<{ success: boolean }> {
+    const participant = await this.participantModel.findById(participantId).exec();
+    if (!participant) {
+      throw new NotFoundException(`Participant with id ${participantId} not found`);
+    }
+
+    await this.participantModel.findByIdAndDelete(participantId).exec();
+
+    return { success: true };
+  }
+
+  async resyncContest(code: string): Promise<{
+    contest: ContestDocument;
+    problems: { added: number; existing: number; total: number };
+    participants: { added: number; existing: number; total: number };
+  }> {
+    // Verify contest exists
+    await this.findOne(code);
+
+    try {
+      // Fetch fresh contest metadata from VNOJ API
+      const vnojContestData = await this.vnojApi.contest.getContestMetadata(code);
+
+      // Update contest information
+      const updatedContest = await this.contestModel
+        .findOneAndUpdate(
+          { code },
+          {
+            name: `Contest ${vnojContestData.code}`,
+            start_time: new Date(vnojContestData.start_time),
+            end_time: new Date(vnojContestData.end_time),
+            frozen_at: vnojContestData.frozen_at ? new Date(vnojContestData.frozen_at) : undefined,
+          },
+          { new: true },
+        )
+        .exec();
+
+      if (!updatedContest) {
+        throw new NotFoundException(`Contest with code ${code} not found`);
+      }
+
+      // Sync problems
+      let problemsAdded = 0;
+      let problemsExisting = 0;
+      try {
+        const problems = await this.vnojApi.contest.getProblems(code);
+        for (const problem of problems) {
+          const existingProblem = await this.problemModel
+            .findOne({
+              code: problem.code,
+              contest: code,
+            })
+            .exec();
+
+          if (existingProblem) {
+            problemsExisting++;
+          } else {
+            await this.problemModel.create({
+              code: problem.code,
+              contest: problem.contest,
+            });
+            problemsAdded++;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to sync problems:', error);
+      }
+
+      // Sync participants
+      let participantsAdded = 0;
+      let participantsExisting = 0;
+      try {
+        const vnojParticipants = await this.vnojApi.contest.getParticipants(code);
+        for (const vnojParticipant of vnojParticipants) {
+          const existingParticipant = await this.participantModel
+            .findOne({
+              username: vnojParticipant.user,
+              contest: code,
+            })
+            .exec();
+
+          if (existingParticipant) {
+            participantsExisting++;
+          } else {
+            await this.participantModel.create({
+              username: vnojParticipant.user,
+              contest: code,
+            });
+            participantsAdded++;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to sync participants:', error);
+      }
+
+      return {
+        contest: updatedContest,
+        problems: {
+          added: problemsAdded,
+          existing: problemsExisting,
+          total: problemsAdded + problemsExisting,
+        },
+        participants: {
+          added: participantsAdded,
+          existing: participantsExisting,
+          total: participantsAdded + participantsExisting,
+        },
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to resync contest:', error);
+      throw new BadRequestException(`Failed to resync contest from VNOJ API. Error: ${errorMessage}`);
     }
   }
 }

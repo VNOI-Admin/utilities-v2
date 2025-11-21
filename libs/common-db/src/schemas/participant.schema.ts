@@ -12,7 +12,7 @@ export class Participant {
   @Prop({ required: true })
   contest!: string;
 
-  // Mapped user ID in our system
+  // Mapped user username in our system
   @Prop({ required: false })
   mapToUser?: string;
 }

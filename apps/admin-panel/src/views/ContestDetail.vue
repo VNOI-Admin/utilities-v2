@@ -5,15 +5,7 @@
       <div class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">
-            <router-link
-              to="/contests"
-              class="px-4 py-2 border border-white/20 hover:border-mission-accent hover:text-mission-accent transition-all duration-300 uppercase text-sm tracking-wider flex items-center gap-2"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span>BACK</span>
-            </router-link>
+            <BackButton to="/contests" />
             <div class="h-8 w-px bg-white/20"></div>
             <div v-if="contest">
               <h1 class="text-2xl font-display font-bold flex items-center gap-2 text-glow">
@@ -38,13 +30,28 @@
             </div>
           </div>
           <div class="flex items-center gap-4">
-            <!-- Last sync indicator -->
-            <div v-if="contest?.last_sync_at" class="flex items-center gap-3 px-4 py-2 bg-mission-gray border border-white/10">
-              <span class="tech-label">LAST SYNC</span>
-              <span class="flex items-center gap-2 text-xs font-mono text-gray-400">
-                {{ formatDateTime(contest.last_sync_at) }}
-              </span>
-            </div>
+            <!-- Resync button -->
+            <button
+              @click="resyncContest"
+              :disabled="resyncingContest"
+              class="px-4 py-2 border border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+              :class="{ 'opacity-50 cursor-not-allowed': resyncingContest }"
+            >
+              <RotateCw
+                :size="16"
+                :stroke-width="2"
+                :class="{ 'animate-spin': resyncingContest }"
+              />
+              <span>{{ resyncingContest ? 'RESYNCING...' : 'RESYNC ALL' }}</span>
+            </button>
+            <!-- Delete button -->
+            <button
+              @click="showDeleteModal = true"
+              class="px-4 py-2 border border-mission-red text-mission-red hover:bg-mission-red hover:text-white transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+            >
+              <Trash2 :size="16" :stroke-width="2" />
+              <span>DELETE</span>
+            </button>
           </div>
         </div>
       </div>
@@ -63,9 +70,7 @@
       <!-- Error State -->
       <div v-else-if="error" class="flex items-center justify-center py-24">
         <div class="mission-card p-8 max-w-md text-center border-mission-red">
-          <svg class="w-16 h-16 mx-auto mb-4 text-mission-red" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <AlertCircle :size="64" :stroke-width="2" class="mx-auto mb-4 text-mission-red" />
           <p class="font-mono text-mission-red mb-4">{{ error }}</p>
           <router-link to="/contests" class="btn-secondary inline-block">
             RETURN TO CONTESTS
@@ -88,7 +93,7 @@
                 : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'"
             >
               <div class="flex items-center justify-center gap-2">
-                <span v-html="tab.icon" class="w-4 h-4"></span>
+                <component :is="tab.iconComponent" :size="16" :stroke-width="2" />
                 {{ tab.label }}
               </div>
               <div
@@ -181,41 +186,27 @@
             <div v-show="activeTab === 'participants'">
               <!-- Search and filters -->
               <div class="mb-4 flex items-center gap-4">
-                <div class="flex-1 relative group">
-                  <input
-                    v-model="participantSearch"
-                    type="text"
-                    placeholder="SEARCH PARTICIPANT USERNAME..."
-                    class="input-mission w-full pl-10"
-                  />
-                  <svg
-                    class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-mission-accent transition-colors"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="tech-label">TOTAL:</span>
-                  <span class="data-value text-lg">{{ filteredParticipants.length }}</span>
-                </div>
-                <button
+                <SearchInput
+                  v-model="participantSearch"
+                  placeholder="SEARCH PARTICIPANT USERNAME..."
+                  container-class="flex-1"
+                />
+                <StatCounter
+                  label="TOTAL:"
+                  :value="filteredParticipants.length"
+                />
+                <RefreshButton
+                  :loading="syncingParticipants"
+                  label="SYNC"
+                  button-class="text-xs"
                   @click="syncParticipants"
-                  :disabled="syncingParticipants"
-                  class="btn-secondary flex items-center gap-2 text-xs"
+                />
+                <button
+                  @click="showAddParticipantModal = true"
+                  class="btn-primary flex items-center gap-2 text-xs"
                 >
-                  <svg
-                    class="w-4 h-4"
-                    :class="{ 'animate-spin': syncingParticipants }"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  {{ syncingParticipants ? 'SYNCING...' : 'SYNC' }}
+                  <UserPlus :size="16" :stroke-width="2" />
+                  ADD PARTICIPANT
                 </button>
               </div>
 
@@ -225,9 +216,7 @@
                 <p class="font-mono text-gray-500 text-xs uppercase">Loading participants...</p>
               </div>
               <div v-else-if="filteredParticipants.length === 0" class="text-center py-12 text-gray-500">
-                <svg class="w-16 h-16 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
+                <Users :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
                 <p class="font-mono text-sm uppercase">No participants found</p>
               </div>
               <div v-else class="mission-card overflow-hidden bg-mission-gray">
@@ -245,22 +234,15 @@
                   >
                     <div class="col-span-3 font-mono text-sm">{{ participant.username }}</div>
                     <div class="col-span-4">
-                      <select
+                      <MissionSelect
                         v-if="editingParticipant === participant._id"
                         v-model="selectedUser[participant._id]"
-                        class="input-mission text-sm w-full"
-                        @change="() => {}"
-                      >
-                        <option value="">-- Select User --</option>
-                        <option
-                          v-for="user in availableUsers"
-                          :key="user.username"
-                          :value="user.username"
-                          :disabled="isUserAlreadyMapped(user.username, participant._id)"
-                        >
-                          {{ user.fullName }} (@{{ user.username }})
-                        </option>
-                      </select>
+                        :options="availableUsers"
+                        :option-label="(user: any) => `${user.fullName} (@${user.username})`"
+                        option-value="username"
+                        :disabled-options="(user: any) => isUserAlreadyMapped(user.username, participant._id)"
+                        placeholder="-- Select User --"
+                      />
                       <div v-else class="text-sm">
                         <span v-if="participant.mapToUser" class="data-value">{{ participant.mapToUser }}</span>
                         <span v-else class="text-gray-500">Not mapped</span>
@@ -306,11 +288,18 @@
                       <button
                         v-if="participant.mapToUser && editingParticipant !== participant._id"
                         @click="unlinkParticipant(participant._id)"
-                        class="text-mission-red hover:text-mission-red/80 transition-colors"
+                        class="text-mission-amber hover:text-mission-amber/80 transition-colors"
+                        title="Unlink user"
                       >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <EyeOff :size="16" :stroke-width="2" />
+                      </button>
+                      <button
+                        v-if="editingParticipant !== participant._id"
+                        @click="confirmDeleteParticipant(participant._id, participant.username)"
+                        class="text-mission-red hover:text-mission-red/80 transition-colors"
+                        title="Remove participant"
+                      >
+                        <Trash2 :size="16" :stroke-width="2" />
                       </button>
                     </div>
                   </div>
@@ -322,39 +311,19 @@
             <div v-show="activeTab === 'submissions'">
               <!-- Filters -->
               <div class="mb-4 flex items-center gap-4 flex-wrap">
-                <div class="flex-1 min-w-[250px] relative group">
-                  <input
-                    v-model="submissionSearch"
-                    type="text"
-                    placeholder="SEARCH AUTHOR OR PROBLEM..."
-                    class="input-mission w-full pl-10"
-                  />
-                  <svg
-                    class="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-mission-accent transition-colors"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
+                <SearchInput
+                  v-model="submissionSearch"
+                  placeholder="SEARCH AUTHOR OR PROBLEM..."
+                  container-class="flex-1 min-w-[250px]"
+                />
                 <div class="flex items-center gap-2">
                   <span class="tech-label">STATUS:</span>
-                  <select v-model="submissionStatusFilter" class="input-mission text-sm">
-                    <option value="all">ALL</option>
-                    <option value="AC">AC</option>
-                    <option value="WA">WA</option>
-                    <option value="RTE">RTE</option>
-                    <option value="RE">RE</option>
-                    <option value="IR">IR</option>
-                    <option value="OLE">OLE</option>
-                    <option value="MLE">MLE</option>
-                    <option value="TLE">TLE</option>
-                    <option value="IE">IE</option>
-                    <option value="AB">AB</option>
-                    <option value="CE">CE</option>
-                    <option value="UNKNOWN">UNKNOWN</option>
-                  </select>
+                  <MissionSelect
+                    v-model="submissionStatusFilter"
+                    :options="['all', 'AC', 'WA', 'RTE', 'RE', 'IR', 'OLE', 'MLE', 'TLE', 'IE', 'AB', 'CE', 'UNKNOWN']"
+                    :searchable="false"
+                    container-class="w-32"
+                  />
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="tech-label">SHOWING:</span>
@@ -367,15 +336,11 @@
                   :disabled="loadingSubmissions"
                   class="btn-secondary flex items-center gap-2 text-xs"
                 >
-                  <svg
-                    class="w-4 h-4"
+                  <RotateCw
+                    :size="16"
+                    :stroke-width="2"
                     :class="{ 'animate-spin': loadingSubmissions || autoRefresh }"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
+                  />
                   {{ autoRefresh ? 'AUTO-SYNC' : 'REFRESH' }}
                 </button>
               </div>
@@ -386,9 +351,7 @@
                 <p class="font-mono text-gray-500 text-xs uppercase">Loading submissions...</p>
               </div>
               <div v-else-if="submissions.length === 0" class="text-center py-12 text-gray-500">
-                <svg class="w-16 h-16 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <FileText :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
                 <p class="font-mono text-sm uppercase">No submissions found</p>
               </div>
               <div v-else class="mission-card overflow-hidden bg-mission-gray">
@@ -424,9 +387,7 @@
                     <div class="col-span-2 text-center font-mono">
                       <span v-if="submission.data.old_rank !== submission.data.new_rank">
                         <span class="text-gray-500">{{ submission.data.old_rank }}</span>
-                        <svg class="w-3 h-3 inline mx-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
+                        <ChevronRight :size="12" :stroke-width="2" class="inline mx-1" />
                         <span :class="submission.data.new_rank < submission.data.old_rank ? 'text-mission-accent' : 'text-mission-red'">
                           {{ submission.data.new_rank }}
                         </span>
@@ -458,9 +419,7 @@
                       ? 'border-white/10 text-gray-600 cursor-not-allowed'
                       : 'border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent'"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
+                    <ChevronLeft :size="16" :stroke-width="2" />
                   </button>
 
                   <!-- Page Numbers -->
@@ -489,9 +448,7 @@
                       ? 'border-white/10 text-gray-600 cursor-not-allowed'
                       : 'border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent'"
                   >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
+                    <ChevronRight :size="16" :stroke-width="2" />
                   </button>
                 </div>
               </div>
@@ -504,9 +461,7 @@
                 <p class="font-mono text-gray-500 text-xs uppercase">Loading problems...</p>
               </div>
               <div v-else-if="problems.length === 0" class="text-center py-12 text-gray-500">
-                <svg class="w-16 h-16 mx-auto mb-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+                <FileText :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
                 <p class="font-mono text-sm uppercase">No problems found</p>
               </div>
               <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -536,6 +491,448 @@
         </div>
       </div>
     </main>
+
+    <!-- Delete Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showDeleteModal"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          @click.self="closeDeleteModal"
+        >
+          <div class="mission-card w-full max-w-lg mx-4 border-mission-red overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+              <div class="flex items-center justify-between">
+                <h2 class="text-xl font-display font-bold flex items-center gap-2 text-mission-red">
+                  <AlertCircle :size="24" :stroke-width="2" />
+                  DELETE CONTEST
+                </h2>
+                <button
+                  @click="closeDeleteModal"
+                  class="text-gray-400 hover:text-mission-red transition-colors"
+                >
+                  <X :size="24" :stroke-width="2" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+              <div class="p-4 border border-mission-red bg-mission-red/10">
+                <p class="text-sm font-mono text-mission-red">
+                  ⚠️ WARNING: This action cannot be undone!
+                </p>
+              </div>
+
+              <div class="space-y-3">
+                <p class="text-sm text-gray-300">
+                  You are about to permanently delete the contest <span class="font-mono text-mission-accent">{{ contest?.code }}</span> and all of its related data:
+                </p>
+
+                <ul class="space-y-2 text-sm text-gray-400 font-mono">
+                  <li class="flex items-center gap-2">
+                    <span class="text-mission-red">•</span>
+                    <span>{{ participants.length }} Participant(s)</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <span class="text-mission-red">•</span>
+                    <span>{{ totalSubmissions }} Submission(s)</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <span class="text-mission-red">•</span>
+                    <span>{{ problems.length }} Problem(s)</span>
+                  </li>
+                  <li class="flex items-center gap-2">
+                    <span class="text-mission-red">•</span>
+                    <span>Contest metadata and settings</span>
+                  </li>
+                </ul>
+
+                <p class="text-sm text-gray-400 mt-4">
+                  To confirm deletion, type the contest code below:
+                </p>
+
+                <input
+                  v-model="deleteConfirmText"
+                  type="text"
+                  :placeholder="`Type '${contest?.code}' to confirm`"
+                  class="input-mission font-mono uppercase w-full"
+                  @keyup.enter="deleteConfirmText === contest?.code && handleDeleteContest()"
+                />
+              </div>
+
+              <!-- Error Message -->
+              <div v-if="deleteError" class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono">
+                {{ deleteError }}
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  @click="handleDeleteContest"
+                  :disabled="deleting || deleteConfirmText !== contest?.code"
+                  class="flex-1 px-6 py-3 border font-mono text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2"
+                  :class="deleting || deleteConfirmText !== contest?.code
+                    ? 'border-white/10 text-gray-600 cursor-not-allowed'
+                    : 'border-mission-red text-mission-red hover:bg-mission-red hover:text-white'"
+                >
+                  <RotateCw
+                    v-if="deleting"
+                    :size="20"
+                    :stroke-width="2"
+                    class="animate-spin"
+                  />
+                  <Trash2 v-else :size="20" :stroke-width="2" />
+                  <span>{{ deleting ? 'DELETING...' : 'CONFIRM DELETE' }}</span>
+                </button>
+                <button
+                  type="button"
+                  @click="closeDeleteModal"
+                  :disabled="deleting"
+                  class="btn-secondary px-8"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Add Participant Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showAddParticipantModal"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          @click.self="closeAddParticipantModal"
+        >
+          <div class="mission-card w-full max-w-3xl mx-4 border-mission-accent overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray relative overflow-hidden">
+              <!-- Decorative corner elements -->
+              <div class="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-mission-accent opacity-30"></div>
+              <div class="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-mission-accent opacity-30"></div>
+
+              <div class="flex items-center justify-between relative z-10">
+                <div>
+                  <h2 class="text-xl font-display font-bold flex items-center gap-3 text-mission-accent mb-1">
+                    <UserPlus :size="24" :stroke-width="2" />
+                    PERSONNEL INTAKE
+                  </h2>
+                  <p class="text-xs font-mono text-gray-500 uppercase tracking-wider">CLASSIFIED :: AUTHORIZED ACCESS ONLY</p>
+                </div>
+                <button
+                  @click="closeAddParticipantModal"
+                  class="text-gray-400 hover:text-mission-accent transition-colors"
+                >
+                  <X :size="24" :stroke-width="2" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Mode Selection -->
+            <div class="p-6 border-b border-white/10 bg-mission-dark">
+              <div class="tech-label mb-3">SELECT INTAKE PROTOCOL</div>
+              <div class="grid grid-cols-3 gap-3">
+                <button
+                  @click="addParticipantMode = 'existing_user'"
+                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
+                  :class="addParticipantMode === 'existing_user'
+                    ? 'border-mission-accent bg-mission-accent/10 text-mission-accent'
+                    : 'border-white/20 hover:border-mission-accent/50 text-gray-400 hover:text-gray-200'"
+                >
+                  <div class="absolute inset-0 bg-gradient-to-br from-mission-accent/0 to-mission-accent/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div class="relative z-10">
+                    <Users :size="32" :stroke-width="2" class="mx-auto mb-2" />
+                    <div class="font-mono text-xs uppercase tracking-wider font-bold">Existing User</div>
+                    <div class="text-[10px] text-gray-500 mt-1">Link to registered personnel</div>
+                  </div>
+                </button>
+
+                <button
+                  @click="addParticipantMode = 'csv_import'"
+                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
+                  :class="addParticipantMode === 'csv_import'
+                    ? 'border-mission-cyan bg-mission-cyan/10 text-mission-cyan'
+                    : 'border-white/20 hover:border-mission-cyan/50 text-gray-400 hover:text-gray-200'"
+                >
+                  <div class="absolute inset-0 bg-gradient-to-br from-mission-cyan/0 to-mission-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div class="relative z-10">
+                    <Download :size="32" :stroke-width="2" class="mx-auto mb-2" />
+                    <div class="font-mono text-xs uppercase tracking-wider font-bold">Batch Import</div>
+                    <div class="text-[10px] text-gray-500 mt-1">CSV bulk assignment</div>
+                  </div>
+                </button>
+
+                <button
+                  @click="addParticipantMode = 'create_user'"
+                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
+                  :class="addParticipantMode === 'create_user'
+                    ? 'border-mission-amber bg-mission-amber/10 text-mission-amber'
+                    : 'border-white/20 hover:border-mission-amber/50 text-gray-400 hover:text-gray-200'"
+                >
+                  <div class="absolute inset-0 bg-gradient-to-br from-mission-amber/0 to-mission-amber/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div class="relative z-10">
+                    <UserPlus :size="32" :stroke-width="2" class="mx-auto mb-2" />
+                    <div class="font-mono text-xs uppercase tracking-wider font-bold">New Recruit</div>
+                    <div class="text-[10px] text-gray-500 mt-1">Create user + participant</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6 bg-mission-dark max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <!-- Mode: Existing User -->
+              <div v-if="addParticipantMode === 'existing_user'" class="space-y-4">
+                <div class="p-4 border border-mission-accent/30 bg-mission-accent/5">
+                  <p class="text-xs font-mono text-mission-accent flex items-center gap-2">
+                    <Info :size="16" :stroke-width="2" />
+                    Link a participant to an existing user in the system
+                  </p>
+                </div>
+
+                <div>
+                  <label class="tech-label mb-2 block">PARTICIPANT USERNAME (VNOJ)</label>
+                  <input
+                    v-model="newParticipant.participantUsername"
+                    type="text"
+                    placeholder="Enter VNOJ username"
+                    class="input-mission w-full font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label class="tech-label mb-2 block">SELECT BACKEND USER</label>
+                  <MissionSelect
+                    v-model="newParticipant.userId"
+                    :options="availableUsers"
+                    :option-label="(user: any) => `${user.fullName} (@${user.username})`"
+                    option-value="username"
+                    placeholder="-- Select User --"
+                  />
+                </div>
+              </div>
+
+              <!-- Mode: CSV Import -->
+              <div v-if="addParticipantMode === 'csv_import'" class="space-y-4">
+                <div class="p-4 border border-mission-cyan/30 bg-mission-cyan/5">
+                  <p class="text-xs font-mono text-mission-cyan flex items-center gap-2 mb-2">
+                    <Info :size="16" :stroke-width="2" />
+                    Batch import participants from CSV data
+                  </p>
+                  <p class="text-[11px] font-mono text-gray-400">
+                    Format: participant_username,backend_username (one per line)
+                  </p>
+                  <div class="mt-2 p-2 bg-mission-dark border-l-2 border-mission-cyan font-mono text-[10px] text-gray-500">
+                    Example:<br/>
+                    john_vnoj,john_backend<br/>
+                    jane_vnoj,jane_backend
+                  </div>
+                </div>
+
+                <div>
+                  <label class="tech-label mb-2 block">CSV DATA</label>
+                  <textarea
+                    v-model="newParticipant.csvData"
+                    rows="10"
+                    placeholder="participant1,user1&#10;participant2,user2"
+                    class="input-mission w-full font-mono text-sm resize-none"
+                  ></textarea>
+                  <div class="mt-2 flex items-center gap-2 text-xs font-mono text-gray-500">
+                    <span class="tech-label">LINES:</span>
+                    <span class="data-value">{{ (newParticipant.csvData || '').split('\n').filter(l => l.trim()).length }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mode: Create User -->
+              <div v-if="addParticipantMode === 'create_user'" class="space-y-4">
+                <div class="p-4 border border-mission-amber/30 bg-mission-amber/5">
+                  <p class="text-xs font-mono text-mission-amber flex items-center gap-2">
+                    <AlertCircle :size="16" :stroke-width="2" />
+                    Create a new user and link to participant automatically
+                  </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="tech-label mb-2 block">PARTICIPANT USERNAME (VNOJ)</label>
+                    <input
+                      v-model="newParticipant.participantUsername"
+                      type="text"
+                      placeholder="VNOJ username"
+                      class="input-mission w-full font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="tech-label mb-2 block">BACKEND USERNAME</label>
+                    <input
+                      v-model="newParticipant.backendUsername"
+                      type="text"
+                      placeholder="Backend username"
+                      class="input-mission w-full font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="tech-label mb-2 block">FULL NAME</label>
+                  <input
+                    v-model="newParticipant.fullName"
+                    type="text"
+                    placeholder="Enter full name"
+                    class="input-mission w-full"
+                  />
+                </div>
+
+                <div>
+                  <label class="tech-label mb-2 block">PASSWORD</label>
+                  <input
+                    v-model="newParticipant.password"
+                    type="password"
+                    placeholder="Enter password"
+                    class="input-mission w-full font-mono"
+                  />
+                </div>
+              </div>
+
+              <!-- Error Display -->
+              <div v-if="addParticipantError" class="p-3 border border-mission-red bg-mission-red/10">
+                <p class="text-sm font-mono text-mission-red">{{ addParticipantError }}</p>
+              </div>
+
+              <!-- Success Stats (after submission) -->
+              <div v-if="addParticipantResult" class="space-y-3">
+                <div class="p-4 border border-mission-accent bg-mission-accent/10">
+                  <div class="flex items-center gap-2 mb-3">
+                    <Check :size="20" :stroke-width="2" class="text-mission-accent" />
+                    <span class="font-mono text-sm text-mission-accent uppercase font-bold">Operation Complete</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-4 font-mono text-xs">
+                    <div>
+                      <div class="tech-label mb-1">ADDED</div>
+                      <div class="data-value text-mission-accent text-lg">{{ addParticipantResult.added }}</div>
+                    </div>
+                    <div>
+                      <div class="tech-label mb-1">SKIPPED</div>
+                      <div class="data-value text-mission-amber text-lg">{{ addParticipantResult.skipped }}</div>
+                    </div>
+                    <div>
+                      <div class="tech-label mb-1">TOTAL</div>
+                      <div class="data-value text-lg">{{ addParticipantResult.total }}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Error details -->
+                <div v-if="addParticipantResult.errors && addParticipantResult.errors.length > 0" class="p-3 border border-mission-amber bg-mission-amber/5">
+                  <div class="tech-label mb-2 flex items-center gap-2">
+                    <AlertCircle :size="16" :stroke-width="2" />
+                    ISSUES ENCOUNTERED ({{ addParticipantResult.errors.length }})
+                  </div>
+                  <div class="max-h-32 overflow-y-auto custom-scrollbar space-y-1">
+                    <div
+                      v-for="(error, index) in addParticipantResult.errors"
+                      :key="index"
+                      class="text-xs font-mono text-mission-amber pl-6"
+                    >
+                      • {{ error }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-white/10 bg-mission-gray flex items-center justify-between">
+              <div class="text-xs font-mono text-gray-500 uppercase tracking-wider">
+                MODE: <span class="text-mission-accent">{{ addParticipantMode.replace('_', ' ') }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <button
+                  type="button"
+                  @click="closeAddParticipantModal"
+                  :disabled="addingParticipant"
+                  class="btn-secondary px-6"
+                >
+                  {{ addParticipantResult ? 'CLOSE' : 'CANCEL' }}
+                </button>
+                <button
+                  v-if="!addParticipantResult"
+                  type="button"
+                  @click="handleAddParticipants"
+                  :disabled="addingParticipant || !canSubmitParticipant"
+                  class="px-6 py-3 border-2 font-mono text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2"
+                  :class="addingParticipant || !canSubmitParticipant
+                    ? 'border-white/10 text-gray-600 cursor-not-allowed bg-mission-gray'
+                    : 'border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark shadow-[0_0_20px_rgba(0,255,157,0.3)] hover:shadow-[0_0_30px_rgba(0,255,157,0.5)]'"
+                >
+                  <RotateCw
+                    v-if="addingParticipant"
+                    :size="20"
+                    :stroke-width="2"
+                    class="animate-spin"
+                  />
+                  <Check v-else :size="20" :stroke-width="2" />
+                  <span>{{ addingParticipant ? 'PROCESSING...' : 'EXECUTE' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Delete Participant Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showDeleteParticipantModal"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          @click.self="closeDeleteParticipantModal"
+        >
+          <div class="mission-card w-full max-w-md mx-4 border-mission-red overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+              <h2 class="text-xl font-display font-bold flex items-center gap-2 text-mission-red">
+                <AlertCircle :size="24" :stroke-width="2" />
+                REMOVE PARTICIPANT
+              </h2>
+            </div>
+            <div class="p-6 space-y-4">
+              <p class="text-sm text-gray-300">
+                Are you sure you want to remove participant <span class="font-mono text-mission-accent">{{ participantToDelete?.username }}</span> from this contest?
+              </p>
+              <p class="text-xs text-mission-red font-mono">This action cannot be undone.</p>
+              <div class="flex items-center gap-3 pt-4">
+                <button
+                  @click="handleDeleteParticipant"
+                  :disabled="deletingParticipant"
+                  class="flex-1 px-6 py-3 border font-mono text-sm uppercase tracking-wider transition-all duration-300"
+                  :class="deletingParticipant
+                    ? 'border-white/10 text-gray-600 cursor-not-allowed'
+                    : 'border-mission-red text-mission-red hover:bg-mission-red hover:text-white'"
+                >
+                  {{ deletingParticipant ? 'REMOVING...' : 'CONFIRM' }}
+                </button>
+                <button
+                  @click="closeDeleteParticipantModal"
+                  :disabled="deletingParticipant"
+                  class="btn-secondary px-8"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -547,6 +944,7 @@ import type { ContestEntity, ParticipantEntity, SubmissionEntity, ProblemEntity 
 import { internalApi } from '~/services/api';
 import type { UserEntity } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
+import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, Users2, ClipboardList } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -580,10 +978,10 @@ const getInitialTab = (): TabType => {
 
 const activeTab = ref<TabType>(getInitialTab());
 const tabs = [
-  { id: 'details', label: 'Details', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>' },
-  { id: 'participants', label: 'Participants', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>' },
-  { id: 'submissions', label: 'Submissions', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>' },
-  { id: 'problems', label: 'Problems', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>' },
+  { id: 'details', label: 'Details', iconComponent: Info },
+  { id: 'participants', label: 'Participants', iconComponent: Users },
+  { id: 'submissions', label: 'Submissions', iconComponent: ClipboardList },
+  { id: 'problems', label: 'Problems', iconComponent: FileText },
 ];
 
 // Participant state
@@ -592,6 +990,9 @@ const editingParticipant = ref<string | null>(null);
 const selectedUser = ref<Record<string, string>>({});
 const linkingParticipant = ref<string | null>(null);
 const syncingParticipants = ref(false);
+
+// Resync state
+const resyncingContest = ref(false);
 
 // Submission state
 const submissionSearch = ref('');
@@ -602,6 +1003,32 @@ const pageSize = ref(100);
 const totalSubmissions = ref(0);
 const totalPages = ref(0);
 let refreshInterval: NodeJS.Timeout | null = null;
+
+// Delete modal state
+const showDeleteModal = ref(false);
+const deleting = ref(false);
+const deleteError = ref('');
+const deleteConfirmText = ref('');
+
+// Add participant modal state
+const showAddParticipantModal = ref(false);
+const addParticipantMode = ref<'existing_user' | 'csv_import' | 'create_user'>('existing_user');
+const addingParticipant = ref(false);
+const addParticipantError = ref('');
+const addParticipantResult = ref<{added: number; skipped: number; total: number; errors: string[]} | null>(null);
+const newParticipant = ref({
+  participantUsername: '',
+  userId: '',
+  csvData: '',
+  backendUsername: '',
+  fullName: '',
+  password: '',
+});
+
+// Delete participant modal state
+const showDeleteParticipantModal = ref(false);
+const deletingParticipant = ref(false);
+const participantToDelete = ref<{id: string; username: string} | null>(null);
 
 // Computed
 const contestStatus = computed(() => {
@@ -616,6 +1043,22 @@ const filteredParticipants = computed(() => {
     p.username.toLowerCase().includes(query) ||
     (p.mapToUser && p.mapToUser.toLowerCase().includes(query))
   );
+});
+
+const canSubmitParticipant = computed(() => {
+  if (addParticipantMode.value === 'existing_user') {
+    return newParticipant.value.participantUsername && newParticipant.value.userId;
+  } else if (addParticipantMode.value === 'csv_import') {
+    return newParticipant.value.csvData && newParticipant.value.csvData.trim().length > 0;
+  } else if (addParticipantMode.value === 'create_user') {
+    return (
+      newParticipant.value.participantUsername &&
+      newParticipant.value.backendUsername &&
+      newParticipant.value.fullName &&
+      newParticipant.value.password
+    );
+  }
+  return false;
 });
 
 // Methods
@@ -735,7 +1178,12 @@ async function loadSubmissions() {
   loadingSubmissions.value = true;
 
   try {
-    const queryParams: Record<string, any> = {
+    const queryParams: {
+      page: number;
+      limit: number;
+      search?: string;
+      status?: 'AC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
+    } = {
       page: currentPage.value,
       limit: pageSize.value,
     };
@@ -747,17 +1195,17 @@ async function loadSubmissions() {
 
     // Add status filter parameter
     if (submissionStatusFilter.value && submissionStatusFilter.value !== 'all') {
-      queryParams.status = submissionStatusFilter.value;
+      queryParams.status = submissionStatusFilter.value as any;
     }
 
-    const response = await internalApi.contest.getSubmissions(contest.value.code, { query: queryParams });
+    const response = await internalApi.contest.getSubmissions(contest.value.code, queryParams);
 
     // Handle paginated response
-    submissions.value = response.data;
+    submissions.value = response.data as any[];
     totalSubmissions.value = response.pagination.total;
     totalPages.value = response.pagination.totalPages;
 
-    contestsStore.setSubmissions(response.data);
+    contestsStore.setSubmissions(response.data as any[]);
   } catch (err: any) {
     toast.error('Failed to load submissions');
     console.error('Load submissions error:', err);
@@ -968,6 +1416,36 @@ async function syncParticipants() {
   }
 }
 
+async function resyncContest() {
+  if (!contest.value) return;
+
+  resyncingContest.value = true;
+
+  try {
+    const result = await internalApi.contest.resyncContest(contest.value.code);
+
+    // Update contest data
+    contest.value = result.contest;
+    contestsStore.setCurrentContest(result.contest);
+
+    // Reload all data
+    await Promise.all([
+      loadParticipants(),
+      loadProblems(),
+    ]);
+
+    // Show detailed success message
+    toast.success(
+      `Contest resynced! Problems: ${result.problems.added} added (${result.problems.total} total), Participants: ${result.participants.added} added (${result.participants.total} total)`
+    );
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Failed to resync contest');
+    console.error('Resync contest error:', err);
+  } finally {
+    resyncingContest.value = false;
+  }
+}
+
 function startAutoRefresh() {
   if (contestStatus.value === 'ongoing') {
     autoRefresh.value = true;
@@ -982,6 +1460,133 @@ function stopAutoRefresh() {
   if (refreshInterval) {
     clearInterval(refreshInterval);
     refreshInterval = null;
+  }
+}
+
+function closeDeleteModal() {
+  showDeleteModal.value = false;
+  deleteError.value = '';
+  deleteConfirmText.value = '';
+}
+
+async function handleDeleteContest() {
+  if (!contest.value || deleteConfirmText.value !== contest.value.code) {
+    return;
+  }
+
+  deleting.value = true;
+  deleteError.value = '';
+
+  try {
+    const result = await internalApi.contest.delete(contest.value.code);
+
+    // Remove from store
+    contestsStore.removeContest(contest.value.code);
+
+    // Show success message with deletion counts
+    toast.success(
+      `Contest deleted successfully! Removed: ${result.deletedCounts.participants} participants, ${result.deletedCounts.submissions} submissions, ${result.deletedCounts.problems} problems`
+    );
+
+    // Navigate back to contests list
+    router.push('/contests');
+  } catch (error: any) {
+    deleteError.value = error.response?.data?.message || 'Failed to delete contest. Please try again.';
+    console.error('Delete contest error:', error);
+  } finally {
+    deleting.value = false;
+  }
+}
+
+// Add participant modal functions
+function closeAddParticipantModal() {
+  showAddParticipantModal.value = false;
+  addParticipantError.value = '';
+  addParticipantResult.value = null;
+  // Reset form
+  newParticipant.value = {
+    participantUsername: '',
+    userId: '',
+    csvData: '',
+    backendUsername: '',
+    fullName: '',
+    password: '',
+  };
+}
+
+async function handleAddParticipants() {
+  if (!contest.value || !canSubmitParticipant.value) return;
+
+  addingParticipant.value = true;
+  addParticipantError.value = '';
+  addParticipantResult.value = null;
+
+  try {
+    const payload: any = {
+      mode: addParticipantMode.value,
+    };
+
+    if (addParticipantMode.value === 'existing_user') {
+      payload.participantUsername = newParticipant.value.participantUsername;
+      payload.userId = newParticipant.value.userId;
+    } else if (addParticipantMode.value === 'csv_import') {
+      payload.csvData = newParticipant.value.csvData;
+    } else if (addParticipantMode.value === 'create_user') {
+      payload.participantUsername = newParticipant.value.participantUsername;
+      payload.backendUsername = newParticipant.value.backendUsername;
+      payload.fullName = newParticipant.value.fullName;
+      payload.password = newParticipant.value.password;
+    }
+
+    const result = await internalApi.contest.addParticipants(contest.value.code, payload);
+    addParticipantResult.value = result;
+
+    // Reload participants list
+    await loadParticipants();
+
+    if (result.added > 0) {
+      toast.success(`Successfully added ${result.added} participant(s)`);
+    }
+  } catch (error: any) {
+    addParticipantError.value = error.response?.data?.message || 'Failed to add participants. Please try again.';
+    console.error('Add participants error:', error);
+  } finally {
+    addingParticipant.value = false;
+  }
+}
+
+// Delete participant functions
+function confirmDeleteParticipant(participantId: string, username: string) {
+  participantToDelete.value = { id: participantId, username };
+  showDeleteParticipantModal.value = true;
+}
+
+function closeDeleteParticipantModal() {
+  showDeleteParticipantModal.value = false;
+  participantToDelete.value = null;
+}
+
+async function handleDeleteParticipant() {
+  if (!participantToDelete.value) return;
+
+  deletingParticipant.value = true;
+
+  try {
+    await internalApi.contest.removeParticipant(participantToDelete.value.id);
+
+    // Remove from local state
+    const index = participants.value.findIndex(p => p._id === participantToDelete.value?.id);
+    if (index !== -1) {
+      participants.value.splice(index, 1);
+    }
+
+    toast.success(`Participant ${participantToDelete.value.username} removed successfully`);
+    closeDeleteParticipantModal();
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to remove participant');
+    console.error('Remove participant error:', error);
+  } finally {
+    deletingParticipant.value = false;
   }
 }
 
@@ -1021,5 +1626,45 @@ onUnmounted(() => {
 
 .max-h-\[600px\]::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 255, 157, 0.5);
+}
+
+/* Custom scrollbar for modals */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 157, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 157, 0.5);
+}
+
+/* Modal animations */
+@keyframes slideInModal {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 </style>

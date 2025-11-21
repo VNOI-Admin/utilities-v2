@@ -18,6 +18,7 @@ import { UpdateContestDto } from './dtos/updateContest.dto';
 import { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { ContestFilter, GetContestsDto } from './dtos/getContests.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
+import { AddParticipantDto, AddParticipantResponseDto } from './dtos/addParticipant.dto';
 
 @ApiTags('Contest')
 @ApiBearerAuth()
@@ -85,5 +86,24 @@ export class ContestController {
   @ApiOperation({ summary: 'Sync participants from VNOJ API' })
   async syncParticipants(@Param('code') code: string) {
     return this.contestService.syncParticipants(code);
+  }
+
+  @Post(':code/resync')
+  @ApiOperation({ summary: 'Resync contest information, problems, and participants from VNOJ API' })
+  async resyncContest(@Param('code') code: string) {
+    return this.contestService.resyncContest(code);
+  }
+
+  @Post(':code/participants')
+  @ApiOperation({ summary: 'Manually add participants to contest' })
+  @ApiOkResponse({ type: AddParticipantResponseDto })
+  async addParticipants(@Param('code') code: string, @Body() dto: AddParticipantDto) {
+    return this.contestService.addParticipants(code, dto);
+  }
+
+  @Delete('participants/:participantId')
+  @ApiOperation({ summary: 'Remove participant from contest' })
+  async removeParticipant(@Param('participantId') participantId: string) {
+    return this.contestService.removeParticipant(participantId);
   }
 }

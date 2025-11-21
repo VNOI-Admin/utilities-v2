@@ -9,6 +9,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { ContestController } from './contest.controller';
 import { ContestService } from './contest.service';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ContestService } from './contest.service';
       { name: User.name, schema: UserSchema },
     ]),
     VNOJApiModule.forRootAsync(),
+    UserModule,
   ],
   controllers: [ContestController],
   providers: [ContestService],

@@ -56,9 +56,15 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     try {
       this.logger.log(`Syncing submissions for contest ${contest.code}`);
 
-      // Determine from_timestamp based on last sync
-      const fromTimestamp = contest.last_sync_at
-        ? contest.last_sync_at.toISOString()
+      // Find the latest submission for this contest to determine from_timestamp
+      const latestSubmission = await this.submissionModel
+        .findOne({ contest_code: contest.code })
+        .sort({ submittedAt: -1 })
+        .exec();
+
+      // Use latest submission timestamp or contest start time if no submissions exist
+      const fromTimestamp = latestSubmission
+        ? latestSubmission.submittedAt.toISOString()
         : contest.start_time.toISOString();
 
       // Fetch submissions from VNOJ
@@ -67,9 +73,6 @@ export class SyncSubmissionsProcessor extends WorkerHost {
       });
 
       this.logger.log(`Fetched ${vnojSubmissions.length} submissions for contest ${contest.code}`);
-
-      // Track the latest submission timestamp
-      let latestSubmissionTimestamp: Date | null = null;
 
       // Process each submission
       for (const vnojSub of vnojSubmissions) {
@@ -82,11 +85,6 @@ export class SyncSubmissionsProcessor extends WorkerHost {
         // Calculate penalty (time from contest start in minutes)
         const submittedAt = new Date(vnojSub.submittedAt);
         const penaltyMinutes = Math.floor((submittedAt.getTime() - contest.start_time.getTime()) / 60000);
-
-        // Track the latest submission timestamp
-        if (!latestSubmissionTimestamp || submittedAt > latestSubmissionTimestamp) {
-          latestSubmissionTimestamp = submittedAt;
-        }
 
         // Create or update submission
         await this.submissionModel.findOneAndUpdate(
@@ -115,14 +113,6 @@ export class SyncSubmissionsProcessor extends WorkerHost {
             new: true,
           },
         );
-      }
-
-      // Update last sync time to the timestamp of the last submission synced
-      // This prevents missing submissions if the API caps the response
-      if (latestSubmissionTimestamp) {
-        contest.last_sync_at = latestSubmissionTimestamp;
-        await contest.save();
-        this.logger.log(`Updated last_sync_at to ${latestSubmissionTimestamp.toISOString()} for contest ${contest.code}`);
       }
 
       this.logger.log(`Completed syncing submissions for contest ${contest.code}`);

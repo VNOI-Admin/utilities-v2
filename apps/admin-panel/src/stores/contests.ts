@@ -9,7 +9,6 @@ export interface ContestEntity {
   start_time: string | Date;
   end_time: string | Date;
   frozen_at?: string | Date;
-  last_sync_at?: string | Date;
 }
 
 export interface ParticipantEntity {

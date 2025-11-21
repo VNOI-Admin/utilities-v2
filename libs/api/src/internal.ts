@@ -105,8 +105,54 @@ export interface UpdateContestDto {
   frozen_at?: string;
 }
 
+export interface PaginationMetadata {
+  /** Current page number */
+  page: number;
+  /** Number of items per page */
+  limit: number;
+  /** Total number of items */
+  total: number;
+  /** Total number of pages */
+  totalPages: number;
+}
+
+export interface PaginatedSubmissionsResponse {
+  /** Array of submissions */
+  data: object[];
+  /** Pagination metadata */
+  pagination: PaginationMetadata;
+}
+
 export interface LinkParticipantDto {
   user?: string;
+}
+
+export interface AddParticipantDto {
+  /** Mode for adding participant */
+  mode: 'existing_user' | 'csv_import' | 'create_user';
+  /** Participant username (VNOJ username) - required for existing_user and create_user modes */
+  participantUsername?: string;
+  /** User ID to link to - required for existing_user mode */
+  userId?: string;
+  /** CSV string with format: participant_username,backend_username (one per line) - required for csv_import mode */
+  csvData?: string;
+  /** Full name for new user - required for create_user mode */
+  fullName?: string;
+  /** Backend username for new user - required for create_user mode */
+  backendUsername?: string;
+  /** Password for new user - required for create_user mode */
+  password?: string;
+}
+
+export interface AddParticipantResponseDto {
+  /** Number of participants successfully added */
+  added: number;
+  /** Number of participants that were skipped (already exist) */
+  skipped: number;
+  /** Total number of participants processed */
+  total: number;
+  /** Array of errors that occurred during processing */
+  errors: string[];
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -726,11 +772,32 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @request GET:/contests/{code}/submissions
      * @secure
      */
-    getSubmissions: (code: string, params: RequestParams = {}) =>
-      this.request<any, any>({
+    getSubmissions: (
+      code: string,
+      query?: {
+        /**
+         * Page number (1-indexed)
+         * @default 1
+         */
+        page?: number;
+        /**
+         * Number of submissions per page
+         * @default 100
+         */
+        limit?: number;
+        /** Search by author or problem code */
+        search?: string;
+        /** Filter by submission status */
+        status?: 'AC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<PaginatedSubmissionsResponse, any>({
         path: `/contests/${code}/submissions`,
         method: 'GET',
+        query: query,
         secure: true,
+        format: 'json',
         ...params,
       }),
 
@@ -748,6 +815,26 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         path: `/contests/${code}/participants`,
         method: 'GET',
         secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name AddParticipants
+     * @summary Manually add participants to contest
+     * @request POST:/contests/{code}/participants
+     * @secure
+     */
+    addParticipants: (code: string, data: AddParticipantDto, params: RequestParams = {}) =>
+      this.request<AddParticipantResponseDto, any>({
+        path: `/contests/${code}/participants`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
         ...params,
       }),
 
@@ -797,9 +884,43 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @secure
      */
     syncParticipants: (code: string, params: RequestParams = {}) =>
-      this.request<{ added: number; skipped: number; total: number }, any>({
+      this.request<any, any>({
         path: `/contests/${code}/sync-participants`,
         method: 'POST',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name ResyncContest
+     * @summary Resync contest information, problems, and participants from VNOJ API
+     * @request POST:/contests/{code}/resync
+     * @secure
+     */
+    resyncContest: (code: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}/resync`,
+        method: 'POST',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name RemoveParticipant
+     * @summary Remove participant from contest
+     * @request DELETE:/contests/participants/{participantId}
+     * @secure
+     */
+    removeParticipant: (participantId: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/participants/${participantId}`,
+        method: 'DELETE',
         secure: true,
         ...params,
       }),
