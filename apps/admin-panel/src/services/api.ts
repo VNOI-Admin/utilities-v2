@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from 'axios';
 import getEnv from '~/common/getEnv';
 import { InternalApi } from '@libs/api/internal';
+import { PrintingApi } from '@libs/api/printing';
 
 // Create axios instances for each service
 const AUTH_ENDPOINT = getEnv('VITE_APP_AUTH_ENDPOINT') || 'http://localhost:8002';
@@ -69,6 +70,29 @@ export const internalApi = new InternalApi({
 
 // Apply the same error handling interceptor to the InternalApi instance
 internalApi.instance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Create typed Printing API client instance
+export const printingApi = new PrintingApi({
+  baseURL: PRINTING_ENDPOINT,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Apply the same error handling interceptor to the PrintingApi instance
+printingApi.instance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
