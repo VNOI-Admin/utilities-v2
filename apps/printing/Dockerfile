@@ -29,7 +29,7 @@ WORKDIR /app
 
 COPY --from=installer /app .
 
-EXPOSE 8003
+EXPOSE 8004
 
 USER node
 
