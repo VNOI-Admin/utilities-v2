@@ -46,7 +46,7 @@ export class GuestProcessor extends WorkerHost {
       }
 
       this.logger.log('Guest adjustment completed successfully');
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Failed to adjust guest count: ${error.message}`, error.stack);
       throw error; // Re-throw to mark job as failed
     }

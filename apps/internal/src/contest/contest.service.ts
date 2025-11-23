@@ -459,6 +459,7 @@ export class ContestService {
       fullName: dto.fullName,
       password: dto.password,
       role: Role.CONTESTANT,
+      isActive: true,
     };
 
     await this.userService.createUser(createUserDto);
