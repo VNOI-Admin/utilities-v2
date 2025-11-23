@@ -19,7 +19,7 @@ export default defineConfig({
         'vue',
         'vue-router',
         '@vueuse/core',
-        { 'js-cookie': ['default', 'Cookies'] },
+        { 'js-cookie': ['Cookies'] },
         { 'vue-toastification': ['useToast'] },
       ],
       dts: 'src/auto-imports.d.ts',

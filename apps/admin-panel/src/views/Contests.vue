@@ -238,7 +238,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Plus, Users, ChevronRight, X, Loader2 } from 'lucide-vue-next';
 import { useContestsStore } from '~/stores/contests';
-import type { ContestFilter, ContestEntity } from '~/stores/contests';
+import type { ContestFilter } from '~/stores/contests';
 import { internalApi } from '~/services/api';
 import { useToast } from 'vue-toastification';
 

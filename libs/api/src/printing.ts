@@ -20,7 +20,7 @@ export interface PrintJobEntity {
   username: string;
   clientId: string;
   priority: number;
-  status: object;
+  status: 'queued' | 'done';
   /** @format date-time */
   requestedAt: string;
 }

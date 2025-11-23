@@ -944,7 +944,7 @@ import type { ContestEntity, ParticipantEntity, SubmissionEntity, ProblemEntity 
 import { internalApi } from '~/services/api';
 import type { UserEntity } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
-import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, Users2, ClipboardList } from 'lucide-vue-next';
+import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -1062,19 +1062,20 @@ const canSubmitParticipant = computed(() => {
 });
 
 // Methods
-function formatDateTime(date: string | Date): string {
-  const d = new Date(date);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-
-  if (days > 0) return `${days}d ${hours % 24}h ago`;
-  if (hours > 0) return `${hours}h ${minutes % 60}m ago`;
-  if (minutes > 0) return `${minutes}m ago`;
-  return 'Just now';
-}
+// Unused - may be needed for future features
+// function formatDateTime(date: string | Date): string {
+//   const d = new Date(date);
+//   const now = new Date();
+//   const diff = now.getTime() - d.getTime();
+//   const minutes = Math.floor(diff / 60000);
+//   const hours = Math.floor(minutes / 60);
+//   const days = Math.floor(hours / 24);
+//
+//   if (days > 0) return `${days}d ${hours % 24}h ago`;
+//   if (hours > 0) return `${hours}h ${minutes % 60}m ago`;
+//   if (minutes > 0) return `${minutes}m ago`;
+//   return 'Just now';
+// }
 
 function formatFullDateTime(date: string | Date): string {
   const d = new Date(date);
@@ -1086,13 +1087,14 @@ function formatFullDateTime(date: string | Date): string {
   return `${day}/${month}/${year} ${hours}:${minutes}`;
 }
 
-function formatTime(date: string | Date): string {
-  const d = new Date(date);
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  const seconds = d.getSeconds().toString().padStart(2, '0');
-  return `${hours}:${minutes}:${seconds}`;
-}
+// Unused - may be needed for future features
+// function formatTime(date: string | Date): string {
+//   const d = new Date(date);
+//   const hours = d.getHours().toString().padStart(2, '0');
+//   const minutes = d.getMinutes().toString().padStart(2, '0');
+//   const seconds = d.getSeconds().toString().padStart(2, '0');
+//   return `${hours}:${minutes}:${seconds}`;
+// }
 
 function getStatusClass(status: string): string {
   const classes: Record<string, string> = {

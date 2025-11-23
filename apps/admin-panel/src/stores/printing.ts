@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { PrintJobEntity, PrintClientEntity } from '@libs/api/printing';
-import { internalApi, internalClient } from '~/services/api';
+import { internalClient } from '~/services/api';
 
 export const usePrintingStore = defineStore('printing', () => {
   // State

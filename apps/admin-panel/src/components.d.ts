@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AlertCircle: typeof import('lucide-vue-next')['AlertCircle']
     BackButton: typeof import('./components/BackButton.vue')['default']
     EmptyState: typeof import('./components/EmptyState.vue')['default']
     FilterButtonGroup: typeof import('./components/FilterButtonGroup.vue')['default']

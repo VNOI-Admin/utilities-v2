@@ -218,10 +218,10 @@
           <label class="tech-label block mb-2">ROLE *</label>
           <div class="grid grid-cols-4 gap-2">
             <button
-              v-for="role in ['admin', 'coach', 'contestant', 'guest']"
+              v-for="role in ['admin', 'coach', 'contestant', 'guest'] as const"
               :key="role"
               type="button"
-              @click="newUser.role = role"
+              @click="newUser.role = role as 'admin' | 'coach' | 'contestant' | 'guest'"
               class="px-4 py-3 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
               :class="newUser.role === role
                 ? 'border-mission-accent text-mission-accent bg-mission-accent/10'

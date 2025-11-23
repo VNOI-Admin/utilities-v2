@@ -82,7 +82,7 @@ const router = createRouter({
 });
 
 // Navigation guard for authentication and role-based access
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore();
   const requiresAuth = to.meta.requiresAuth !== false;
 

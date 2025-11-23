@@ -24,7 +24,7 @@ export interface UserEntity {
   fullName: string;
   isActive: boolean;
   vpnIpAddress: string;
-  role: string;
+  role: 'contestant' | 'coach' | 'admin' | 'guest';
   machineUsage: MachineUsageEntity;
   group: string;
   streamUrl?: string;
@@ -37,6 +37,7 @@ export interface CreateUserDto {
   password: string;
   /** @default "contestant" */
   role: 'contestant' | 'coach' | 'admin' | 'guest';
+  group?: string;
   isActive?: boolean;
 }
 

@@ -166,9 +166,10 @@ const onlineCount = computed(() =>
   users.value.filter(u => u.machineUsage.isOnline).length
 );
 
-const activeCount = computed(() =>
-  users.value.filter(u => u.isActive).length
-);
+// Unused but may be needed for future features
+// const activeCount = computed(() =>
+//   users.value.filter(u => u.isActive).length
+// );
 
 async function loadUsers() {
   loading.value = true;

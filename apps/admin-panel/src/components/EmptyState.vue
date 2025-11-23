@@ -30,10 +30,11 @@ import {
   FileText,
   ClipboardList,
   Archive,
+  Printer,
   type LucideIcon
 } from 'lucide-vue-next';
 
-type IconType = 'users' | 'contests' | 'participants' | 'problems' | 'submissions' | 'generic';
+type IconType = 'users' | 'contests' | 'participants' | 'problems' | 'submissions' | 'generic' | 'printer';
 type IconSize = 'sm' | 'md' | 'lg' | 'xl';
 
 interface Props {
@@ -58,6 +59,7 @@ const iconMap: Record<IconType, LucideIcon> = {
   problems: FileText,
   submissions: ClipboardList,
   generic: Archive,
+  printer: Printer,
 };
 
 const iconComponent = computed(() => iconMap[props.icon]);
