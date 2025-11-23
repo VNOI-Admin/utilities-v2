@@ -52,6 +52,16 @@ services:
     ports:
       - "8004:8004"
 
+  sync:
+    image: utilities/sync
+    container_name: utilities_sync
+    networks:
+      - utilities_network
+    env_file:
+      - .docker.env
+    ports:
+      - "8005:8005"
+
   mongo:
     image: mongo
     container_name: utilities_mongo
