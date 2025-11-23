@@ -154,6 +154,7 @@ export class UserService implements OnModuleInit {
         vpnIpAddress,
         keyPair,
         machineUsage: new MachineUsage(),
+        isActive: createUserDto.isActive ?? true,
       });
 
       return new UserEntity(user.toObject());

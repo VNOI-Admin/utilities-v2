@@ -7,14 +7,13 @@ import { Model } from 'mongoose';
 import * as ping from 'ping';
 
 import { QUEUE_NAMES } from '../constants';
+import { Role } from '@libs/common/decorators/role.decorator';
 
 @Processor(QUEUE_NAMES.PING_USERS)
 export class PingUsersProcessor extends WorkerHost {
   private readonly logger = new Logger(PingUsersProcessor.name);
 
-  constructor(
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-  ) {
+  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {
     super();
   }
 
@@ -29,6 +28,8 @@ export class PingUsersProcessor extends WorkerHost {
 
     this.logger.log(`Pinging ${users.length} users`);
 
+    const now = new Date();
+
     await Promise.all(
       users.map(async (user) => {
         const res = await ping.promise.probe(user.vpnIpAddress, {
@@ -38,9 +39,20 @@ export class PingUsersProcessor extends WorkerHost {
         if (res.alive && res.time !== 'unknown') {
           user.machineUsage.ping = res.time;
           user.machineUsage.isOnline = true;
+
+          if (user.role === Role.GUEST) user.machineUsage.lastReportedAt = now;
         } else {
           user.machineUsage.ping = 0;
           user.machineUsage.isOnline = false;
+
+          // Deactivate guest user if offline for 30 minutes
+          if (
+            user.role === Role.GUEST &&
+            user.machineUsage.lastReportedAt &&
+            now.getTime() - user.machineUsage.lastReportedAt.getTime() >= 30 * 60 * 1000
+          ) {
+            user.isActive = false;
+          }
         }
         await user.save();
       }),

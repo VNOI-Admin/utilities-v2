@@ -36,14 +36,15 @@ export interface CreateUserDto {
   fullName: string;
   password: string;
   /** @default "contestant" */
-  role: 'contestant' | 'coach' | 'admin';
+  role: 'contestant' | 'coach' | 'admin' | 'guest';
+  isActive?: boolean;
 }
 
 export interface UpdateUserDto {
   password?: string;
   fullName?: string;
   /** @default "contestant" */
-  role?: 'contestant' | 'coach' | 'admin';
+  role?: 'contestant' | 'coach' | 'admin' | 'guest';
   group?: string;
   isActive?: boolean;
 }
@@ -316,7 +317,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         orderBy?: string;
         /** Search query */
         q?: string;
-        role?: 'contestant' | 'coach' | 'admin';
+        role?: 'contestant' | 'coach' | 'admin' | 'guest';
         /** Return current user based on access token */
         me?: boolean;
         /**
