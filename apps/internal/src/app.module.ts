@@ -11,6 +11,7 @@ import { UserModule } from './user/user.module';
 import { ContestModule } from './contest/contest.module';
 import { GuardsModule } from '@libs/common/guards/guards.module';
 import { PrintingModule } from './printing/printing.module';
+import { GuestModule } from './guest/guest.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PrintingModule } from './printing/printing.module';
     DatabaseModule,
     UserModule,
     GroupModule,
+    GuestModule,
     OverlayModule,
     ScrapingModule,
     GuardsModule,

@@ -31,6 +31,12 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] },
     },
     {
+      path: '/guests',
+      name: 'Guests',
+      component: () => import('~/views/Guests.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
       path: '/contests',
       name: 'Contests',
       component: () => import('~/views/Contests.vue'),

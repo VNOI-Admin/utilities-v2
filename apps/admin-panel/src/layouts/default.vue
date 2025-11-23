@@ -65,7 +65,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { authService } from '~/services/auth';
 import { useToast } from 'vue-toastification';
-import { Home, Users, CheckCircle, Video, Printer, Monitor } from 'lucide-vue-next';
+import { Home, Users, UserPlus, CheckCircle, Video, Printer, Monitor } from 'lucide-vue-next';
 
 const router = useRouter();
 const route = useRoute();
@@ -83,6 +83,12 @@ const allMenuItems = [
     label: 'Users',
     path: '/users',
     iconComponent: Users,
+    roles: ['admin']
+  },
+  {
+    label: 'Guests',
+    path: '/guests',
+    iconComponent: UserPlus,
     roles: ['admin']
   },
   {

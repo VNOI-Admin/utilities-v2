@@ -27,7 +27,7 @@
         <!-- Role Filter -->
         <FilterButtonGroup
           v-model="selectedRole"
-          :options="['all', 'admin', 'coach', 'contestant']"
+          :options="['all', 'admin', 'coach', 'contestant', 'guest']"
           label="ROLE:"
         />
 
@@ -216,9 +216,9 @@
         <!-- Role -->
         <div>
           <label class="tech-label block mb-2">ROLE *</label>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-4 gap-2">
             <button
-              v-for="role in ['admin', 'coach', 'contestant']"
+              v-for="role in ['admin', 'coach', 'contestant', 'guest']"
               :key="role"
               type="button"
               @click="newUser.role = role"
@@ -287,7 +287,7 @@ const toast = useToast();
 // State
 const loading = ref(false);
 const searchQuery = ref('');
-const selectedRole = ref<'all' | 'admin' | 'coach' | 'contestant'>('all');
+const selectedRole = ref<'all' | 'admin' | 'coach' | 'contestant' | 'guest'>('all');
 const onlineOnly = ref(false);
 const activeOnly = ref(true);
 

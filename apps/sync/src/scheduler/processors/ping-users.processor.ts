@@ -21,7 +21,7 @@ export class PingUsersProcessor extends WorkerHost {
     this.logger.log(`Processing job ${job.id} - ${job.name}`);
 
     const users = await this.userModel.find({
-      role: 'contestant',
+      role: { $in: [Role.CONTESTANT, Role.GUEST] },
       vpnIpAddress: { $ne: null },
       isActive: true,
     });
