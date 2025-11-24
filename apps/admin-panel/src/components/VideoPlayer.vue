@@ -45,6 +45,13 @@ function initializePlayer() {
     return;
   }
 
+  // Ensure the element is in the DOM before initializing
+  if (!document.body.contains(videoElement.value)) {
+    console.warn('Video element not yet in DOM, retrying...');
+    setTimeout(() => initializePlayer(), 50);
+    return;
+  }
+
   loading.value = true;
   error.value = null;
 
@@ -143,9 +150,25 @@ onBeforeUnmount(() => {
   destroyPlayer();
 });
 
-// Watch for source changes and reinitialize
+// Watch for source changes and update player instead of destroying
 watch(() => props.src, (newSrc, oldSrc) => {
-  if (newSrc !== oldSrc) {
+  if (newSrc !== oldSrc && newSrc && player) {
+    // If player exists, just update the source instead of destroying
+    loading.value = true;
+    error.value = null;
+
+    player.src({ src: newSrc, type: 'application/x-mpegURL' });
+    player.load();
+
+    if (props.autoplay) {
+      player.play()?.catch(() => {
+        // Browser might block autoplay, try with muted
+        player?.muted(true);
+        player?.play()?.catch(() => {});
+      });
+    }
+  } else if (newSrc !== oldSrc) {
+    // Only destroy and reinitialize if player doesn't exist
     destroyPlayer();
     if (newSrc) {
       setTimeout(() => initializePlayer(), 100);
