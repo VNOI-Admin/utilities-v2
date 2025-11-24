@@ -10,7 +10,7 @@ services:
     env_file:
       - .docker.env
     ports:
-      - "8000:80"
+      - "127.0.0.1:8000:80"
 
   user:
     image: utilities/user
@@ -20,7 +20,7 @@ services:
     env_file:
       - .docker.env
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
 
   auth:
     image: utilities/auth
@@ -30,7 +30,7 @@ services:
     env_file:
       - .docker.env
     ports:
-      - "8002:8002"
+      - "127.0.0.1:8002:8002"
 
   internal:
     image: utilities/internal
@@ -40,7 +40,7 @@ services:
     env_file:
       - .docker.env
     ports:
-      - "8003:8003"
+      - "127.0.0.1:8003:8003"
 
   printing:
     image: utilities/printing
@@ -50,7 +50,7 @@ services:
     env_file:
       - .docker.env
     ports:
-      - "8004:8004"
+      - "127.0.0.1:8004:8004"
 
   sync:
     image: utilities/sync
@@ -60,7 +60,7 @@ services:
     env_file:
       - .docker.env
     ports:
-      - "8005:8005"
+      - "127.0.0.1:8005:8005"
 
   mongo:
     image: mongo
@@ -78,7 +78,7 @@ services:
     networks:
       - utilities_network
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
 volumes:
   mongo_data:
