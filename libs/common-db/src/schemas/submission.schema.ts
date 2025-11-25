@@ -64,6 +64,9 @@ export class Submission {
 
   @Prop({ required: false })
   language?: string;
+
+  @Prop({ required: false, default: false })
+  balloon_sent?: boolean;
 }
 
 export const SubmissionSchema = SchemaFactory.createForClass(Submission);
@@ -72,3 +75,4 @@ export const SubmissionSchema = SchemaFactory.createForClass(Submission);
 SubmissionSchema.index({ contest_code: 1, submittedAt: -1 });
 SubmissionSchema.index({ author: 1, contest_code: 1 });
 SubmissionSchema.index({ submissionStatus: 1, 'data.reaction': 1 });
+SubmissionSchema.index({ submissionStatus: 1, balloon_sent: 1, submittedAt: 1 });

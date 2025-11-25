@@ -12,6 +12,7 @@ export class SchedulerService implements OnModuleInit {
     @InjectQueue(QUEUE_NAMES.PING_USERS) private pingUsersQueue: Queue,
     @InjectQueue(QUEUE_NAMES.SYNC_SUBMISSIONS) private syncSubmissionsQueue: Queue,
     @InjectQueue(QUEUE_NAMES.PROCESS_REACTIONS) private processReactionsQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.SEND_BALLOONS) private sendBalloonsQueue: Queue,
   ) {}
 
   async onModuleInit() {
@@ -59,5 +60,19 @@ export class SchedulerService implements OnModuleInit {
     );
 
     this.logger.log('Process reactions job scheduled to run every 5 seconds');
+    // Add repeatable job to send balloons every 5 seconds
+    await this.sendBalloonsQueue.add(
+      'send-balloons',
+      {},
+      {
+        repeat: {
+          every: 5000, // Every 5 seconds
+        },
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    );
+
+    this.logger.log('Send balloons job scheduled to run every 5 seconds');
   }
 }
