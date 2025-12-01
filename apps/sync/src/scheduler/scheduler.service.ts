@@ -3,6 +3,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Queue } from 'bullmq';
 
 import { QUEUE_NAMES } from './constants';
+import { CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class SchedulerService implements OnModuleInit {
@@ -21,7 +22,8 @@ export class SchedulerService implements OnModuleInit {
       {},
       {
         repeat: {
-          pattern: '*/1 * * * *', // Every 1 minute
+          // every 20 seconds
+          pattern: '*/20 * * * * *',
         },
         removeOnComplete: true,
         removeOnFail: false,

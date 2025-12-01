@@ -77,14 +77,14 @@ export class VpnService implements OnModuleInit {
 PrivateKey = ${user.keyPair.privateKey}
 Address = ${user.vpnIpAddress}/32
 ListenPort = ${this.configService.get('WG_LISTEN_PORT')}
-PostUp = ip link set mtu 1300 dev %i
+PostUp = ip link set mtu ${this.configService.get('WG_MTU')} dev %i
 
 # Core
 [Peer]
 PublicKey = ${this.configService.get('WG_CORE_PUBLIC_KEY')}
 AllowedIPs = ${this.configService.get('WG_CORE_ALLOWED_IPS')}
 Endpoint = ${coreEndpoint}
-PersistentKeepalive = 25
+PersistentKeepalive = ${this.configService.get('WG_PERSISTENT_KEEPALIVE')}
 `;
 
     return wireGuardConfig;

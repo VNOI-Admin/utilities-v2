@@ -38,7 +38,7 @@ Address = ${process.env.WG_CORE_IP_ADDRESS}/32
 ListenPort = ${process.env.WG_LISTEN_PORT}
 PostUp = iptables -w -t nat -A POSTROUTING -o eth0 -j MASQUERADE; ip6tables -w -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 PostDown = iptables -w -t nat -D POSTROUTING -o eth0 -j MASQUERADE; ip6tables -w -t nat -D POSTROUTING -o eth0 -j MASQUERADE
-MTU = 1300
+MTU = ${process.env.WG_MTU}
 `;
 
   for (const user of users) {
@@ -47,7 +47,7 @@ MTU = 1300
 [Peer]
 PublicKey = ${user.keyPair.publicKey}
 AllowedIPs = ${user.vpnIpAddress}/32
-PersistentKeepalive = 25
+PersistentKeepalive = ${process.env.WG_PERSISTENT_KEEPALIVE}
 `;
   }
 
