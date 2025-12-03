@@ -45,11 +45,11 @@ export class PingUsersProcessor extends WorkerHost {
           user.machineUsage.ping = 0;
           user.machineUsage.isOnline = false;
 
-          // Deactivate guest user if offline for 30 minutes
+          // Deactivate guest user if offline for 1 minute
           if (
             user.role === Role.GUEST &&
             user.machineUsage.lastReportedAt &&
-            now.getTime() - user.machineUsage.lastReportedAt.getTime() >= 30 * 60 * 1000
+            now.getTime() - user.machineUsage.lastReportedAt.getTime() >= 1 * 60 * 1000
           ) {
             user.isActive = false;
           }
