@@ -30,33 +30,48 @@ export class PingUsersProcessor extends WorkerHost {
 
     const now = new Date();
 
-    await Promise.all(
+    const pingResults = await Promise.all(
       users.map(async (user) => {
         const res = await ping.promise.probe(user.vpnIpAddress, {
           timeout: 3,
           min_reply: 3,
         });
+
+        const updateFields: Record<string, any> = {};
+
         if (res.alive && res.time !== 'unknown') {
-          user.machineUsage.ping = res.time;
-          user.machineUsage.isOnline = true;
+          updateFields['machineUsage.ping'] = res.time;
+          updateFields['machineUsage.isOnline'] = true;
 
-          if (user.role === Role.GUEST) user.machineUsage.lastReportedAt = now;
+          if (user.role === Role.GUEST) {
+            updateFields['machineUsage.lastReportedAt'] = now;
+          }
         } else {
-          user.machineUsage.ping = 0;
-          user.machineUsage.isOnline = false;
+          updateFields['machineUsage.ping'] = 0;
+          updateFields['machineUsage.isOnline'] = false;
 
-          // Deactivate guest user if offline for 1 minute
+          // Deactivate guest user if offline for 5 minutes
           if (
             user.role === Role.GUEST &&
             user.machineUsage.lastReportedAt &&
             now.getTime() - user.machineUsage.lastReportedAt.getTime() >= 5 * 60 * 1000
           ) {
-            user.isActive = false;
+            updateFields.isActive = false;
           }
         }
-        await user.save();
+
+        return {
+          updateOne: {
+            filter: { _id: user._id },
+            update: { $set: updateFields },
+          },
+        };
       }),
     );
+
+    if (pingResults.length > 0) {
+      await this.userModel.bulkWrite(pingResults);
+    }
 
     this.logger.log('Pinging completed');
   }
