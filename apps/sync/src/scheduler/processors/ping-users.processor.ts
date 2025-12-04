@@ -49,7 +49,7 @@ export class PingUsersProcessor extends WorkerHost {
           if (
             user.role === Role.GUEST &&
             user.machineUsage.lastReportedAt &&
-            now.getTime() - user.machineUsage.lastReportedAt.getTime() >= 1 * 60 * 1000
+            now.getTime() - user.machineUsage.lastReportedAt.getTime() >= 5 * 60 * 1000
           ) {
             user.isActive = false;
           }

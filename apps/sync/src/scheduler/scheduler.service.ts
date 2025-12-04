@@ -22,8 +22,8 @@ export class SchedulerService implements OnModuleInit {
       {},
       {
         repeat: {
-          // every 20 seconds
-          pattern: '*/20 * * * * *',
+          // every 15 seconds
+          pattern: '*/15 * * * * *',
         },
         removeOnComplete: true,
         removeOnFail: false,
