@@ -1,15 +1,36 @@
 import { OverlayLayout, OverlayLayoutDocument } from '@libs/common-db/schemas/overlay.schema';
 import { User, UserDocument } from '@libs/common-db/schemas/user.schema';
+import { Submission, SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
 import { WebcamLayoutDto } from './dtos/webcam-layout.dto';
+import { GlobalConfigDto, FooterContentType } from './dtos/global-config.dto';
+import { SingleContestantConfigDto, DisplayMode } from './dtos/single-contestant-config.dto';
+import { MultiContestantConfigDto, LayoutMode } from './dtos/multi-contestant-config.dto';
+import { AnnouncementConfigDto } from './dtos/announcement.dto';
 import { MULTI_USER_STREAM_KEY, MultiUserStream } from './layouts/multi-user-stream';
 import { USER_STREAM_KEY, UserStream } from './layouts/user-stream';
 import { WEBCAM_LAYOUT_KEY, WebcamLayout } from './layouts/webcam-layout';
+import { GLOBAL_CONFIG_KEY, GlobalConfig } from './layouts/global-config';
+import { SINGLE_CONTESTANT_KEY, SingleContestantConfig } from './layouts/single-contestant-config';
+import { MULTI_CONTESTANT_KEY, MultiContestantConfig } from './layouts/multi-contestant-config';
+import { ANNOUNCEMENTS_KEY, AnnouncementConfig } from './layouts/announcement-config';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
+
+export interface SubmissionWithAuthor {
+  _id?: unknown;
+  submittedAt: Date;
+  judgedAt?: Date;
+  author: string;
+  submissionStatus: string;
+  contest_code: string;
+  problem_code: string;
+  authorFullName: string;
+  [key: string]: unknown;
+}
 
 @Injectable()
 export class OverlayService {
@@ -20,6 +41,8 @@ export class OverlayService {
     private readonly userModel: Model<UserDocument>,
     @InjectModel(OverlayLayout.name)
     private readonly overlayLayoutModel: Model<OverlayLayoutDocument>,
+    @InjectModel(Submission.name)
+    private readonly submissionModel: Model<SubmissionDocument>,
 
     private readonly configService: ConfigService,
   ) {
@@ -175,5 +198,154 @@ export class OverlayService {
     await this.setCurrentLayout(MULTI_USER_STREAM_KEY);
 
     return multiUserStream.toRecord();
+  }
+
+  // New methods for overlay feature
+
+  async getGlobalConfig() {
+    const layout = await this.overlayLayoutModel.findOne({
+      key: GLOBAL_CONFIG_KEY,
+    });
+
+    if (!layout) {
+      return new GlobalConfig({
+        contestId: '',
+        fullViewMode: false,
+        showSubmissionQueue: true,
+        showFooter: true,
+        footerContentType: FooterContentType.ANNOUNCEMENTS,
+        currentLayout: 'none',
+      }).toRecord();
+    }
+
+    return layout.data;
+  }
+
+  async setGlobalConfig(body: GlobalConfigDto) {
+    const globalConfig = new GlobalConfig(body);
+
+    await this.overlayLayoutModel.updateOne(
+      { key: GLOBAL_CONFIG_KEY },
+      { data: globalConfig.toRecord() },
+      { upsert: true },
+    );
+
+    return globalConfig.toRecord();
+  }
+
+  async getSingleContestantConfig() {
+    const layout = await this.overlayLayoutModel.findOne({
+      key: SINGLE_CONTESTANT_KEY,
+    });
+
+    if (!layout) {
+      return new SingleContestantConfig({
+        username: '',
+        displayMode: DisplayMode.BOTH,
+        swapSources: false,
+      }).toRecord();
+    }
+
+    return layout.data;
+  }
+
+  async setSingleContestantConfig(body: SingleContestantConfigDto) {
+    const user = await this.userModel.findOne({ username: body.username });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const singleContestantConfig = new SingleContestantConfig(body);
+
+    await this.overlayLayoutModel.updateOne(
+      { key: SINGLE_CONTESTANT_KEY },
+      { data: singleContestantConfig.toRecord() },
+      { upsert: true },
+    );
+
+    return singleContestantConfig.toRecord();
+  }
+
+  async getMultiContestantConfig() {
+    const layout = await this.overlayLayoutModel.findOne({
+      key: MULTI_CONTESTANT_KEY,
+    });
+
+    if (!layout) {
+      return new MultiContestantConfig({
+        usernames: [],
+        layoutMode: LayoutMode.SIDE_BY_SIDE,
+      }).toRecord();
+    }
+
+    return layout.data;
+  }
+
+  async setMultiContestantConfig(body: MultiContestantConfigDto) {
+    // Validate all users exist
+    for (const username of body.usernames) {
+      const user = await this.userModel.findOne({ username });
+      if (!user) {
+        throw new Error(`User not found: ${username}`);
+      }
+    }
+
+    const multiContestantConfig = new MultiContestantConfig(body);
+
+    await this.overlayLayoutModel.updateOne(
+      { key: MULTI_CONTESTANT_KEY },
+      { data: multiContestantConfig.toRecord() },
+      { upsert: true },
+    );
+
+    return multiContestantConfig.toRecord();
+  }
+
+  async getAnnouncements() {
+    const layout = await this.overlayLayoutModel.findOne({
+      key: ANNOUNCEMENTS_KEY,
+    });
+
+    if (!layout) {
+      return new AnnouncementConfig({
+        announcements: [],
+      }).toRecord();
+    }
+
+    return layout.data;
+  }
+
+  async setAnnouncements(body: AnnouncementConfigDto) {
+    const announcementConfig = new AnnouncementConfig(body);
+
+    await this.overlayLayoutModel.updateOne(
+      { key: ANNOUNCEMENTS_KEY },
+      { data: announcementConfig.toRecord() },
+      { upsert: true },
+    );
+
+    return announcementConfig.toRecord();
+  }
+
+  async getRecentSubmissions(contestCode: string, limit = 10): Promise<SubmissionWithAuthor[]> {
+    const submissions = await this.submissionModel
+      .find({ contest_code: contestCode })
+      .sort({ submittedAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // Fetch user details for each submission to get full names
+    const submissionsWithUserDetails = await Promise.all(
+      submissions.map(async (submission) => {
+        const user = await this.userModel.findOne({ username: submission.author }).lean();
+        return {
+          ...submission,
+          authorFullName: user?.fullName || submission.author,
+        } as SubmissionWithAuthor;
+      }),
+    );
+
+    return submissionsWithUserDetails;
   }
 }

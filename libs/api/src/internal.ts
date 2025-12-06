@@ -24,7 +24,7 @@ export interface UserEntity {
   fullName: string;
   isActive: boolean;
   vpnIpAddress: string;
-  role: 'contestant' | 'coach' | 'admin' | 'guest';
+  role: string;
   machineUsage: MachineUsageEntity;
   group: string;
   streamUrl?: string;
@@ -37,7 +37,6 @@ export interface CreateUserDto {
   password: string;
   /** @default "contestant" */
   role: 'contestant' | 'coach' | 'admin' | 'guest';
-  group?: string;
   isActive?: boolean;
 }
 
@@ -64,6 +63,8 @@ export interface UpdateGroupDto {
   code?: string;
   name?: string;
 }
+
+export type AdjustGuestCountDto = object;
 
 export interface UserStream {
   username: string;
@@ -93,6 +94,89 @@ export interface WebcamLayout {
 
 export interface WebcamLayoutDto {
   enabled: boolean;
+}
+
+export interface GlobalConfig {
+  contestId: string;
+  fullViewMode: boolean;
+  showSubmissionQueue: boolean;
+  showFooter: boolean;
+  footerContentType: 'announcements' | 'ranking';
+  currentLayout: string;
+}
+
+export interface GlobalConfigDto {
+  /** ID of the contest bound to this overlay */
+  contestId: string;
+  /** Show/hide all components (full view mode) */
+  fullViewMode: boolean;
+  /** Show/hide submission queue */
+  showSubmissionQueue: boolean;
+  /** Show/hide footer */
+  showFooter: boolean;
+  /** Type of content to display in footer */
+  footerContentType: 'announcements' | 'ranking';
+  /** Current main view layout type (single, multi, or none) */
+  currentLayout: string;
+}
+
+export interface SingleContestantConfig {
+  username: string;
+  displayMode: 'both' | 'stream_only' | 'webcam_only';
+  swapSources: boolean;
+}
+
+export interface SingleContestantConfigDto {
+  /** Username of the contestant */
+  username: string;
+  /**
+   * Display mode for sources
+   * @default "both"
+   */
+  displayMode: 'both' | 'stream_only' | 'webcam_only';
+  /**
+   * Swap stream and webcam positions
+   * @default false
+   */
+  swapSources: boolean;
+}
+
+export interface MultiContestantConfig {
+  usernames: string[];
+  layoutMode: 'side_by_side' | 'quad';
+}
+
+export interface MultiContestantConfigDto {
+  /** Array of usernames (max 4) */
+  usernames: string[];
+  /**
+   * Layout mode for displaying multiple contestants
+   * @default "side_by_side"
+   */
+  layoutMode: 'side_by_side' | 'quad';
+}
+
+export interface AnnouncementItem {
+  /** Unique ID for this announcement */
+  id: string;
+  /** Announcement text content */
+  text: string;
+  /**
+   * Priority level (higher shows first)
+   * @default 0
+   */
+  priority: number;
+  /** Timestamp when announcement was created */
+  timestamp: number;
+}
+
+export interface AnnouncementConfig {
+  announcements: AnnouncementItem[];
+}
+
+export interface AnnouncementConfigDto {
+  /** Array of announcements */
+  announcements: AnnouncementItem[];
 }
 
 export interface CreateContestDto {
@@ -155,6 +239,45 @@ export interface AddParticipantResponseDto {
   total: number;
   /** Array of errors that occurred during processing */
   errors: string[];
+}
+
+export interface PrintJobEntity {
+  jobId: string;
+  filename: string;
+  username: string;
+  clientId: string;
+  priority: number;
+  status: object;
+  /** @format date-time */
+  requestedAt: string;
+}
+
+export interface UpdatePrintJobDto {
+  status?: 'queued' | 'done';
+  username?: string;
+  clientId?: string;
+  priority?: number;
+}
+
+export interface CreatePrintClientDto {
+  clientId: string;
+  authKey?: string;
+  isActive?: boolean;
+}
+
+export interface PrintClientEntity {
+  clientId: string;
+  authKey: string;
+  isActive: boolean;
+  isOnline: boolean;
+  /** @format date-time */
+  lastReportedAt: string;
+}
+
+export interface UpdatePrintClientDto {
+  clientId?: string;
+  authKey?: string;
+  isActive?: boolean;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
@@ -490,6 +613,48 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         ...params,
       }),
   };
+  guests = {
+    /**
+     * No description
+     *
+     * @name GetGuests
+     * @request GET:/guests
+     */
+    getGuests: (params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/guests`,
+        method: 'GET',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @name GetGuestCount
+     * @request GET:/guests/count
+     */
+    getGuestCount: (params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/guests/count`,
+        method: 'GET',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @name AdjustGuestCount
+     * @request POST:/guests/adjust
+     */
+    adjustGuestCount: (data: AdjustGuestCountDto, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/guests/adjust`,
+        method: 'POST',
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+  };
   overlay = {
     /**
      * No description
@@ -638,6 +803,182 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         secure: true,
         type: ContentType.Json,
         format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name GetGlobalConfig
+     * @summary Get global overlay configuration
+     * @request GET:/overlay/config/global
+     * @secure
+     */
+    getGlobalConfig: (params: RequestParams = {}) =>
+      this.request<GlobalConfig, any>({
+        path: `/overlay/config/global`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name SetGlobalConfig
+     * @summary Set global overlay configuration
+     * @request POST:/overlay/config/global
+     * @secure
+     */
+    setGlobalConfig: (data: GlobalConfigDto, params: RequestParams = {}) =>
+      this.request<GlobalConfig, any>({
+        path: `/overlay/config/global`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name GetSingleContestantConfig
+     * @summary Get single contestant overlay configuration
+     * @request GET:/overlay/config/single-contestant
+     * @secure
+     */
+    getSingleContestantConfig: (params: RequestParams = {}) =>
+      this.request<SingleContestantConfig, any>({
+        path: `/overlay/config/single-contestant`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name SetSingleContestantConfig
+     * @summary Set single contestant overlay configuration
+     * @request POST:/overlay/config/single-contestant
+     * @secure
+     */
+    setSingleContestantConfig: (data: SingleContestantConfigDto, params: RequestParams = {}) =>
+      this.request<SingleContestantConfig, any>({
+        path: `/overlay/config/single-contestant`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name GetMultiContestantConfig
+     * @summary Get multi contestant overlay configuration
+     * @request GET:/overlay/config/multi-contestant
+     * @secure
+     */
+    getMultiContestantConfig: (params: RequestParams = {}) =>
+      this.request<MultiContestantConfig, any>({
+        path: `/overlay/config/multi-contestant`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name SetMultiContestantConfig
+     * @summary Set multi contestant overlay configuration
+     * @request POST:/overlay/config/multi-contestant
+     * @secure
+     */
+    setMultiContestantConfig: (data: MultiContestantConfigDto, params: RequestParams = {}) =>
+      this.request<MultiContestantConfig, any>({
+        path: `/overlay/config/multi-contestant`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name GetAnnouncements
+     * @summary Get announcements configuration
+     * @request GET:/overlay/announcements
+     * @secure
+     */
+    getAnnouncements: (params: RequestParams = {}) =>
+      this.request<AnnouncementConfig, any>({
+        path: `/overlay/announcements`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name SetAnnouncements
+     * @summary Set announcements configuration
+     * @request POST:/overlay/announcements
+     * @secure
+     */
+    setAnnouncements: (data: AnnouncementConfigDto, params: RequestParams = {}) =>
+      this.request<AnnouncementConfig, any>({
+        path: `/overlay/announcements`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name GetRecentSubmissions
+     * @summary Get recent submissions for a contest
+     * @request GET:/overlay/submissions/{contestCode}
+     * @secure
+     */
+    getRecentSubmissions: (
+      contestCode: string,
+      query: {
+        limit: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<any, any>({
+        path: `/overlay/submissions/${contestCode}`,
+        method: 'GET',
+        query: query,
+        secure: true,
         ...params,
       }),
   };
@@ -924,6 +1265,188 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         path: `/contests/participants/${participantId}`,
         method: 'DELETE',
         secure: true,
+        ...params,
+      }),
+  };
+  printing = {
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name GetPrintJobs
+     * @summary Get all print jobs
+     * @request GET:/printing/jobs
+     * @secure
+     */
+    getPrintJobs: (
+      query?: {
+        status?: 'queued' | 'done';
+        username?: string;
+        clientId?: string;
+        priority?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<PrintJobEntity[], any>({
+        path: `/printing/jobs`,
+        method: 'GET',
+        query: query,
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name GetPrintJob
+     * @summary Get one print job
+     * @request GET:/printing/jobs/{id}
+     * @secure
+     */
+    getPrintJob: (id: string, params: RequestParams = {}) =>
+      this.request<PrintJobEntity, any>({
+        path: `/printing/jobs/${id}`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name UpdatePrintJob
+     * @summary Update one print job
+     * @request PATCH:/printing/jobs/{id}
+     * @secure
+     */
+    updatePrintJob: (id: string, data: UpdatePrintJobDto, params: RequestParams = {}) =>
+      this.request<PrintJobEntity, any>({
+        path: `/printing/jobs/${id}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name DeletePrintJob
+     * @summary Delete one print job
+     * @request DELETE:/printing/jobs/{id}
+     * @secure
+     */
+    deletePrintJob: (id: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+        },
+        any
+      >({
+        path: `/printing/jobs/${id}`,
+        method: 'DELETE',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name GetPrintJobFile
+     * @summary Get print job file
+     * @request GET:/printing/jobs/{id}/file
+     * @secure
+     */
+    getPrintJobFile: (id: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/printing/jobs/${id}/file`,
+        method: 'GET',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name CreatePrintClient
+     * @summary Create print client
+     * @request POST:/printing/clients
+     * @secure
+     */
+    createPrintClient: (data: CreatePrintClientDto, params: RequestParams = {}) =>
+      this.request<PrintClientEntity, any>({
+        path: `/printing/clients`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name GetPrintClients
+     * @summary Get all print clients
+     * @request GET:/printing/clients
+     * @secure
+     */
+    getPrintClients: (params: RequestParams = {}) =>
+      this.request<PrintClientEntity[], any>({
+        path: `/printing/clients`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name GetPrintClient
+     * @summary Get one print client
+     * @request GET:/printing/clients/{clientId}
+     * @secure
+     */
+    getPrintClient: (clientId: string, params: RequestParams = {}) =>
+      this.request<PrintClientEntity, any>({
+        path: `/printing/clients/${clientId}`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Printing
+     * @name UpdatePrintClient
+     * @summary Update one print client
+     * @request PATCH:/printing/clients/{clientId}
+     * @secure
+     */
+    updatePrintClient: (clientId: string, data: UpdatePrintClientDto, params: RequestParams = {}) =>
+      this.request<PrintClientEntity, any>({
+        path: `/printing/clients/${clientId}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
         ...params,
       }),
   };
