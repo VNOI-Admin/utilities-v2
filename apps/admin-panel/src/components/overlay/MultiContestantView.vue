@@ -48,21 +48,17 @@ const layoutModeClass = computed(() => {
 
 async function loadStreamUrls() {
   try {
-    // Temporary test URL
-    const testUrl = 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8';
-    streamUrls.value = props.config.usernames.map(() => testUrl);
-
-    // const urls = await Promise.all(
-    //   props.config.usernames.map(async (username) => {
-    //     try {
-    //       const response = await internalApi.overlay.getStreamSourceByUsername(username);
-    //       return response.streamUrl || '';
-    //     } catch {
-    //       return '';
-    //     }
-    //   })
-    // );
-    // streamUrls.value = urls;
+    const urls = await Promise.all(
+      props.config.usernames.map(async (username) => {
+        try {
+          const response = await internalApi.overlay.getStreamSourceByUsername(username);
+          return response.streamUrl || '';
+        } catch {
+          return '';
+        }
+      })
+    );
+    streamUrls.value = urls;
   } catch (error) {
     console.error('Failed to load stream URLs:', error);
   }

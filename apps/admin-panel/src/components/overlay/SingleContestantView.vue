@@ -63,14 +63,9 @@ const showWebcam = computed(() => {
 
 async function loadStreamUrls() {
   try {
-    // Temporary test URL
-    const testUrl = 'https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8';
-    streamUrl.value = testUrl;
-    webcamUrl.value = testUrl;
-
-    // const response = await internalApi.overlay.getStreamSourceByUsername(props.config.username);
-    // streamUrl.value = response.streamUrl || '';
-    // webcamUrl.value = response.webcamUrl || '';
+    const response = await internalApi.overlay.getStreamSourceByUsername(props.config.username);
+    streamUrl.value = response.streamUrl || '';
+    webcamUrl.value = response.webcamUrl || '';
   } catch (error) {
     console.error('Failed to load stream URLs:', error);
   }
