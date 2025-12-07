@@ -108,7 +108,7 @@
 
           <!-- Role -->
           <div class="col-span-1">
-            <StatusBadge :role="user.role">
+            <StatusBadge :role="user.role as any">
               {{ user.role }}
             </StatusBadge>
           </div>
@@ -232,17 +232,6 @@
           </div>
         </div>
 
-        <!-- Group (Optional) -->
-        <div>
-          <label class="tech-label block mb-2">GROUP (OPTIONAL)</label>
-          <input
-            v-model="newUser.group"
-            type="text"
-            class="input-mission"
-            placeholder="Enter group name..."
-          />
-        </div>
-
         <!-- Actions -->
         <div class="flex items-center gap-3 pt-4">
           <button
@@ -300,7 +289,6 @@ const newUser = ref<CreateUserDto>({
   fullName: '',
   password: '',
   role: 'contestant',
-  group: '',
 });
 
 // Computed
@@ -370,7 +358,6 @@ function closeCreateModal() {
     fullName: '',
     password: '',
     role: 'contestant',
-    group: '',
   };
 }
 
@@ -385,10 +372,6 @@ async function handleCreateUser() {
       password: newUser.value.password,
       role: newUser.value.role,
     };
-
-    if (newUser.value.group) {
-      userData.group = newUser.value.group;
-    }
 
     const createdUser = await internalApi.user.createUser(userData);
     usersStore.addUser(createdUser);

@@ -36,22 +36,6 @@ const timeRemaining = computed(() => {
   return 0;
 });
 
-const status = computed(() => {
-  if (!contest.value) return 'NO CONTEST';
-
-  const now = currentTime.value;
-  const start = new Date(contest.value.start_time).getTime();
-  const end = new Date(contest.value.end_time).getTime();
-
-  if (now < start) return 'STARTING';
-  if (now >= start && now < end) return 'LIVE';
-  return 'ENDED';
-});
-
-const statusClass = computed(() => {
-  return `status-${status.value.toLowerCase().replace(' ', '-')}`;
-});
-
 const formattedTime = computed(() => {
   const ms = timeRemaining.value;
   if (ms <= 0) return '00:00:00';

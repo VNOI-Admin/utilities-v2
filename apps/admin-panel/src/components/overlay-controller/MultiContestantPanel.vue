@@ -24,10 +24,10 @@
           <div v-if="localConfig.usernames.length < 4" class="flex-1 min-w-[200px]">
             <MissionSelect
               v-model="selectedUser"
-              :options="availableContestants"
+              :options="availableContestants as any"
               placeholder="Add Contestant..."
-              :option-label="(user) => `${user.fullName} (${user.username})`"
-              :option-value="(user) => user.username"
+              :option-label="(user: any) => `${user.fullName} (${user.username})`"
+              :option-value="(user: any) => user.username"
               @update:model-value="addUser"
             />
           </div>

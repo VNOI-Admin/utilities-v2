@@ -8,10 +8,10 @@
         <label class="tech-label mb-2">Contest</label>
         <MissionSelect
           v-model="localConfig.contestId"
-          :options="contestsStore.contests"
+          :options="contestsStore.contests as any"
           placeholder="Select Contest"
-          :option-label="(contest) => `${contest.name} (${contest.code})`"
-          :option-value="(contest) => contest.code"
+          :option-label="(contest: any) => `${contest.name} (${contest.code})`"
+          :option-value="(contest: any) => contest.code"
           @update:model-value="saveConfig"
         />
       </div>
@@ -21,7 +21,7 @@
         <label class="tech-label mb-2">Current Layout</label>
         <MissionSelect
           v-model="localConfig.currentLayout"
-          :options="layoutOptions"
+          :options="layoutOptions as any"
           placeholder="Select Layout"
           :searchable="false"
           @update:model-value="saveConfig"

@@ -8,10 +8,10 @@
         <label class="tech-label mb-2">Contestant</label>
         <MissionSelect
           v-model="localConfig.username"
-          :options="contestants"
+          :options="contestants as any"
           placeholder="Select Contestant"
-          :option-label="(user) => `${user.fullName} (${user.username})`"
-          :option-value="(user) => user.username"
+          :option-label="(user: any) => `${user.fullName} (${user.username})`"
+          :option-value="(user: any) => user.username"
           @update:model-value="saveConfig"
         />
       </div>

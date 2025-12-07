@@ -41,7 +41,7 @@
     <div v-if="localAnnouncements.length > 0" class="flex flex-col gap-3">
       <h3 class="tech-label mb-2">Active Announcements ({{ localAnnouncements.length }})</h3>
       <div
-        v-for="(announcement, index) in sortedAnnouncements"
+        v-for="announcement in sortedAnnouncements"
         :key="announcement.id"
         class="p-4 bg-mission-dark border border-white/10 rounded"
       >
