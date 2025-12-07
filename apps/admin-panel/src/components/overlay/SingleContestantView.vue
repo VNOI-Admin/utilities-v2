@@ -109,6 +109,7 @@ watch(() => props.config.username, (newUsername) => {
     displayName.value = newUsername; // Reset to username while loading
     teamRank.value = 0; // Reset rank while loading
     loadParticipantData();
+    loadStreamUrls();
   }
 });
 
