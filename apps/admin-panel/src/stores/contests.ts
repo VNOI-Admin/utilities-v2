@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import type { ParticipantResponse } from '@libs/api/internal';
 
 // Type definitions matching backend schemas
 export interface ContestEntity {
@@ -17,21 +18,8 @@ export interface ProblemData {
   wrongTries: number;
 }
 
-export interface ParticipantEntity {
-  _id: string;
-  username: string;
-  contest: string;
-  mapToUser?: string;
-  displayName: string; // Computed: mapped user's fullName > mapped user's username > participant username
-  solvedCount: number;
-  totalPenalty: number;
-  rank: number; // Current rank in the contest (calculated after each sync batch)
-  solvedProblems: string[];
-  problemData: Record<string, ProblemData>;
-  groupCode?: string; // Group code from the mapped user
-  groupName?: string; // Group name from the groups collection
-  groupLogoUrl?: string; // Group logo URL from the groups collection
-}
+// Re-export ParticipantResponse as ParticipantEntity for backwards compatibility
+export type ParticipantEntity = ParticipantResponse;
 
 export enum SubmissionStatus {
   AC = 'AC',

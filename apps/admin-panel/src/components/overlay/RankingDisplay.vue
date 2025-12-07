@@ -64,13 +64,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { internalApi } from '~/services/api';
-import type { ParticipantEntity } from '~/stores/contests';
+import type { ParticipantResponse } from '@libs/api/internal';
 
 const props = defineProps<{
   contestId: string;
 }>();
 
-const participants = ref<ParticipantEntity[]>([]);
+const participants = ref<ParticipantResponse[]>([]);
 
 // Sort participants by rank
 const sortedParticipants = computed(() => {

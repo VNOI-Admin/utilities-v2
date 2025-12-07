@@ -1101,9 +1101,9 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useContestsStore } from '~/stores/contests';
-import type { ContestEntity, ParticipantEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
+import type { ContestEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
 import { internalApi } from '~/services/api';
-import type { UserEntity } from '@libs/api/internal';
+import type { UserEntity, ParticipantResponse } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
 import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList, Trophy } from 'lucide-vue-next';
 
@@ -1119,7 +1119,7 @@ const loadingSubmissions = ref(false);
 const loadingProblems = ref(false);
 const error = ref('');
 const contest = ref<ContestEntity | null>(null);
-const participants = ref<ParticipantEntity[]>([]);
+const participants = ref<ParticipantResponse[]>([]);
 const submissions = ref<SubmissionEntity[]>([]);
 const problems = ref<ProblemEntity[]>([]);
 const availableUsers = ref<UserEntity[]>([]);
@@ -1250,7 +1250,8 @@ const rankingData = computed(() => {
     const problemStates: Record<string, { solved: boolean; tries: number; penalty: number }> = {};
 
     for (const problem of sortedProblems.value) {
-      const problemData = participant.problemData?.[problem.code];
+      const problemDataMap = participant.problemData as Record<string, { solveTime: number; wrongTries: number }> | undefined;
+      const problemData = problemDataMap?.[problem.code];
       if (problemData) {
         const solved = participant.solvedProblems?.includes(problem.code) || false;
         problemStates[problem.code] = {

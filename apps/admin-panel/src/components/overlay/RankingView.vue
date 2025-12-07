@@ -84,7 +84,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { internalApi } from '~/services/api';
-import type { ParticipantEntity, ProblemEntity } from '~/stores/contests';
+import type { ParticipantResponse } from '@libs/api/internal';
+import type { ProblemEntity } from '~/stores/contests';
 
 const props = defineProps<{
   contestId: string;
@@ -92,7 +93,7 @@ const props = defineProps<{
 }>();
 
 const ITEMS_PER_PAGE = 15;
-const participants = ref<ParticipantEntity[]>([]);
+const participants = ref<ParticipantResponse[]>([]);
 const problems = ref<ProblemEntity[]>([]);
 
 // Sort participants by rank
@@ -119,7 +120,8 @@ const rankingData = computed(() => {
     const problemStates: Record<string, { solved: boolean; tries: number; penalty: number }> = {};
 
     for (const problem of sortedProblems.value) {
-      const problemData = participant.problemData?.[problem.code];
+      const problemDataMap = participant.problemData as Record<string, { solveTime: number; wrongTries: number }> | undefined;
+      const problemData = problemDataMap?.[problem.code];
       if (problemData) {
         const solved = participant.solvedProblems?.includes(problem.code) || false;
         problemStates[problem.code] = {
