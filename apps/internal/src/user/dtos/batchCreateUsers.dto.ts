@@ -40,6 +40,5 @@ export class BatchCreateUsersDto {
   @ValidateNested({ each: true })
   @Type(() => BatchUserItemDto)
   @ArrayMinSize(1)
-  @ArrayMaxSize(100)
   users!: BatchUserItemDto[];
 }

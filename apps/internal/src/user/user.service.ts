@@ -10,13 +10,14 @@ import { Role } from '@libs/common/decorators/role.decorator';
 import { UserEntity } from '@libs/common/dtos/User.entity';
 import { getErrorMessage } from '@libs/common/helper/error';
 import { generateKeyPair } from '@libs/utils/crypto/keygen';
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import * as argon2 from 'argon2';
 import * as ip from 'ip';
 import { Model, PipelineStage } from 'mongoose';
 import { GetUsersDto } from './dtos/getUsers.dto';
+import { GroupService } from '../group/group.service';
 
 @Injectable()
 export class UserService implements OnModuleInit {
@@ -26,6 +27,8 @@ export class UserService implements OnModuleInit {
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
     private configService: ConfigService,
+    @Inject(forwardRef(() => GroupService))
+    private groupService: GroupService,
   ) {}
 
   async onModuleInit() {
@@ -296,6 +299,7 @@ export class UserService implements OnModuleInit {
   /**
    * Finds or creates a group by name
    * Returns the group code for use in user creation
+   * Uses GroupService.createGroup to auto-fetch logo URL for new groups
    */
   async findOrCreateGroupByName(groupName: string): Promise<{
     code: string;
@@ -319,8 +323,8 @@ export class UserService implements OnModuleInit {
       return { code: group.code, wasCreated: false };
     }
 
-    // Create new group
-    const newGroup = await this.groupModel.create({
+    // Create new group using GroupService (which fetches logo URL)
+    const newGroup = await this.groupService.createGroup({
       code,
       name: groupName,
     });
