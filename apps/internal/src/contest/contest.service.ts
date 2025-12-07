@@ -1,3 +1,4 @@
+import { randomFillSync } from 'crypto';
 import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
@@ -95,7 +96,7 @@ export class ContestService {
         await Promise.all(
           problems.map((problem: VnojProblem) =>
             this.problemModel.create({
-              code: problem.code,
+              code: this.stripContestPrefix(problem.code, createContestDto.code),
               contest: problem.contest,
             }),
           ),
@@ -217,8 +218,49 @@ export class ContestService {
     };
   }
 
-  async getParticipants(code: string): Promise<ParticipantDocument[]> {
-    return this.participantModel.find({ contest: code }).sort({ rank: 1 }).exec();
+  async getParticipants(code: string): Promise<(ParticipantDocument & { displayName: string })[]> {
+    // Use aggregation to join with users collection and compute displayName
+    const participants = await this.participantModel.aggregate([
+      { $match: { contest: code } },
+      // Left join with users collection on mapToUser -> username
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'mapToUser',
+          foreignField: 'username',
+          as: 'mappedUserData',
+        },
+      },
+      // Add displayName field: mapped user's fullName > mapped user's username > participant username
+      {
+        $addFields: {
+          displayName: {
+            $cond: {
+              if: { $gt: [{ $size: '$mappedUserData' }, 0] },
+              then: {
+                $cond: {
+                  if: {
+                    $and: [
+                      { $ne: [{ $arrayElemAt: ['$mappedUserData.fullName', 0] }, null] },
+                      { $ne: [{ $arrayElemAt: ['$mappedUserData.fullName', 0] }, ''] },
+                    ],
+                  },
+                  then: { $arrayElemAt: ['$mappedUserData.fullName', 0] },
+                  else: { $arrayElemAt: ['$mappedUserData.username', 0] },
+                },
+              },
+              else: '$username',
+            },
+          },
+        },
+      },
+      // Remove the joined array to keep response clean
+      { $project: { mappedUserData: 0 } },
+      // Sort by ICPC ranking: more solved problems first, then by lower penalty
+      { $sort: { solvedCount: -1, totalPenalty: 1 } },
+    ]);
+
+    return participants;
   }
 
   async getProblems(code: string): Promise<ProblemDocument[]> {
@@ -306,6 +348,9 @@ export class ContestService {
           break;
         case AddParticipantMode.CREATE_USER:
           await this.addParticipantWithNewUser(code, dto, response);
+          break;
+        case AddParticipantMode.AUTO_CREATE_USER:
+          await this.addParticipantsWithAutoCreate(code, dto, response);
           break;
         default:
           throw new BadRequestException('Invalid mode');
@@ -474,6 +519,86 @@ export class ContestService {
     response.added = 1;
   }
 
+  private async addParticipantsWithAutoCreate(
+    code: string,
+    _dto: AddParticipantDto,
+    response: AddParticipantResponseDto,
+  ): Promise<void> {
+    // Find all participants in this contest without a mapped user
+    const unmappedParticipants = await this.participantModel
+      .find({
+        contest: code,
+        $or: [
+          { mapToUser: { $exists: false } },
+          { mapToUser: null },
+          { mapToUser: '' },
+        ],
+      })
+      .exec();
+
+    if (unmappedParticipants.length === 0) {
+      throw new BadRequestException('No unmapped participants found in this contest');
+    }
+
+    // Extract usernames from unmapped participants
+    const usernames = unmappedParticipants.map((p) => p.username);
+
+    response.total = usernames.length;
+    response.generatedCredentials = [];
+
+    for (const username of usernames) {
+      try {
+        // Check if user already exists
+        const existingUser = await this.userModel.findOne({ username }).exec();
+        if (existingUser) {
+          // User exists - link participant to existing user without creating new one
+          await this.participantModel.updateOne(
+            { username, contest: code },
+            { mapToUser: username },
+          );
+          response.errors.push(`User ${username} already exists - linked participant to existing user`);
+          response.skipped++;
+          continue;
+        }
+
+        // Generate random password (8 characters alphanumeric)
+        const password = this.generateRandomPassword(8);
+
+        // Create new user
+        const createUserDto: CreateUserDto = {
+          username,
+          fullName: username,
+          password,
+          role: Role.CONTESTANT,
+          isActive: true,
+        };
+
+        await this.userService.createUser(createUserDto);
+
+        // Update participant to link to the new user
+        await this.participantModel.updateOne(
+          { username, contest: code },
+          { mapToUser: username },
+        );
+
+        // Store generated credentials
+        response.generatedCredentials.push({ username, password });
+        response.added++;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        response.errors.push(`Error creating ${username}: ${errorMessage}`);
+        response.skipped++;
+      }
+    }
+  }
+
+  private generateRandomPassword(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const randomValues = new Uint8Array(length);
+    randomFillSync(randomValues);
+    return Array.from(randomValues, (v) => chars[v % chars.length]).join('');
+  }
+
   async removeParticipant(participantId: string): Promise<{ success: boolean }> {
     const participant = await this.participantModel.findById(participantId).exec();
     if (!participant) {
@@ -521,9 +646,10 @@ export class ContestService {
       try {
         const problems = await this.vnojApi.contest.getProblems(code);
         for (const problem of problems) {
+          const strippedCode = this.stripContestPrefix(problem.code, code);
           const existingProblem = await this.problemModel
             .findOne({
-              code: problem.code,
+              code: strippedCode,
               contest: code,
             })
             .exec();
@@ -532,7 +658,7 @@ export class ContestService {
             problemsExisting++;
           } else {
             await this.problemModel.create({
-              code: problem.code,
+              code: strippedCode,
               contest: problem.contest,
             });
             problemsAdded++;
@@ -587,5 +713,18 @@ export class ContestService {
       console.error('Failed to resync contest:', error);
       throw new BadRequestException(`Failed to resync contest from VNOJ API. Error: ${errorMessage}`);
     }
+  }
+
+  /**
+   * Strip the contest prefix from a problem code.
+   * Problem codes from VNOJ are in format: contestId_problemCode (e.g., "abc123_A")
+   * This method returns just the problem code part (e.g., "A")
+   */
+  private stripContestPrefix(problemCode: string, contestCode: string): string {
+    const prefix = `${contestCode}_`;
+    if (problemCode.startsWith(prefix)) {
+      return problemCode.slice(prefix.length);
+    }
+    return problemCode;
   }
 }

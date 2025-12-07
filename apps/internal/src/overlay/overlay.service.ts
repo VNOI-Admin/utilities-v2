@@ -1,6 +1,7 @@
 import { OverlayLayout, OverlayLayoutDocument } from '@libs/common-db/schemas/overlay.schema';
 import { User, UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Submission, SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import { Participant, ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -18,6 +19,7 @@ import { GLOBAL_CONFIG_KEY, GlobalConfig } from './layouts/global-config';
 import { SINGLE_CONTESTANT_KEY, SingleContestantConfig } from './layouts/single-contestant-config';
 import { MULTI_CONTESTANT_KEY, MultiContestantConfig } from './layouts/multi-contestant-config';
 import { ANNOUNCEMENTS_KEY, AnnouncementConfig } from './layouts/announcement-config';
+import { RANKING_KEY, RankingConfig } from './layouts/ranking-config';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
 
 export interface SubmissionWithAuthor {
@@ -43,6 +45,8 @@ export class OverlayService {
     private readonly overlayLayoutModel: Model<OverlayLayoutDocument>,
     @InjectModel(Submission.name)
     private readonly submissionModel: Model<SubmissionDocument>,
+    @InjectModel(Participant.name)
+    private readonly participantModel: Model<ParticipantDocument>,
 
     private readonly configService: ConfigService,
   ) {
@@ -335,17 +339,64 @@ export class OverlayService {
       .limit(limit)
       .lean();
 
-    // Fetch user details for each submission to get full names
+    // Fetch participant and mapped user details to compute displayName
     const submissionsWithUserDetails = await Promise.all(
       submissions.map(async (submission) => {
-        const user = await this.userModel.findOne({ username: submission.author }).lean();
+        // Find participant for this submission author
+        const participant = await this.participantModel
+          .findOne({
+            username: submission.author,
+            contest: contestCode,
+          })
+          .lean();
+
+        let displayName = submission.author; // Fallback to submission author
+
+        if (participant?.mapToUser) {
+          // Participant is mapped to a user - get user details
+          const user = await this.userModel.findOne({ username: participant.mapToUser }).lean();
+          if (user) {
+            // Use fullName if available, otherwise use username
+            displayName = user.fullName && user.fullName.trim() ? user.fullName : user.username;
+          } else {
+            // Mapped user not found, use mapped username
+            displayName = participant.mapToUser;
+          }
+        }
+
         return {
           ...submission,
-          authorFullName: user?.fullName || submission.author,
+          authorFullName: displayName,
         } as SubmissionWithAuthor;
       }),
     );
 
     return submissionsWithUserDetails;
+  }
+
+  async getRankingConfig() {
+    const layout = await this.overlayLayoutModel.findOne({
+      key: RANKING_KEY,
+    });
+
+    if (!layout) {
+      return new RankingConfig({
+        currentPage: 0,
+      }).toRecord();
+    }
+
+    return layout.data;
+  }
+
+  async setRankingConfig(body: { currentPage: number }) {
+    const rankingConfig = new RankingConfig(body);
+
+    await this.overlayLayoutModel.updateOne(
+      { key: RANKING_KEY },
+      { data: rankingConfig.toRecord() },
+      { upsert: true },
+    );
+
+    return rankingConfig.toRecord();
   }
 }

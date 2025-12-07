@@ -9,12 +9,14 @@ import { GlobalConfigDto } from './dtos/global-config.dto';
 import { SingleContestantConfigDto } from './dtos/single-contestant-config.dto';
 import { MultiContestantConfigDto } from './dtos/multi-contestant-config.dto';
 import { AnnouncementConfigDto } from './dtos/announcement.dto';
+import { RankingConfigDto } from './dtos/ranking-config.dto';
 import { UserStream } from './layouts/user-stream';
 import { WebcamLayout } from './layouts/webcam-layout';
 import { GlobalConfig } from './layouts/global-config';
 import { SingleContestantConfig } from './layouts/single-contestant-config';
 import { MultiContestantConfig } from './layouts/multi-contestant-config';
 import { AnnouncementConfig } from './layouts/announcement-config';
+import { RankingConfig } from './layouts/ranking-config';
 import { OverlayService, type SubmissionWithAuthor } from './overlay.service';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
 
@@ -318,5 +320,40 @@ export class OverlayController {
     @Query('limit') limit?: number,
   ): Promise<SubmissionWithAuthor[]> {
     return await this.overlayService.getRecentSubmissions(contestCode, limit || 10);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Get ranking configuration',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Ranking configuration retrieved successfully',
+    type: RankingConfig,
+  })
+  @Get('/config/ranking')
+  getRankingConfig() {
+    return this.overlayService.getRankingConfig();
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Set ranking configuration',
+  })
+  @ApiBody({
+    type: RankingConfigDto,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Ranking configuration set successfully',
+    type: RankingConfig,
+  })
+  @Post('/config/ranking')
+  async setRankingConfig(@Body() body: RankingConfigDto) {
+    return await this.overlayService.setRankingConfig(body);
   }
 }

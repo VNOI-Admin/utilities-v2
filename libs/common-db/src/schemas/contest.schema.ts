@@ -19,6 +19,9 @@ export class Contest {
 
   @Prop({ required: false })
   frozen_at?: Date;
+
+  @Prop({ required: false, default: 20 })
+  penalty?: number; // Minutes penalty per wrong submission before first AC
 }
 
 export const ContestSchema = SchemaFactory.createForClass(Contest);

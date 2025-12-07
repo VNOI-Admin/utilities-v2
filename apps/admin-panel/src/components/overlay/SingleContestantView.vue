@@ -27,26 +27,29 @@
 
     <!-- Team Info Float (Bottom Left) -->
     <TeamInfoFloat
-      :username="config.username"
+      :username="displayName"
       :rank="teamRank"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { internalApi } from '~/services/api';
 import VideoPlayer from '~/components/VideoPlayer.vue';
 import TeamInfoFloat from './TeamInfoFloat.vue';
 import type { SingleContestantConfig } from '~/stores/overlay';
+import { useOverlayStore } from '~/stores/overlay';
 
 const props = defineProps<{
   config: SingleContestantConfig;
 }>();
 
+const overlayStore = useOverlayStore();
 const streamUrl = ref('');
 const webcamUrl = ref('');
 const teamRank = ref(0);
+const displayName = ref(props.config.username); // Initialize with username as fallback
 
 const showStream = computed(() => {
   const mode = props.config.displayMode || 'both';
@@ -73,9 +76,53 @@ async function loadStreamUrls() {
   }
 }
 
+async function loadParticipantData() {
+  try {
+    if (!overlayStore.activeContestId || !props.config.username) {
+      teamRank.value = 0;
+      return;
+    }
+
+    const participants = await internalApi.contest.getParticipants(overlayStore.activeContestId);
+    const participant = participants.find((p: any) => p.mapToUser === props.config.username);
+
+    if (participant) {
+      if (participant.displayName) {
+        displayName.value = participant.displayName;
+      }
+      // Update rank from participant data
+      teamRank.value = participant.rank || 0;
+    } else {
+      teamRank.value = 0;
+    }
+  } catch (error) {
+    console.error('Failed to load participant data:', error);
+    teamRank.value = 0;
+  }
+}
+
 onMounted(() => {
   if (props.config.username) {
     loadStreamUrls();
+    loadParticipantData();
+  }
+});
+
+// Watch for config changes to update participant data
+watch(() => props.config.username, (newUsername) => {
+  if (newUsername) {
+    displayName.value = newUsername; // Reset to username while loading
+    teamRank.value = 0; // Reset rank while loading
+    loadParticipantData();
+  }
+});
+
+// Watch for contest changes to update rank
+watch(() => overlayStore.activeContestId, (newContestId) => {
+  if (newContestId && props.config.username) {
+    loadParticipantData();
+  } else {
+    teamRank.value = 0;
   }
 });
 </script>

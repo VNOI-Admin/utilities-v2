@@ -3,7 +3,7 @@
     <div class="team-name">{{ username }}</div>
     <div class="team-rank">
       <span class="rank-label">RANK</span>
-      <span class="rank-value">{{ rank || '-' }}</span>
+      <span class="rank-value">{{ rank ? `#${rank}` : '-' }}</span>
     </div>
   </div>
 </template>

@@ -143,6 +143,7 @@ const layoutOptions = [
   { label: 'None (Standby)', value: 'none' },
   { label: 'Single Contestant', value: 'single' },
   { label: 'Multi Contestant', value: 'multi' },
+  { label: 'Ranking', value: 'ranking' },
 ];
 
 watch(() => overlayStore.globalConfig, (newConfig) => {

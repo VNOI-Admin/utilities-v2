@@ -9,6 +9,12 @@ export interface ContestEntity {
   start_time: string | Date;
   end_time: string | Date;
   frozen_at?: string | Date;
+  penalty?: number; // Minutes penalty per wrong submission (default 20)
+}
+
+export interface ProblemData {
+  solveTime: number;
+  wrongTries: number;
 }
 
 export interface ParticipantEntity {
@@ -16,6 +22,12 @@ export interface ParticipantEntity {
   username: string;
   contest: string;
   mapToUser?: string;
+  displayName: string; // Computed: mapped user's fullName > mapped user's username > participant username
+  solvedCount: number;
+  totalPenalty: number;
+  rank: number; // Current rank in the contest (calculated after each sync batch)
+  solvedProblems: string[];
+  problemData: Record<string, ProblemData>;
 }
 
 export enum SubmissionStatus {

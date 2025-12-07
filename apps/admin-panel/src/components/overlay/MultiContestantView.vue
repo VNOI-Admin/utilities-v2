@@ -18,8 +18,8 @@
 
         <!-- Contestant Info (Bottom Left) -->
         <div class="contestant-info">
-          <div class="contestant-name">{{ username }}</div>
-          <div class="contestant-rank">{{ ranks[index] || '-' }}</div>
+          <div class="contestant-name">{{ displayNames[index] || username }}</div>
+          <div class="contestant-rank">{{ ranks[index] ? `#${ranks[index]}` : '-' }}</div>
         </div>
       </div>
     </div>
@@ -27,17 +27,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { internalApi } from '~/services/api';
 import VideoPlayer from '~/components/VideoPlayer.vue';
 import type { MultiContestantConfig } from '~/stores/overlay';
+import { useOverlayStore } from '~/stores/overlay';
 
 const props = defineProps<{
   config: MultiContestantConfig;
 }>();
 
+const overlayStore = useOverlayStore();
 const streamUrls = ref<string[]>([]);
 const ranks = ref<number[]>([]);
+const displayNames = ref<string[]>([]);
 
 const layoutModeClass = computed(() => {
   return `layout-${props.config.layoutMode || 'side_by_side'}`;
@@ -65,9 +68,56 @@ async function loadStreamUrls() {
   }
 }
 
+async function loadParticipantData() {
+  try {
+    if (!overlayStore.activeContestId || props.config.usernames.length === 0) {
+      displayNames.value = props.config.usernames;
+      ranks.value = props.config.usernames.map(() => 0);
+      return;
+    }
+
+    const participants = await internalApi.contest.getParticipants(overlayStore.activeContestId);
+
+    // Map each username to its displayName and rank
+    displayNames.value = [];
+    ranks.value = [];
+
+    for (const username of props.config.usernames) {
+      const participant = participants.find((p: any) => p.username === username);
+      displayNames.value.push(participant?.displayName || username);
+      ranks.value.push(participant?.rank || 0);
+    }
+  } catch (error) {
+    console.error('Failed to load participant data:', error);
+    // Fallback to usernames and zero ranks
+    displayNames.value = props.config.usernames;
+    ranks.value = props.config.usernames.map(() => 0);
+  }
+}
+
 onMounted(() => {
   if (props.config.usernames.length > 0) {
     loadStreamUrls();
+    loadParticipantData();
+  }
+});
+
+// Watch for config changes to update participant data
+watch(() => props.config.usernames, (newUsernames) => {
+  if (newUsernames && newUsernames.length > 0) {
+    displayNames.value = newUsernames; // Reset to usernames while loading
+    ranks.value = newUsernames.map(() => 0); // Reset ranks while loading
+    loadParticipantData();
+  }
+}, { deep: true });
+
+// Watch for contest changes to update participant data
+watch(() => overlayStore.activeContestId, (newContestId) => {
+  if (newContestId && props.config.usernames.length > 0) {
+    loadParticipantData();
+  } else {
+    displayNames.value = props.config.usernames;
+    ranks.value = props.config.usernames.map(() => 0);
   }
 });
 </script>

@@ -16,6 +16,11 @@
             v-else-if="overlayStore.currentLayout === 'multi' && !overlayStore.isFullViewMode"
             :config="overlayStore.multiContestantConfig"
           />
+          <RankingView
+            v-else-if="overlayStore.currentLayout === 'ranking' && !overlayStore.isFullViewMode"
+            :contest-id="overlayStore.globalConfig.contestId"
+            :current-page="overlayStore.rankingConfig.currentPage"
+          />
           <div v-else class="empty-main-view">
             <!-- Transparent/empty for OBS chroma key -->
           </div>
@@ -69,6 +74,7 @@ import { onMounted, onUnmounted } from 'vue';
 import { useOverlayStore } from '~/stores/overlay';
 import SingleContestantView from '~/components/overlay/SingleContestantView.vue';
 import MultiContestantView from '~/components/overlay/MultiContestantView.vue';
+import RankingView from '~/components/overlay/RankingView.vue';
 import SubmissionQueue from '~/components/overlay/SubmissionQueue.vue';
 import OverlayFooter from '~/components/overlay/OverlayFooter.vue';
 

@@ -27,6 +27,12 @@
         </div>
 
         <div class="flex items-center gap-2">
+          <!-- Contest Indicator -->
+          <div v-if="overlayStore.activeContestId" class="flex items-center gap-2 px-3 py-2 bg-mission-gray border border-mission-accent/30">
+            <div class="w-2 h-2 bg-mission-accent rounded-full animate-pulse"></div>
+            <span class="tech-label">CONTEST: {{ overlayStore.activeContestId }}</span>
+          </div>
+
           <button
             @click="swapStreams"
             class="btn-secondary flex items-center gap-2"
@@ -154,6 +160,23 @@
                 <div class="tech-label mb-1">DISK</div>
                 <div class="font-mono text-sm text-white">{{ user.machineUsage.disk }}%</div>
               </div>
+              <template v-if="participantRank !== null && participantData">
+                <div class="h-8 w-px bg-white/20"></div>
+                <div>
+                  <div class="tech-label mb-1">CONTEST RANK</div>
+                  <div class="font-mono text-sm text-mission-accent font-bold">#{{ participantRank }}</div>
+                </div>
+                <div class="h-8 w-px bg-white/20"></div>
+                <div>
+                  <div class="tech-label mb-1">SOLVED</div>
+                  <div class="font-mono text-sm text-white">{{ participantData.solvedCount || 0 }}</div>
+                </div>
+                <div class="h-8 w-px bg-white/20"></div>
+                <div>
+                  <div class="tech-label mb-1">PENALTY</div>
+                  <div class="font-mono text-sm text-white">{{ participantData.totalPenalty || 0 }}min</div>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -163,20 +186,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { internalApi } from '~/services/api';
+import { useOverlayStore } from '~/stores/overlay';
 import VideoPlayer from '~/components/VideoPlayer.vue';
 import { ArrowLeft, ArrowDownUp, Maximize, AlertCircle, Eye } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
+const overlayStore = useOverlayStore();
 
 const user = ref<any>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const swapped = ref(false);
 const streamContainerRef = ref<HTMLElement | null>(null);
+const participantRank = ref<number | null>(null);
+const participantData = ref<any>(null);
 
 const mainStreamUrl = computed(() => {
   if (!user.value) return null;
@@ -227,6 +254,9 @@ async function loadUser() {
       streamUrl: streamData.streamUrl,
       webcamUrl: streamData.webcamUrl,
     };
+
+    // Load participant rank if contest is set
+    await loadParticipantRank();
   } catch (err: any) {
     console.error('Failed to load user:', err);
     error.value = err?.response?.data?.message || 'Failed to load user feed';
@@ -235,18 +265,71 @@ async function loadUser() {
   }
 }
 
-onMounted(() => {
+async function loadParticipantRank() {
+  try {
+    // Check if a contest is configured in overlay
+    if (!overlayStore.activeContestId) {
+      participantRank.value = null;
+      participantData.value = null;
+      return;
+    }
+
+    if (!user.value) {
+      participantRank.value = null;
+      participantData.value = null;
+      return;
+    }
+
+    // Fetch all participants for the contest
+    const participants = await internalApi.contest.getParticipants(overlayStore.activeContestId);
+
+    // Find participant where mapToUser matches current user's username
+    const participant = participants.find((p: any) => p.mapToUser === user.value.username);
+
+    if (!participant) {
+      participantRank.value = null;
+      participantData.value = null;
+      return;
+    }
+
+    // Use the rank field that's calculated and stored by the sync processor
+    participantRank.value = participant.rank || 0;
+    participantData.value = participant;
+  } catch (err) {
+    console.error('Failed to load participant rank:', err);
+    participantRank.value = null;
+    participantData.value = null;
+  }
+}
+
+// Watch for contest changes in overlay store
+watch(
+  () => overlayStore.activeContestId,
+  async (newContestId) => {
+    if (newContestId && user.value) {
+      await loadParticipantRank();
+    } else {
+      participantRank.value = null;
+      participantData.value = null;
+    }
+  }
+);
+
+onMounted(async () => {
+  // Fetch overlay global config to get current contest
+  await overlayStore.fetchGlobalConfig();
+
+  // Load user and participant data
   loadUser();
+
+  // Setup fullscreen listener
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
 });
 
 // Handle fullscreen change
 function handleFullscreenChange() {
   // You can add UI changes when entering/exiting fullscreen
 }
-
-onMounted(() => {
-  document.addEventListener('fullscreenchange', handleFullscreenChange);
-});
 
 onBeforeUnmount(() => {
   document.removeEventListener('fullscreenchange', handleFullscreenChange);

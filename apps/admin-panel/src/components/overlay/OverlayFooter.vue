@@ -14,7 +14,7 @@
             key="announcements"
             :announcements="announcements"
           />
-          <RankingDisplay v-else key="ranking" />
+          <RankingDisplay v-else key="ranking" :contest-id="contestId" />
         </transition>
       </div>
     </div>

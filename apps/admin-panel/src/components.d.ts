@@ -26,7 +26,9 @@ declare module 'vue' {
     MultiContestantView: typeof import('./components/overlay/MultiContestantView.vue')['default']
     OverlayFooter: typeof import('./components/overlay/OverlayFooter.vue')['default']
     PageHeader: typeof import('./components/PageHeader.vue')['default']
+    RankingConfigPanel: typeof import('./components/overlay-controller/RankingConfigPanel.vue')['default']
     RankingDisplay: typeof import('./components/overlay/RankingDisplay.vue')['default']
+    RankingView: typeof import('./components/overlay/RankingView.vue')['default']
     RefreshButton: typeof import('./components/RefreshButton.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
@@ -39,5 +41,6 @@ declare module 'vue' {
     TeamInfoFloat: typeof import('./components/overlay/TeamInfoFloat.vue')['default']
     ToggleButton: typeof import('./components/ToggleButton.vue')['default']
     VideoPlayer: typeof import('./components/VideoPlayer.vue')['default']
+    X: typeof import('lucide-vue-next')['X']
   }
 }

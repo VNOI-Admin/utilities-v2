@@ -33,6 +33,10 @@ export interface AnnouncementConfig {
   announcements: AnnouncementItem[];
 }
 
+export interface RankingConfig {
+  currentPage: number;
+}
+
 export interface Submission {
   _id: string;
   submittedAt: Date;
@@ -75,6 +79,10 @@ export const useOverlayStore = defineStore('overlay', () => {
 
   const announcements = ref<AnnouncementConfig>({
     announcements: [],
+  });
+
+  const rankingConfig = ref<RankingConfig>({
+    currentPage: 0,
   });
 
   const submissions = ref<Submission[]>([]);
@@ -208,12 +216,39 @@ export const useOverlayStore = defineStore('overlay', () => {
     }
   }
 
+  async function fetchRankingConfig() {
+    try {
+      const response = await internalApi.overlay.getRankingConfig();
+      rankingConfig.value = response as RankingConfig;
+    } catch (e: any) {
+      error.value = e.message || 'Failed to fetch ranking config';
+      console.error('Error fetching ranking config:', e);
+    }
+  }
+
+  async function updateRankingConfig(config: RankingConfig) {
+    try {
+      loading.value = true;
+      error.value = null;
+      const response = await internalApi.overlay.setRankingConfig(config as any);
+      rankingConfig.value = response as RankingConfig;
+    } catch (e: any) {
+      error.value = e.message || 'Failed to update ranking config';
+      console.error('Error updating ranking config:', e);
+      throw e;
+    } finally {
+      loading.value = false;
+    }
+  }
+
   async function fetchLayoutConfig() {
     const layout = globalConfig.value.currentLayout;
     if (layout === 'single') {
       await fetchSingleContestantConfig();
     } else if (layout === 'multi') {
       await fetchMultiContestantConfig();
+    } else if (layout === 'ranking') {
+      await fetchRankingConfig();
     }
   }
 
@@ -251,6 +286,7 @@ export const useOverlayStore = defineStore('overlay', () => {
     singleContestantConfig,
     multiContestantConfig,
     announcements,
+    rankingConfig,
     submissions,
     loading,
     error,
@@ -269,6 +305,8 @@ export const useOverlayStore = defineStore('overlay', () => {
     updateMultiContestantConfig,
     fetchAnnouncements,
     updateAnnouncements,
+    fetchRankingConfig,
+    updateRankingConfig,
     fetchSubmissions,
     fetchLayoutConfig,
     fetchAllDisplayData,

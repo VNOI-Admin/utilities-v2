@@ -22,6 +22,7 @@
       <GlobalConfigPanel v-if="activeTab === 'global'" />
       <SingleContestantPanel v-else-if="activeTab === 'single'" />
       <MultiContestantPanel v-else-if="activeTab === 'multi'" />
+      <RankingConfigPanel v-else-if="activeTab === 'ranking'" />
       <AnnouncementManager v-else-if="activeTab === 'announcements'" />
     </div>
 
@@ -46,10 +47,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Monitor, Settings, User, Users, MessageSquare, ExternalLink } from 'lucide-vue-next';
+import { Monitor, Settings, User, Users, ListOrdered, MessageSquare, ExternalLink } from 'lucide-vue-next';
 import GlobalConfigPanel from '~/components/overlay-controller/GlobalConfigPanel.vue';
 import SingleContestantPanel from '~/components/overlay-controller/SingleContestantPanel.vue';
 import MultiContestantPanel from '~/components/overlay-controller/MultiContestantPanel.vue';
+import RankingConfigPanel from '~/components/overlay-controller/RankingConfigPanel.vue';
 import AnnouncementManager from '~/components/overlay-controller/AnnouncementManager.vue';
 
 const activeTab = ref('global');
@@ -58,6 +60,7 @@ const tabs = [
   { id: 'global', label: 'Global Settings', icon: Settings },
   { id: 'single', label: 'Single Contestant', icon: User },
   { id: 'multi', label: 'Multi Contestant', icon: Users },
+  { id: 'ranking', label: 'Ranking', icon: ListOrdered },
   { id: 'announcements', label: 'Announcements', icon: MessageSquare },
 ];
 

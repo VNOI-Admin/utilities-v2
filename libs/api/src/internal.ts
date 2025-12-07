@@ -179,6 +179,19 @@ export interface AnnouncementConfigDto {
   announcements: AnnouncementItem[];
 }
 
+export interface RankingConfig {
+  /** Current page/section (0-indexed) */
+  currentPage: number;
+}
+
+export interface RankingConfigDto {
+  /**
+   * Current page/section (0-indexed)
+   * @min 0
+   */
+  currentPage: number;
+}
+
 export interface CreateContestDto {
   /** Contest code from VNOJ (e.g., vnoicup25_r2) */
   code: string;
@@ -979,6 +992,44 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         method: 'GET',
         query: query,
         secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name GetRankingConfig
+     * @summary Get ranking configuration
+     * @request GET:/overlay/config/ranking
+     * @secure
+     */
+    getRankingConfig: (params: RequestParams = {}) =>
+      this.request<RankingConfig, any>({
+        path: `/overlay/config/ranking`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Overlay
+     * @name SetRankingConfig
+     * @summary Set ranking configuration
+     * @request POST:/overlay/config/ranking
+     * @secure
+     */
+    setRankingConfig: (data: RankingConfigDto, params: RequestParams = {}) =>
+      this.request<RankingConfig, any>({
+        path: `/overlay/config/ranking`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
         ...params,
       }),
   };

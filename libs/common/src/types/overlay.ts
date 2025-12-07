@@ -6,6 +6,7 @@ export const OVERLAY_KEYS = {
   SINGLE_CONTESTANT: 'single-contestant',
   MULTI_CONTESTANT: 'multi-contestant',
   ANNOUNCEMENTS: 'announcements',
+  RANKING: 'ranking',
 };
 
 export type OverlayKey = (typeof OVERLAY_KEYS)[keyof typeof OVERLAY_KEYS];

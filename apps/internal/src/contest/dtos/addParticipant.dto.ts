@@ -5,6 +5,7 @@ export enum AddParticipantMode {
   EXISTING_USER = 'existing_user',
   CSV_IMPORT = 'csv_import',
   CREATE_USER = 'create_user',
+  AUTO_CREATE_USER = 'auto_create_user', // Creates users with username=participant name, random password
 }
 
 export class AddParticipantDto {
@@ -66,6 +67,17 @@ export class AddParticipantDto {
   @IsOptional()
   @IsString()
   password?: string;
+
+  // AUTO_CREATE_USER mode does not require additional fields
+  // It automatically finds all participants without a mapped user
+}
+
+export class GeneratedCredential {
+  @ApiProperty({ description: 'Username of the created user' })
+  username!: string;
+
+  @ApiProperty({ description: 'Generated password for the user' })
+  password!: string;
 }
 
 export class AddParticipantResponseDto {
@@ -83,6 +95,13 @@ export class AddParticipantResponseDto {
     type: [String]
   })
   errors!: string[];
+
+  @ApiProperty({
+    description: 'Generated credentials for auto_create_user mode',
+    type: [GeneratedCredential],
+    required: false
+  })
+  generatedCredentials?: GeneratedCredential[];
 }
 
 export class RemoveParticipantDto {

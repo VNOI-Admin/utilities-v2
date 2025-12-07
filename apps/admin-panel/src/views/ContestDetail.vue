@@ -188,7 +188,7 @@
               <div class="mb-4 flex items-center gap-4">
                 <SearchInput
                   v-model="participantSearch"
-                  placeholder="SEARCH PARTICIPANT USERNAME..."
+                  placeholder="SEARCH PARTICIPANT..."
                   container-class="flex-1"
                 />
                 <StatCounter
@@ -221,7 +221,7 @@
               </div>
               <div v-else class="mission-card overflow-hidden bg-mission-gray">
                 <div class="grid grid-cols-12 gap-4 px-6 py-4 bg-mission-dark border-b border-white/10">
-                  <div class="col-span-3 tech-label">VNOJ USERNAME</div>
+                  <div class="col-span-3 tech-label">PARTICIPANT</div>
                   <div class="col-span-4 tech-label">MAPPED USER</div>
                   <div class="col-span-2 tech-label">STATUS</div>
                   <div class="col-span-3 tech-label text-center">ACTIONS</div>
@@ -232,7 +232,10 @@
                     :key="participant._id"
                     class="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-mission-accent/5 transition-all duration-300"
                   >
-                    <div class="col-span-3 font-mono text-sm">{{ participant.username }}</div>
+                    <div class="col-span-3">
+                      <div class="font-mono text-sm">{{ participant.displayName }}</div>
+                      <div class="text-xs text-gray-500">@{{ participant.username }}</div>
+                    </div>
                     <div class="col-span-4">
                       <MissionSelect
                         v-if="editingParticipant === participant._id"
@@ -295,7 +298,7 @@
                       </button>
                       <button
                         v-if="editingParticipant !== participant._id"
-                        @click="confirmDeleteParticipant(participant._id, participant.username)"
+                        @click="confirmDeleteParticipant(participant._id, participant.displayName)"
                         class="text-mission-red hover:text-mission-red/80 transition-colors"
                         title="Remove participant"
                       >
@@ -487,6 +490,86 @@
                 </div>
               </div>
             </div>
+
+            <!-- RANKING TAB -->
+            <div v-show="activeTab === 'ranking'">
+              <div v-if="loadingParticipants || loadingProblems" class="text-center py-12">
+                <div class="inline-block w-8 h-8 border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p class="font-mono text-gray-500 text-xs uppercase">Loading ranking...</p>
+              </div>
+              <div v-else-if="participants.length === 0" class="text-center py-12 text-gray-500">
+                <Trophy :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
+                <p class="font-mono text-sm uppercase">No participants found</p>
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b border-white/10 bg-mission-gray">
+                      <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 w-12">#</th>
+                      <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 min-w-[150px]">Participant</th>
+                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20">Solved</th>
+                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-24">Penalty</th>
+                      <th
+                        v-for="problem in sortedProblems"
+                        :key="problem._id"
+                        class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20"
+                      >
+                        {{ problem.code }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="row in rankingData"
+                      :key="row.participant._id"
+                      class="border-b border-white/5 hover:bg-white/5 transition-colors"
+                    >
+                      <!-- Rank -->
+                      <td class="px-3 py-3 font-mono text-sm text-gray-400">
+                        {{ row.rank }}
+                      </td>
+                      <!-- Display Name -->
+                      <td class="px-3 py-3">
+                        <div class="font-mono text-sm">{{ row.participant.displayName }}</div>
+                        <div class="text-xs text-gray-500">
+                          @{{ row.participant.username }}
+                        </div>
+                      </td>
+                      <!-- Solved Count -->
+                      <td class="px-3 py-3 text-center">
+                        <span class="font-mono text-sm data-value">{{ row.participant.solvedCount || 0 }}</span>
+                      </td>
+                      <!-- Total Penalty -->
+                      <td class="px-3 py-3 text-center">
+                        <span class="font-mono text-sm text-gray-400">{{ row.participant.totalPenalty || 0 }}</span>
+                      </td>
+                      <!-- Problem Cells -->
+                      <td
+                        v-for="problem in sortedProblems"
+                        :key="problem._id"
+                        class="px-2 py-3 text-center"
+                      >
+                        <div
+                          v-if="row.problemStates[problem.code]?.tries > 0"
+                          class="inline-flex flex-col items-center justify-center min-w-[50px] px-2 py-1 rounded text-xs font-mono"
+                          :class="row.problemStates[problem.code]?.solved
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            : 'bg-red-500/20 text-red-400 border border-red-500/30'"
+                        >
+                          <span class="font-semibold">
+                            {{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}
+                          </span>
+                          <span v-if="row.problemStates[problem.code]?.solved" class="text-[10px] opacity-75">
+                            {{ row.problemStates[problem.code]?.penalty }}'
+                          </span>
+                        </div>
+                        <span v-else class="text-gray-600">-</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -637,7 +720,7 @@
             <!-- Mode Selection -->
             <div class="p-6 border-b border-white/10 bg-mission-dark">
               <div class="tech-label mb-3">SELECT INTAKE PROTOCOL</div>
-              <div class="grid grid-cols-3 gap-3">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <button
                   @click="addParticipantMode = 'existing_user'"
                   class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
@@ -680,6 +763,21 @@
                     <UserPlus :size="32" :stroke-width="2" class="mx-auto mb-2" />
                     <div class="font-mono text-xs uppercase tracking-wider font-bold">New Recruit</div>
                     <div class="text-[10px] text-gray-500 mt-1">Create user + participant</div>
+                  </div>
+                </button>
+
+                <button
+                  @click="addParticipantMode = 'auto_create_user'"
+                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
+                  :class="addParticipantMode === 'auto_create_user'
+                    ? 'border-purple-500 bg-purple-500/10 text-purple-400'
+                    : 'border-white/20 hover:border-purple-500/50 text-gray-400 hover:text-gray-200'"
+                >
+                  <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div class="relative z-10">
+                    <UserPlus :size="32" :stroke-width="2" class="mx-auto mb-2" />
+                    <div class="font-mono text-xs uppercase tracking-wider font-bold">Auto Create</div>
+                    <div class="text-[10px] text-gray-500 mt-1">Bulk create users + random passwords</div>
                   </div>
                 </button>
               </div>
@@ -802,6 +900,33 @@
                 </div>
               </div>
 
+              <!-- Mode: Auto Create User -->
+              <div v-if="addParticipantMode === 'auto_create_user'" class="space-y-4">
+                <div class="p-4 border border-purple-500/30 bg-purple-500/5">
+                  <p class="text-xs font-mono text-purple-400 flex items-center gap-2 mb-2">
+                    <Info :size="16" :stroke-width="2" />
+                    Auto-create users for unmapped participants
+                  </p>
+                  <p class="text-[11px] font-mono text-gray-400">
+                    This will automatically find all participants without a mapped user and create backend users for them with random passwords.
+                  </p>
+                </div>
+
+                <div class="p-4 border border-white/10 bg-mission-gray">
+                  <div class="tech-label mb-2">UNMAPPED PARTICIPANTS</div>
+                  <div class="data-value text-2xl text-purple-400">{{ unmappedParticipantsCount }}</div>
+                  <p class="text-[10px] text-gray-500 mt-1 font-mono">
+                    participant(s) will have users created for them
+                  </p>
+                </div>
+
+                <div class="p-3 border border-purple-500/20 bg-purple-500/5">
+                  <p class="text-[11px] font-mono text-purple-300">
+                    <strong>Note:</strong> Generated credentials will be shown after creation. Make sure to copy them!
+                  </p>
+                </div>
+              </div>
+
               <!-- Error Display -->
               <div v-if="addParticipantError" class="p-3 border border-mission-red bg-mission-red/10">
                 <p class="text-sm font-mono text-mission-red">{{ addParticipantError }}</p>
@@ -844,6 +969,42 @@
                     >
                       • {{ error }}
                     </div>
+                  </div>
+                </div>
+
+                <!-- Generated Credentials (for auto_create_user mode) -->
+                <div v-if="addParticipantResult.generatedCredentials && addParticipantResult.generatedCredentials.length > 0" class="p-4 border border-purple-500/30 bg-purple-500/5">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="tech-label flex items-center gap-2 text-purple-400">
+                      <UserPlus :size="16" :stroke-width="2" />
+                      GENERATED CREDENTIALS ({{ addParticipantResult.generatedCredentials.length }})
+                    </div>
+                    <button
+                      @click="copyCredentialsToClipboard"
+                      class="px-3 py-1 text-xs font-mono border border-purple-500/50 text-purple-400 hover:bg-purple-500/20 transition-colors"
+                    >
+                      COPY ALL
+                    </button>
+                  </div>
+                  <div class="max-h-48 overflow-y-auto custom-scrollbar">
+                    <table class="w-full text-xs font-mono">
+                      <thead>
+                        <tr class="border-b border-purple-500/20">
+                          <th class="text-left py-2 text-gray-400">USERNAME</th>
+                          <th class="text-left py-2 text-gray-400">PASSWORD</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="cred in addParticipantResult.generatedCredentials"
+                          :key="cred.username"
+                          class="border-b border-purple-500/10"
+                        >
+                          <td class="py-2 text-purple-300">{{ cred.username }}</td>
+                          <td class="py-2 text-purple-300">{{ cred.password }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -906,7 +1067,7 @@
             </div>
             <div class="p-6 space-y-4">
               <p class="text-sm text-gray-300">
-                Are you sure you want to remove participant <span class="font-mono text-mission-accent">{{ participantToDelete?.username }}</span> from this contest?
+                Are you sure you want to remove participant <span class="font-mono text-mission-accent">{{ participantToDelete?.displayName }}</span> from this contest?
               </p>
               <p class="text-xs text-mission-red font-mono">This action cannot be undone.</p>
               <div class="flex items-center gap-3 pt-4">
@@ -944,7 +1105,7 @@ import type { ContestEntity, ParticipantEntity, SubmissionEntity, ProblemEntity 
 import { internalApi } from '~/services/api';
 import type { UserEntity } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
-import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList } from 'lucide-vue-next';
+import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList, Trophy } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -964,7 +1125,7 @@ const problems = ref<ProblemEntity[]>([]);
 const availableUsers = ref<UserEntity[]>([]);
 
 // Tab state
-const validTabs = ['details', 'participants', 'submissions', 'problems'] as const;
+const validTabs = ['details', 'participants', 'submissions', 'problems', 'ranking'] as const;
 type TabType = typeof validTabs[number];
 
 // Initialize activeTab from URL query parameter
@@ -982,6 +1143,7 @@ const tabs = [
   { id: 'participants', label: 'Participants', iconComponent: Users },
   { id: 'submissions', label: 'Submissions', iconComponent: ClipboardList },
   { id: 'problems', label: 'Problems', iconComponent: FileText },
+  { id: 'ranking', label: 'Ranking', iconComponent: Trophy },
 ];
 
 // Participant state
@@ -1012,10 +1174,10 @@ const deleteConfirmText = ref('');
 
 // Add participant modal state
 const showAddParticipantModal = ref(false);
-const addParticipantMode = ref<'existing_user' | 'csv_import' | 'create_user'>('existing_user');
+const addParticipantMode = ref<'existing_user' | 'csv_import' | 'create_user' | 'auto_create_user'>('existing_user');
 const addingParticipant = ref(false);
 const addParticipantError = ref('');
-const addParticipantResult = ref<{added: number; skipped: number; total: number; errors: string[]} | null>(null);
+const addParticipantResult = ref<{added: number; skipped: number; total: number; errors: string[]; generatedCredentials?: {username: string; password: string}[]} | null>(null);
 const newParticipant = ref({
   participantUsername: '',
   userId: '',
@@ -1028,7 +1190,7 @@ const newParticipant = ref({
 // Delete participant modal state
 const showDeleteParticipantModal = ref(false);
 const deletingParticipant = ref(false);
-const participantToDelete = ref<{id: string; username: string} | null>(null);
+const participantToDelete = ref<{id: string; displayName: string} | null>(null);
 
 // Computed
 const contestStatus = computed(() => {
@@ -1040,9 +1202,15 @@ const filteredParticipants = computed(() => {
   if (!participantSearch.value) return participants.value;
   const query = participantSearch.value.toLowerCase();
   return participants.value.filter(p =>
+    p.displayName.toLowerCase().includes(query) ||
     p.username.toLowerCase().includes(query) ||
     (p.mapToUser && p.mapToUser.toLowerCase().includes(query))
   );
+});
+
+// Count of participants without mapped users
+const unmappedParticipantsCount = computed(() => {
+  return participants.value.filter(p => !p.mapToUser).length;
 });
 
 const canSubmitParticipant = computed(() => {
@@ -1057,8 +1225,50 @@ const canSubmitParticipant = computed(() => {
       newParticipant.value.fullName &&
       newParticipant.value.password
     );
+  } else if (addParticipantMode.value === 'auto_create_user') {
+    return unmappedParticipantsCount.value > 0;
   }
   return false;
+});
+
+// Ranking computed - sorted problems for header
+const sortedProblems = computed(() => {
+  return [...problems.value].sort((a, b) => a.code.localeCompare(b.code));
+});
+
+// Ranking computed - participants sorted by ICPC rules with problem states
+const rankingData = computed(() => {
+  // Sort participants: more solved first, then lower penalty
+  const sorted = [...participants.value].sort((a, b) => {
+    const solvedDiff = (b.solvedCount || 0) - (a.solvedCount || 0);
+    if (solvedDiff !== 0) return solvedDiff;
+    return (a.totalPenalty || 0) - (b.totalPenalty || 0);
+  });
+
+  return sorted.map((participant, index) => {
+    // Build problem states for this participant
+    const problemStates: Record<string, { solved: boolean; tries: number; penalty: number }> = {};
+
+    for (const problem of sortedProblems.value) {
+      const problemData = participant.problemData?.[problem.code];
+      if (problemData) {
+        const solved = participant.solvedProblems?.includes(problem.code) || false;
+        problemStates[problem.code] = {
+          solved,
+          tries: problemData.wrongTries + (solved ? 1 : 0), // Total attempts including AC
+          penalty: solved ? problemData.solveTime : 0,
+        };
+      } else {
+        problemStates[problem.code] = { solved: false, tries: 0, penalty: 0 };
+      }
+    }
+
+    return {
+      rank: participant.rank || (index + 1), // Use stored rank, fallback to calculated
+      participant,
+      problemStates,
+    };
+  });
 });
 
 // Methods
@@ -1516,6 +1726,20 @@ function closeAddParticipantModal() {
   };
 }
 
+function copyCredentialsToClipboard() {
+  if (!addParticipantResult.value?.generatedCredentials) return;
+
+  const text = addParticipantResult.value.generatedCredentials
+    .map(cred => `${cred.username},${cred.password}`)
+    .join('\n');
+
+  navigator.clipboard.writeText(text).then(() => {
+    toast.success('Credentials copied to clipboard');
+  }).catch(() => {
+    toast.error('Failed to copy credentials');
+  });
+}
+
 async function handleAddParticipants() {
   if (!contest.value || !canSubmitParticipant.value) return;
 
@@ -1539,6 +1763,7 @@ async function handleAddParticipants() {
       payload.fullName = newParticipant.value.fullName;
       payload.password = newParticipant.value.password;
     }
+    // auto_create_user mode doesn't need additional payload - backend finds unmapped participants
 
     const result = await internalApi.contest.addParticipants(contest.value.code, payload);
     addParticipantResult.value = result;
@@ -1558,8 +1783,8 @@ async function handleAddParticipants() {
 }
 
 // Delete participant functions
-function confirmDeleteParticipant(participantId: string, username: string) {
-  participantToDelete.value = { id: participantId, username };
+function confirmDeleteParticipant(participantId: string, displayName: string) {
+  participantToDelete.value = { id: participantId, displayName };
   showDeleteParticipantModal.value = true;
 }
 
@@ -1582,7 +1807,7 @@ async function handleDeleteParticipant() {
       participants.value.splice(index, 1);
     }
 
-    toast.success(`Participant ${participantToDelete.value.username} removed successfully`);
+    toast.success(`Participant ${participantToDelete.value.displayName} removed successfully`);
     closeDeleteParticipantModal();
   } catch (error: any) {
     toast.error(error.response?.data?.message || 'Failed to remove participant');

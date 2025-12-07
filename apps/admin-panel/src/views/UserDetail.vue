@@ -49,6 +49,39 @@
                 {{ user.machineUsage?.isOnline ? 'ONLINE' : 'OFFLINE' }}
               </span>
             </div>
+
+            <!-- Edit/Save/Cancel buttons -->
+            <div v-if="user" class="flex items-center gap-3">
+              <template v-if="!editMode">
+                <button
+                  @click="enterEditMode"
+                  class="px-4 py-2 border border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+                >
+                  <Edit3 :size="16" :stroke-width="2" />
+                  <span>EDIT</span>
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  @click="saveChanges"
+                  :disabled="saving"
+                  class="px-4 py-2 border border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+                  :class="{ 'opacity-50 cursor-not-allowed': saving }"
+                >
+                  <Save :size="16" :stroke-width="2" />
+                  <span>{{ saving ? 'SAVING...' : 'SAVE' }}</span>
+                </button>
+                <button
+                  @click="cancelEdit"
+                  :disabled="saving"
+                  class="px-4 py-2 border border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300 transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+                  :class="{ 'opacity-50 cursor-not-allowed': saving }"
+                >
+                  <X :size="16" :stroke-width="2" />
+                  <span>CANCEL</span>
+                </button>
+              </template>
+            </div>
           </div>
         </div>
       </div>
@@ -92,7 +125,14 @@
               </div>
               <div>
                 <div class="tech-label mb-1">FULL NAME</div>
-                <div class="text-sm">{{ user.fullName }}</div>
+                <div v-if="!editMode" class="text-sm">{{ user.fullName }}</div>
+                <input
+                  v-else
+                  v-model="editForm.fullName"
+                  type="text"
+                  class="input-mission w-full"
+                  placeholder="Enter full name"
+                />
               </div>
               <div>
                 <div class="tech-label mb-1">ROLE</div>
@@ -100,7 +140,24 @@
               </div>
               <div>
                 <div class="tech-label mb-1">GROUP</div>
-                <div class="font-mono text-sm text-gray-400">{{ user.group || 'Not assigned' }}</div>
+                <div v-if="!editMode" class="font-mono text-sm text-gray-400">{{ user.group || 'Not assigned' }}</div>
+                <input
+                  v-else
+                  v-model="editForm.group"
+                  type="text"
+                  class="input-mission w-full font-mono"
+                  placeholder="Enter group (optional)"
+                />
+              </div>
+              <div v-if="editMode">
+                <div class="tech-label mb-1">NEW PASSWORD</div>
+                <input
+                  v-model="editForm.password"
+                  type="password"
+                  class="input-mission w-full font-mono"
+                  placeholder="Leave empty to keep current password"
+                />
+                <p class="text-xs text-gray-500 mt-1 font-mono">Leave empty to keep the current password</p>
               </div>
               <div>
                 <div class="tech-label mb-1">ACCOUNT STATUS</div>
@@ -235,7 +292,7 @@ import { useRoute } from 'vue-router';
 import { internalApi } from '~/services/api';
 import type { UserEntity } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
-import { ArrowLeft, AlertCircle, Monitor, BarChart3 } from 'lucide-vue-next';
+import { ArrowLeft, AlertCircle, Monitor, BarChart3, Edit3, Save, X } from 'lucide-vue-next';
 
 const route = useRoute();
 const toast = useToast();
@@ -243,6 +300,15 @@ const toast = useToast();
 const loading = ref(false);
 const error = ref('');
 const user = ref<UserEntity | null>(null);
+
+// Edit mode state
+const editMode = ref(false);
+const saving = ref(false);
+const editForm = ref({
+  fullName: '',
+  group: '',
+  password: '',
+});
 
 async function loadUser() {
   loading.value = true;
@@ -279,6 +345,75 @@ function getPingColor(ping: number): string {
   if (ping < 50) return 'text-mission-accent';
   if (ping < 100) return 'text-mission-amber';
   return 'text-mission-red';
+}
+
+function enterEditMode() {
+  if (!user.value) return;
+
+  // Populate edit form with current values
+  editForm.value = {
+    fullName: user.value.fullName || '',
+    group: user.value.group || '',
+    password: '', // Always start empty for security
+  };
+
+  editMode.value = true;
+}
+
+function cancelEdit() {
+  editMode.value = false;
+  editForm.value = {
+    fullName: '',
+    group: '',
+    password: '',
+  };
+}
+
+async function saveChanges() {
+  if (!user.value) return;
+
+  saving.value = true;
+
+  try {
+    // Prepare update payload - only include fields that have values
+    const updateData: any = {};
+
+    if (editForm.value.fullName && editForm.value.fullName !== user.value.fullName) {
+      updateData.fullName = editForm.value.fullName;
+    }
+
+    if (editForm.value.group !== user.value.group) {
+      updateData.group = editForm.value.group || null; // Allow clearing group
+    }
+
+    if (editForm.value.password && editForm.value.password.trim()) {
+      updateData.password = editForm.value.password;
+    }
+
+    // Only make API call if there are changes
+    if (Object.keys(updateData).length === 0) {
+      toast.info('No changes to save');
+      editMode.value = false;
+      return;
+    }
+
+    // Call update API
+    await internalApi.user.updateUser(user.value.username, updateData);
+
+    // Reload user data to reflect changes
+    await loadUser();
+
+    toast.success('User updated successfully');
+    editMode.value = false;
+
+    // Clear password field for security
+    editForm.value.password = '';
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Failed to update user');
+    console.error('Update user error:', err);
+  } finally {
+    saving.value = false;
+  }
 }
 
 onMounted(() => {
