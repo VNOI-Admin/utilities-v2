@@ -44,7 +44,7 @@ export class UserService implements OnModuleInit {
   }
 
   async getUsers(caller: string, query: GetUsersDto) {
-    const { q, role, me, isActive, isOnline, orderBy, withStream } = query;
+    const { q, role, me, isActive, isOnline, orderBy, withStream, group } = query;
 
     const pipeline: PipelineStage[] = [];
 
@@ -84,6 +84,14 @@ export class UserService implements OnModuleInit {
       pipeline.push({
         $match: {
           'machineUsage.isOnline': isOnline,
+        },
+      });
+    }
+
+    if (group) {
+      pipeline.push({
+        $match: {
+          group,
         },
       });
     }
@@ -146,6 +154,20 @@ export class UserService implements OnModuleInit {
       // Generate key pair
       const keyPair = generateKeyPair();
 
+      // Validate group if provided
+      let validatedGroup: string | undefined;
+      if (createUserDto.group) {
+        const group = await this.groupModel.findOne({
+          code: createUserDto.group,
+        });
+
+        if (!group) {
+          throw new BadRequestException('Group not found');
+        }
+
+        validatedGroup = group.code;
+      }
+
       const user = await this.userModel.create({
         username: createUserDto.username,
         fullName: createUserDto.fullName,
@@ -155,6 +177,7 @@ export class UserService implements OnModuleInit {
         keyPair,
         machineUsage: new MachineUsage(),
         isActive: createUserDto.isActive ?? true,
+        group: validatedGroup,
       });
 
       return new UserEntity(user.toObject());

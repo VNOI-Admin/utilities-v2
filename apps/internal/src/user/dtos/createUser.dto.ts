@@ -23,4 +23,9 @@ export class CreateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive: boolean = true;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  group?: string;
 }

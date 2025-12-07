@@ -28,6 +28,9 @@ export interface ParticipantEntity {
   rank: number; // Current rank in the contest (calculated after each sync batch)
   solvedProblems: string[];
   problemData: Record<string, ProblemData>;
+  groupCode?: string; // Group code from the mapped user
+  groupName?: string; // Group name from the groups collection
+  groupLogoUrl?: string; // Group logo URL from the groups collection
 }
 
 export enum SubmissionStatus {

@@ -9,6 +9,16 @@ import { SUCCESS_RESPONSE } from '@libs/common/types/responses';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+
+interface UniversityLogoData {
+  uniName: string;
+  logoURL: string;
+}
+
+const LOGO_DATA_URL = 'https://raw.githubusercontent.com/VNOI-Admin/uni-logo/refs/heads/master/data.json';
+const LOGO_BASE_URL = 'https://raw.githubusercontent.com/VNOI-Admin/uni-logo/refs/heads/master/logo/';
 
 @Injectable()
 export class GroupService {
@@ -17,13 +27,56 @@ export class GroupService {
     private userModel: Model<UserDocument>,
     @InjectModel(Group.name)
     private groupModel: Model<GroupDocument>,
+    private httpService: HttpService,
   ) {}
+
+  async getGroups() {
+    const groups = await this.groupModel.find().sort({ name: 1 }).lean();
+    return groups.map((group) => new GroupEntity(group));
+  }
+
+  private async fetchLogoUrl(groupName: string): Promise<string | undefined> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get<UniversityLogoData[]>(LOGO_DATA_URL)
+      );
+
+      const logoData = response.data;
+
+      // Try exact match first
+      let match = logoData.find(
+        (item) => item.uniName.toLowerCase() === groupName.toLowerCase()
+      );
+
+      // If no exact match, try partial match
+      if (!match) {
+        match = logoData.find((item) =>
+          item.uniName.toLowerCase().includes(groupName.toLowerCase()) ||
+          groupName.toLowerCase().includes(item.uniName.toLowerCase())
+        );
+      }
+
+      if (match) {
+        return `${LOGO_BASE_URL}${match.logoURL}`;
+      }
+
+      return undefined;
+    } catch (error) {
+      // Log error but don't fail group creation
+      console.error('Failed to fetch logo URL:', error);
+      return undefined;
+    }
+  }
 
   async createGroup(createGroupDto: CreateGroupDto) {
     try {
+      // Fetch logo URL
+      const logoUrl = await this.fetchLogoUrl(createGroupDto.name);
+
       const group = await this.groupModel.create({
         code: createGroupDto.code,
         name: createGroupDto.name,
+        logoUrl,
       });
 
       await group.save();

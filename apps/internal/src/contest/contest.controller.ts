@@ -10,7 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
-import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard'
+import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
 
 import { ContestService } from './contest.service';
 import { CreateContestDto } from './dtos/createContest.dto';
@@ -66,6 +67,10 @@ export class ContestController {
 
   @Get(':code/participants')
   @ApiOperation({ summary: 'Get participants for contest' })
+  @ApiOkResponse({
+    description: 'Return list of participants with group information',
+    type: [ParticipantResponse],
+  })
   async getParticipants(@Param('code') code: string) {
     return this.contestService.getParticipants(code);
   }

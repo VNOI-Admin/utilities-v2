@@ -36,8 +36,17 @@
             </td>
             <td class="col-participant">
               <div class="participant-info">
-                <div class="participant-name">{{ row.participant.displayName }}</div>
-                <div class="participant-username">@{{ row.participant.username }}</div>
+                <div class="participant-text">
+                  <div class="participant-name">{{ row.participant.displayName }}</div>
+                  <div v-if="row.participant.groupName" class="participant-group">{{ row.participant.groupName }}</div>
+                </div>
+                <img
+                  v-if="row.participant.groupLogoUrl"
+                  :src="row.participant.groupLogoUrl"
+                  :alt="`${row.participant.groupName} logo`"
+                  class="group-logo"
+                  @error="handleImageError"
+                />
               </div>
             </td>
             <td class="col-solved">
@@ -168,6 +177,12 @@ const fetchProblems = async () => {
   } catch (error) {
     console.error('Failed to fetch problems:', error);
   }
+};
+
+// Handle image loading errors
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  img.style.display = 'none';
 };
 
 // Polling interval
@@ -353,8 +368,17 @@ onBeforeUnmount(() => {
 /* Participant Column */
 .participant-info {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.participant-text {
+  display: flex;
   flex-direction: column;
   gap: 1px;
+  flex: 1;
   overflow: hidden;
 }
 
@@ -376,6 +400,24 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.2;
+}
+
+.participant-group {
+  font-size: 10px;
+  color: #d4a857;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.group-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 3px;
 }
 
 /* Solved Column */

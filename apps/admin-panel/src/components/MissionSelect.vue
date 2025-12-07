@@ -121,8 +121,8 @@ const searchQuery = ref('');
 const dropdownStyle = ref({});
 
 const selectedOption = computed(() => {
-  if (!props.modelValue) return null;
-  return props.options.find(opt => getOptionValue(opt) === getOptionValue(props.modelValue as T));
+  if (props.modelValue === null || props.modelValue === undefined) return null;
+  return props.options.find(opt => getOptionValue(opt) === props.modelValue);
 });
 
 const filteredOptions = computed(() => {
@@ -156,7 +156,7 @@ function getOptionValue(option: T): any {
 }
 
 function isOptionSelected(option: T): boolean {
-  return getOptionValue(option) === getOptionValue(props.modelValue as T);
+  return getOptionValue(option) === props.modelValue;
 }
 
 function isOptionDisabled(option: T): boolean {

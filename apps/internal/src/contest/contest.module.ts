@@ -3,6 +3,7 @@ import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
+import { Group, GroupSchema } from '@libs/common-db/schemas/group.schema';
 import { VNOJApiModule } from '@libs/api/vnoj-api.module';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -19,6 +20,7 @@ import { UserModule } from '../user/user.module';
       { name: Participant.name, schema: ParticipantSchema },
       { name: Problem.name, schema: ProblemSchema },
       { name: User.name, schema: UserSchema },
+      { name: Group.name, schema: GroupSchema },
     ]),
     VNOJApiModule.forRootAsync(),
     UserModule,

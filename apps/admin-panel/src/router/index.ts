@@ -31,6 +31,12 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] },
     },
     {
+      path: '/groups',
+      name: 'Groups',
+      component: () => import('~/views/Groups.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
       path: '/guests',
       name: 'Guests',
       component: () => import('~/views/Guests.vue'),

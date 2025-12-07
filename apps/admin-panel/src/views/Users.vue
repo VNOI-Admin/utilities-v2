@@ -31,6 +31,20 @@
           label="ROLE:"
         />
 
+        <!-- Group Filter -->
+        <div class="flex items-center gap-2">
+          <span class="tech-label">GROUP:</span>
+          <MissionSelect
+            v-model="selectedGroup"
+            :options="groupFilterOptions"
+            :searchable="true"
+            option-label="label"
+            option-value="value"
+            placeholder="All Groups"
+            container-class="w-64"
+          />
+        </div>
+
         <!-- Status Filters -->
         <div class="flex items-center gap-2">
           <span class="tech-label">STATUS:</span>
@@ -232,6 +246,19 @@
           </div>
         </div>
 
+        <!-- Group -->
+        <div>
+          <label class="tech-label block mb-2">GROUP (OPTIONAL)</label>
+          <MissionSelect
+            v-model="newUser.group"
+            :options="groupOptions"
+            placeholder="Select a group..."
+            :searchable="true"
+            option-label="label"
+            option-value="value"
+          />
+        </div>
+
         <!-- Actions -->
         <div class="flex items-center gap-3 pt-4">
           <button
@@ -265,18 +292,21 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { Plus, RotateCw } from 'lucide-vue-next';
 import { useUsersStore } from '~/stores/users';
+import { useGroupsStore } from '~/stores/groups';
 import { internalApi } from '~/services/api';
 import type { CreateUserDto } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
 
 const router = useRouter();
 const usersStore = useUsersStore();
+const groupsStore = useGroupsStore();
 const toast = useToast();
 
 // State
 const loading = ref(false);
 const searchQuery = ref('');
 const selectedRole = ref<'all' | 'admin' | 'coach' | 'contestant' | 'guest'>('all');
+const selectedGroup = ref<string>('all');
 const onlineOnly = ref(false);
 const activeOnly = ref(true);
 
@@ -289,10 +319,21 @@ const newUser = ref<CreateUserDto>({
   fullName: '',
   password: '',
   role: 'contestant',
+  group: undefined,
 });
 
 // Computed
 const users = computed(() => usersStore.users);
+
+const groupOptions = computed(() => [
+  { label: 'No Group', value: undefined },
+  ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
+]);
+
+const groupFilterOptions = computed(() => [
+  { label: 'All Groups', value: 'all' },
+  ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
+]);
 
 const filteredUsers = computed(() => {
   let filtered = users.value;
@@ -310,6 +351,11 @@ const filteredUsers = computed(() => {
   // Role filter
   if (selectedRole.value !== 'all') {
     filtered = filtered.filter((u) => u.role === selectedRole.value);
+  }
+
+  // Group filter
+  if (selectedGroup.value !== 'all') {
+    filtered = filtered.filter((u) => u.group === selectedGroup.value);
   }
 
   // Online filter
@@ -385,7 +431,15 @@ async function handleCreateUser() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadUsers();
+
+  // Load groups for filter
+  try {
+    const groupsData = await internalApi.group.getGroups();
+    groupsStore.setGroups(groupsData);
+  } catch (error) {
+    console.error('Failed to load groups:', error);
+  }
 });
 </script>

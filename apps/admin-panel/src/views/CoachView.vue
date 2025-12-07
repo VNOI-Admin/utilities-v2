@@ -37,6 +37,20 @@
           />
         </div>
 
+        <!-- Group Filter -->
+        <div class="flex items-center gap-2">
+          <span class="tech-label">GROUP:</span>
+          <MissionSelect
+            v-model="selectedGroup"
+            :options="groupFilterOptions"
+            :searchable="true"
+            option-label="label"
+            option-value="value"
+            placeholder="All Groups"
+            container-class="w-64"
+          />
+        </div>
+
         <!-- Stats -->
         <div class="ml-auto flex items-center gap-4">
           <StatCounter
@@ -126,17 +140,25 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
+import { useGroupsStore } from '~/stores/groups';
 import { internalApi } from '~/services/api';
 import { Zap } from 'lucide-vue-next';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const groupsStore = useGroupsStore();
 
 const users = ref<any[]>([]);
 const loading = ref(false);
 const searchQuery = ref('');
+const selectedGroup = ref<string>('all');
 const onlineOnly = ref(true);
 const activeOnly = ref(true);
+
+const groupFilterOptions = computed(() => [
+  { label: 'All Groups', value: 'all' },
+  ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
+]);
 
 const filteredUsers = computed(() => {
   let filtered = users.value;
@@ -148,6 +170,11 @@ const filteredUsers = computed(() => {
 
   if (activeOnly.value) {
     filtered = filtered.filter(u => u.isActive);
+  }
+
+  // Group filter
+  if (selectedGroup.value !== 'all') {
+    filtered = filtered.filter(u => u.group === selectedGroup.value);
   }
 
   // Apply search
@@ -189,7 +216,15 @@ function navigateToUser(username: string) {
   router.push({ name: 'CoachViewDetail', params: { username } });
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadUsers();
+
+  // Load groups for filter
+  try {
+    const groupsData = await internalApi.group.getGroups();
+    groupsStore.setGroups(groupsData);
+  } catch (error) {
+    console.error('Failed to load groups:', error);
+  }
 });
 </script>

@@ -10,6 +10,9 @@ export class Group {
 
   @Prop({ required: true })
   name!: string;
+
+  @Prop({ required: false })
+  logoUrl?: string;
 }
 
 export const GroupSchema = SchemaFactory.createForClass(Group);

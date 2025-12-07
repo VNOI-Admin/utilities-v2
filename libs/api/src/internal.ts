@@ -38,6 +38,7 @@ export interface CreateUserDto {
   /** @default "contestant" */
   role: 'contestant' | 'coach' | 'admin' | 'guest';
   isActive?: boolean;
+  group?: string;
 }
 
 export interface UpdateUserDto {
@@ -49,12 +50,13 @@ export interface UpdateUserDto {
   isActive?: boolean;
 }
 
-export interface CreateGroupDto {
+export interface GroupEntity {
   code: string;
   name: string;
+  logoUrl?: string;
 }
 
-export interface GroupEntity {
+export interface CreateGroupDto {
   code: string;
   name: string;
 }
@@ -180,7 +182,10 @@ export interface AnnouncementConfigDto {
 }
 
 export interface RankingConfig {
-  /** Current page/section (0-indexed) */
+  /**
+   * Current page/section (0-indexed)
+   * @default 0
+   */
   currentPage: number;
 }
 
@@ -188,6 +193,7 @@ export interface RankingConfigDto {
   /**
    * Current page/section (0-indexed)
    * @min 0
+   * @default 0
    */
   currentPage: number;
 }
@@ -228,7 +234,7 @@ export interface LinkParticipantDto {
 
 export interface AddParticipantDto {
   /** Mode for adding participant */
-  mode: 'existing_user' | 'csv_import' | 'create_user';
+  mode: 'existing_user' | 'csv_import' | 'create_user' | 'auto_create_user';
   /** Participant username (VNOJ username) - required for existing_user and create_user modes */
   participantUsername?: string;
   /** User ID to link to - required for existing_user mode */
@@ -243,6 +249,13 @@ export interface AddParticipantDto {
   password?: string;
 }
 
+export interface GeneratedCredential {
+  /** Username of the created user */
+  username: string;
+  /** Generated password for the user */
+  password: string;
+}
+
 export interface AddParticipantResponseDto {
   /** Number of participants successfully added */
   added: number;
@@ -252,6 +265,8 @@ export interface AddParticipantResponseDto {
   total: number;
   /** Array of errors that occurred during processing */
   errors: string[];
+  /** Generated credentials for auto_create_user mode */
+  generatedCredentials?: GeneratedCredential[];
 }
 
 export interface PrintJobEntity {
@@ -469,6 +484,8 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
          * @default false
          */
         withStream?: boolean;
+        /** Filter by group code */
+        group?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -563,6 +580,24 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
       }),
   };
   group = {
+    /**
+     * No description
+     *
+     * @tags Group
+     * @name GetGroups
+     * @summary Get all groups
+     * @request GET:/groups
+     * @secure
+     */
+    getGroups: (params: RequestParams = {}) =>
+      this.request<GroupEntity[], any>({
+        path: `/groups`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
     /**
      * No description
      *

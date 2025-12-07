@@ -140,13 +140,17 @@
               </div>
               <div>
                 <div class="tech-label mb-1">GROUP</div>
-                <div v-if="!editMode" class="font-mono text-sm text-gray-400">{{ user.group || 'Not assigned' }}</div>
-                <input
+                <div v-if="!editMode" class="font-mono text-sm text-gray-400">
+                  {{ user.group ? (groupsStore.getGroupByCode(user.group)?.name || user.group) : 'Not assigned' }}
+                </div>
+                <MissionSelect
                   v-else
                   v-model="editForm.group"
-                  type="text"
-                  class="input-mission w-full font-mono"
-                  placeholder="Enter group (optional)"
+                  :options="groupOptions"
+                  placeholder="Select a group..."
+                  :searchable="true"
+                  :option-label="(opt) => opt.label"
+                  :option-value="(opt) => opt.value"
                 />
               </div>
               <div v-if="editMode">
@@ -287,15 +291,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { internalApi } from '~/services/api';
+import { useGroupsStore } from '~/stores/groups';
 import type { UserEntity } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
 import { ArrowLeft, AlertCircle, Monitor, BarChart3, Edit3, Save, X } from 'lucide-vue-next';
 
 const route = useRoute();
 const toast = useToast();
+const groupsStore = useGroupsStore();
 
 const loading = ref(false);
 const error = ref('');
@@ -309,6 +315,12 @@ const editForm = ref({
   group: '',
   password: '',
 });
+
+// Computed
+const groupOptions = computed(() => [
+  { label: 'No Group', value: '' },
+  ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
+]);
 
 async function loadUser() {
   loading.value = true;
@@ -416,7 +428,15 @@ async function saveChanges() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadUser();
+
+  // Load groups for dropdown
+  try {
+    const groupsData = await internalApi.group.getGroups();
+    groupsStore.setGroups(groupsData);
+  } catch (error) {
+    console.error('Failed to load groups:', error);
+  }
 });
 </script>

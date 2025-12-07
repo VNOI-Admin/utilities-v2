@@ -39,4 +39,9 @@ export class GetUsersDto extends SortDto {
   @IsOptional()
   @IsBoolean()
   withStream?: boolean;
+
+  @ApiProperty({ required: false, description: 'Filter by group code' })
+  @IsOptional()
+  @IsString()
+  group?: string;
 }

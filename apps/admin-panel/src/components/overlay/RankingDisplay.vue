@@ -16,7 +16,16 @@
             class="ranking-item"
           >
             <span class="rank-position">{{ participant.rank }}</span>
-            <span class="participant-name">{{ participant.displayName }}</span>
+            <div class="participant-info">
+              <img
+                v-if="participant.groupLogoUrl"
+                :src="participant.groupLogoUrl"
+                :alt="`${participant.groupName} logo`"
+                class="group-logo"
+                @error="handleImageError"
+              />
+              <span class="participant-name">{{ participant.displayName }}</span>
+            </div>
             <span class="participant-stats">
               <span class="solved-count">{{ participant.solvedCount }}</span>
               <span class="stat-separator">/</span>
@@ -30,7 +39,16 @@
             class="ranking-item"
           >
             <span class="rank-position">{{ participant.rank }}</span>
-            <span class="participant-name">{{ participant.displayName }}</span>
+            <div class="participant-info">
+              <img
+                v-if="participant.groupLogoUrl"
+                :src="participant.groupLogoUrl"
+                :alt="`${participant.groupName} logo`"
+                class="group-logo"
+                @error="handleImageError"
+              />
+              <span class="participant-name">{{ participant.displayName }}</span>
+            </div>
             <span class="participant-stats">
               <span class="solved-count">{{ participant.solvedCount }}</span>
               <span class="stat-separator">/</span>
@@ -69,6 +87,12 @@ const fetchParticipants = async () => {
   } catch (error) {
     console.error('Failed to fetch participants:', error);
   }
+};
+
+// Handle image loading errors
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  img.style.display = 'none';
 };
 
 // Polling interval
@@ -175,6 +199,20 @@ onBeforeUnmount(() => {
   color: #d4a857;
   min-width: 28px;
   text-align: center;
+}
+
+.participant-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-logo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 3px;
 }
 
 .participant-name {

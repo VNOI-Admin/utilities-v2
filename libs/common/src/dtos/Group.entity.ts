@@ -11,8 +11,13 @@ export class GroupEntity {
   @ApiProperty()
   name: string;
 
+  @Expose()
+  @ApiProperty({ required: false })
+  logoUrl?: string;
+
   constructor(data: ConstructorType<GroupEntity>) {
     this.code = data.code;
     this.name = data.name;
+    this.logoUrl = data.logoUrl;
   }
 }

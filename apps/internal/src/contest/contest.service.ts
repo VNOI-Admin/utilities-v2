@@ -4,8 +4,10 @@ import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/p
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Submission, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { type VnojProblem, type VnojParticipant, type VNOJApi, VNOJ_API_CLIENT } from '@libs/api/vnoj';
 import { Role } from '@libs/common/decorators/role.decorator';
+import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -27,6 +29,7 @@ export class ContestService {
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Group.name) private groupModel: Model<GroupDocument>,
     @Inject(VNOJ_API_CLIENT) private vnojApi: VNOJApi<unknown>,
     private userService: UserService,
   ) {}
@@ -218,49 +221,70 @@ export class ContestService {
     };
   }
 
-  async getParticipants(code: string): Promise<(ParticipantDocument & { displayName: string })[]> {
-    // Use aggregation to join with users collection and compute displayName
-    const participants = await this.participantModel.aggregate([
-      { $match: { contest: code } },
-      // Left join with users collection on mapToUser -> username
-      {
-        $lookup: {
-          from: 'users',
-          localField: 'mapToUser',
-          foreignField: 'username',
-          as: 'mappedUserData',
-        },
-      },
-      // Add displayName field: mapped user's fullName > mapped user's username > participant username
-      {
-        $addFields: {
-          displayName: {
-            $cond: {
-              if: { $gt: [{ $size: '$mappedUserData' }, 0] },
-              then: {
-                $cond: {
-                  if: {
-                    $and: [
-                      { $ne: [{ $arrayElemAt: ['$mappedUserData.fullName', 0] }, null] },
-                      { $ne: [{ $arrayElemAt: ['$mappedUserData.fullName', 0] }, ''] },
-                    ],
-                  },
-                  then: { $arrayElemAt: ['$mappedUserData.fullName', 0] },
-                  else: { $arrayElemAt: ['$mappedUserData.username', 0] },
-                },
-              },
-              else: '$username',
-            },
-          },
-        },
-      },
-      // Remove the joined array to keep response clean
-      { $project: { mappedUserData: 0 } },
-      // Sort by ICPC ranking: more solved problems first, then by lower penalty
-      { $sort: { solvedCount: -1, totalPenalty: 1 } },
-    ]);
+  async getParticipants(code: string): Promise<ParticipantResponse[]> {
+    // Query 1: Get all participants for this contest
+    const participants = await this.participantModel
+      .find({ contest: code })
+      .sort({ solvedCount: -1, totalPenalty: 1 })
+      .lean()
+      .exec();
 
-    return participants;
+    // Query 2: Get all mapped users
+    const mappedUsernames = participants
+      .filter((p) => p.mapToUser)
+      .map((p) => p.mapToUser);
+
+    const users = mappedUsernames.length > 0
+      ? await this.userModel.find({ username: { $in: mappedUsernames } }).lean().exec()
+      : [];
+
+    // Create a map for quick user lookup
+    const userMap = new Map(users.map((u) => [u.username, u]));
+
+    // Query 3: Get all groups
+    const groupCodes = users
+      .filter((u) => u.group)
+      .map((u) => u.group);
+
+    const groups = groupCodes.length > 0
+      ? await this.groupModel.find({ code: { $in: groupCodes } }).lean().exec()
+      : [];
+
+    // Create a map for quick group lookup
+    const groupMap = new Map(groups.map((g) => [g.code, g]));
+
+    // Combine the data and map to ParticipantResponse
+    return participants.map((participant) => {
+      const mappedUser = participant.mapToUser ? userMap.get(participant.mapToUser) : undefined;
+      const groupCode = mappedUser?.group;
+      const groupData = groupCode ? groupMap.get(groupCode) : undefined;
+
+      // Compute displayName: mapped user's fullName > mapped user's username > participant username
+      let displayName = participant.username;
+      if (mappedUser) {
+        if (mappedUser.fullName && mappedUser.fullName.trim() !== '') {
+          displayName = mappedUser.fullName;
+        } else {
+          displayName = mappedUser.username;
+        }
+      }
+
+      return new ParticipantResponse({
+        _id: participant._id.toString(),
+        username: participant.username,
+        contest: participant.contest,
+        mapToUser: participant.mapToUser,
+        displayName,
+        solvedCount: participant.solvedCount,
+        totalPenalty: participant.totalPenalty,
+        rank: participant.rank,
+        solvedProblems: participant.solvedProblems,
+        problemData: participant.problemData as Record<string, any>,
+        groupCode,
+        groupName: groupData?.name,
+        groupLogoUrl: groupData?.logoUrl,
+      });
+    });
   }
 
   async getProblems(code: string): Promise<ProblemDocument[]> {

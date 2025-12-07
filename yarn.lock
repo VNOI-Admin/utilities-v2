@@ -1357,6 +1357,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@nestjs/axios@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "@nestjs/axios@npm:4.0.1"
+  peerDependencies:
+    "@nestjs/common": ^10.0.0 || ^11.0.0
+    axios: ^1.3.1
+    rxjs: ^7.0.0
+  checksum: 10c0/6290f6ceaab2ea1000ee705dfd81da8cd776eb9fb388287a74a4faecf0afd8a8cdef7f6cc3afe2a9b10e47067df027280ca1ddb75b7885ff365e2faed37b10c7
+  languageName: node
+  linkType: hard
+
 "@nestjs/bull-shared@npm:^10.2.3":
   version: 10.2.3
   resolution: "@nestjs/bull-shared@npm:10.2.3"
@@ -10151,6 +10162,7 @@ __metadata:
   resolution: "utilities-v2@workspace:."
   dependencies:
     "@biomejs/biome": "npm:1.9.4"
+    "@nestjs/axios": "npm:^4.0.1"
     "@nestjs/bullmq": "npm:^10.2.3"
     "@nestjs/cli": "npm:^10.0.0"
     "@nestjs/common": "npm:^10.0.0"
