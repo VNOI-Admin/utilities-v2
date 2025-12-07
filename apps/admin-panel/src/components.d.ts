@@ -41,6 +41,5 @@ declare module 'vue' {
     TeamInfoFloat: typeof import('./components/overlay/TeamInfoFloat.vue')['default']
     ToggleButton: typeof import('./components/ToggleButton.vue')['default']
     VideoPlayer: typeof import('./components/VideoPlayer.vue')['default']
-    X: typeof import('lucide-vue-next')['X']
   }
 }

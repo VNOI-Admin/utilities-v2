@@ -86,11 +86,11 @@
   </div>
 </template>
 
-<script setup lang="ts" generic="T">
+<script setup lang="ts" generic="T = any">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { ChevronDown, Search, Archive } from 'lucide-vue-next';
 
-interface Props {
+const props = withDefaults(defineProps<{
   modelValue: T | null | undefined;
   options: T[];
   placeholder?: string;
@@ -99,9 +99,7 @@ interface Props {
   optionValue?: string | ((option: T) => any);
   disabledOptions?: (option: T) => boolean;
   dropdownPosition?: 'bottom' | 'top' | 'auto';
-}
-
-const props = withDefaults(defineProps<Props>(), {
+}>(), {
   placeholder: '-- Select --',
   searchable: true,
   optionLabel: 'label',

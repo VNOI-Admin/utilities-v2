@@ -42,10 +42,8 @@
           <span class="tech-label">GROUP:</span>
           <MissionSelect
             v-model="selectedGroup"
-            :options="groupFilterOptions"
+            :options="(groupFilterOptions as any)"
             :searchable="true"
-            option-label="label"
-            option-value="value"
             placeholder="All Groups"
             container-class="w-64"
           />
@@ -155,10 +153,15 @@ const selectedGroup = ref<string>('all');
 const onlineOnly = ref(true);
 const activeOnly = ref(true);
 
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
 const groupFilterOptions = computed(() => [
   { label: 'All Groups', value: 'all' },
   ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
-]);
+] as SelectOption[]);
 
 const filteredUsers = computed(() => {
   let filtered = users.value;

@@ -36,10 +36,8 @@
           <span class="tech-label">GROUP:</span>
           <MissionSelect
             v-model="selectedGroup"
-            :options="groupFilterOptions"
+            :options="(groupFilterOptions as any)"
             :searchable="true"
-            option-label="label"
-            option-value="value"
             placeholder="All Groups"
             container-class="w-64"
           />
@@ -251,11 +249,9 @@
           <label class="tech-label block mb-2">GROUP (OPTIONAL)</label>
           <MissionSelect
             v-model="newUser.group"
-            :options="groupOptions"
+            :options="(groupOptions as any)"
             placeholder="Select a group..."
             :searchable="true"
-            option-label="label"
-            option-value="value"
           />
         </div>
 
@@ -323,17 +319,27 @@ const newUser = ref<CreateUserDto>({
 });
 
 // Computed
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
+interface GroupOption {
+  label: string;
+  value: string | undefined;
+}
+
 const users = computed(() => usersStore.users);
 
 const groupOptions = computed(() => [
   { label: 'No Group', value: undefined },
   ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
-]);
+] as GroupOption[]);
 
 const groupFilterOptions = computed(() => [
   { label: 'All Groups', value: 'all' },
   ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
-]);
+] as SelectOption[]);
 
 const filteredUsers = computed(() => {
   let filtered = users.value;

@@ -146,11 +146,9 @@
                 <MissionSelect
                   v-else
                   v-model="editForm.group"
-                  :options="groupOptions"
+                  :options="(groupOptions as any)"
                   placeholder="Select a group..."
                   :searchable="true"
-                  :option-label="(opt) => opt.label"
-                  :option-value="(opt) => opt.value"
                 />
               </div>
               <div v-if="editMode">
@@ -317,10 +315,15 @@ const editForm = ref({
 });
 
 // Computed
+interface SelectOption {
+  label: string;
+  value: string;
+}
+
 const groupOptions = computed(() => [
   { label: 'No Group', value: '' },
   ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
-]);
+] as SelectOption[]);
 
 async function loadUser() {
   loading.value = true;
