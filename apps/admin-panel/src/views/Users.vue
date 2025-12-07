@@ -7,13 +7,22 @@
           title="USER_REGISTRY"
           subtitle="SYSTEM USERS / ACCESS CONTROL INTERFACE"
         />
-        <button
-          @click="showCreateModal = true"
-          class="btn-primary flex items-center gap-2"
-        >
-          <Plus :size="20" :stroke-width="2" />
-          <span>CREATE USER</span>
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            @click="showBatchModal = true"
+            class="btn-secondary flex items-center gap-2"
+          >
+            <Upload :size="20" :stroke-width="2" />
+            <span>BATCH IMPORT</span>
+          </button>
+          <button
+            @click="showCreateModal = true"
+            class="btn-primary flex items-center gap-2"
+          >
+            <Plus :size="20" :stroke-width="2" />
+            <span>CREATE USER</span>
+          </button>
+        </div>
       </div>
 
       <!-- Filter Bar -->
@@ -57,12 +66,21 @@
           />
         </div>
 
-        <!-- Stats -->
+        <!-- Stats & Actions -->
         <div class="ml-auto flex items-center gap-4">
           <StatCounter
             label="TOTAL:"
             :value="filteredUsers.length"
           />
+          <button
+            v-if="canBulkDelete"
+            @click="showDeleteConfirm = true"
+            class="btn-danger flex items-center gap-2 text-xs"
+            title="Delete all users matching the current search filter"
+          >
+            <Trash2 :size="16" :stroke-width="2" />
+            <span>DELETE MATCHING</span>
+          </button>
           <RefreshButton
             :loading="loading"
             @click="refreshUsers"
@@ -179,6 +197,78 @@
       </MissionTable>
     </div>
 
+    <!-- Batch User Modal -->
+    <BatchUserModal
+      :show="showBatchModal"
+      @close="showBatchModal = false"
+      @complete="handleBatchComplete"
+    />
+
+    <!-- Bulk Delete Confirmation Modal -->
+    <MissionModal
+      :show="showDeleteConfirm"
+      title="CONFIRM BULK DELETE"
+      :loading="deleting"
+      :show-actions="false"
+      @close="showDeleteConfirm = false"
+    >
+      <div class="space-y-4">
+        <div class="p-4 border border-mission-red bg-mission-red/10 text-center">
+          <Trash2 :size="48" class="mx-auto mb-4 text-mission-red" />
+          <p class="text-lg font-semibold text-white mb-2">
+            Delete {{ filteredUsers.length }} users?
+          </p>
+          <p class="text-sm text-gray-400">
+            This will permanently delete all users matching your current filters:
+          </p>
+        </div>
+
+        <div class="p-4 bg-mission-gray font-mono text-sm space-y-1">
+          <div class="flex justify-between">
+            <span class="text-gray-400">Search:</span>
+            <span class="text-white">"{{ searchQuery }}"</span>
+          </div>
+          <div v-if="selectedRole !== 'all'" class="flex justify-between">
+            <span class="text-gray-400">Role:</span>
+            <span class="text-white">{{ selectedRole }}</span>
+          </div>
+          <div v-if="selectedGroup !== 'all'" class="flex justify-between">
+            <span class="text-gray-400">Group:</span>
+            <span class="text-white">{{ selectedGroup }}</span>
+          </div>
+          <div v-if="activeOnly" class="flex justify-between">
+            <span class="text-gray-400">Status:</span>
+            <span class="text-white">Active only</span>
+          </div>
+        </div>
+
+        <p class="text-xs text-gray-500 text-center">
+          Note: The admin user will never be deleted.
+        </p>
+
+        <div class="flex items-center gap-3 pt-4">
+          <button
+            type="button"
+            @click="handleBulkDelete"
+            :disabled="deleting"
+            class="btn-danger flex-1 flex items-center justify-center gap-2"
+          >
+            <RotateCw v-if="deleting" :size="20" class="animate-spin" />
+            <Trash2 v-else :size="20" />
+            <span>{{ deleting ? 'DELETING...' : 'DELETE USERS' }}</span>
+          </button>
+          <button
+            type="button"
+            @click="showDeleteConfirm = false"
+            :disabled="deleting"
+            class="btn-secondary px-8"
+          >
+            CANCEL
+          </button>
+        </div>
+      </div>
+    </MissionModal>
+
     <!-- Create User Modal -->
     <MissionModal
       :show="showCreateModal"
@@ -286,12 +376,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Plus, RotateCw } from 'lucide-vue-next';
+import { Plus, RotateCw, Upload, Trash2 } from 'lucide-vue-next';
 import { useUsersStore } from '~/stores/users';
 import { useGroupsStore } from '~/stores/groups';
 import { internalApi } from '~/services/api';
 import type { CreateUserDto } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
+import BatchUserModal from '~/components/batch-user/BatchUserModal.vue';
 
 const router = useRouter();
 const usersStore = useUsersStore();
@@ -318,6 +409,13 @@ const newUser = ref<CreateUserDto>({
   group: undefined,
 });
 
+// Batch modal state
+const showBatchModal = ref(false);
+
+// Bulk delete state
+const showDeleteConfirm = ref(false);
+const deleting = ref(false);
+
 // Computed
 interface SelectOption {
   label: string;
@@ -341,6 +439,9 @@ const groupFilterOptions = computed(() => [
   ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
 ] as SelectOption[]);
 
+// Bulk delete is only enabled when there's a text search filter
+const canBulkDelete = computed(() => searchQuery.value.trim().length > 0);
+
 const filteredUsers = computed(() => {
   let filtered = users.value;
 
@@ -349,8 +450,8 @@ const filteredUsers = computed(() => {
     const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(
       (u) =>
-        u.username.toLowerCase().includes(query) ||
-        u.fullName.toLowerCase().includes(query)
+        u.username?.toLowerCase().includes(query) ||
+        u.fullName?.toLowerCase().includes(query)
     );
   }
 
@@ -411,6 +512,37 @@ function closeCreateModal() {
     password: '',
     role: 'contestant',
   };
+}
+
+function handleBatchComplete(_result: { created: number; failed: number }) {
+  showBatchModal.value = false;
+  // Users are already added to the store during batch creation
+}
+
+async function handleBulkDelete() {
+  if (!searchQuery.value.trim()) return;
+
+  deleting.value = true;
+  try {
+    const result = await internalApi.user.bulkDeleteUsers({
+      q: searchQuery.value.trim(),
+      role: selectedRole.value !== 'all' ? selectedRole.value : undefined,
+      group: selectedGroup.value !== 'all' ? selectedGroup.value : undefined,
+      isActive: activeOnly.value ? true : undefined,
+    });
+
+    // Remove deleted users from store
+    for (const username of result.deletedUsernames) {
+      usersStore.removeUser(username);
+    }
+
+    toast.success(`Deleted ${result.deletedCount} users`);
+    showDeleteConfirm.value = false;
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to delete users');
+  } finally {
+    deleting.value = false;
+  }
 }
 
 async function handleCreateUser() {

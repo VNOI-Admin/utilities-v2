@@ -41,6 +41,55 @@ export interface CreateUserDto {
   group?: string;
 }
 
+export interface BatchUserItemDto {
+  /** Username for the new user */
+  username: string;
+  /** Full name of the user */
+  fullName: string;
+  /** Password for the user */
+  password: string;
+  /** Group name (will auto-create if not exists) */
+  groupName?: string;
+}
+
+export interface BatchCreateUsersDto {
+  /** Role to assign to all users in the batch */
+  role: 'admin' | 'coach' | 'contestant';
+  /** Array of users to create (max 100 per batch) */
+  users: BatchUserItemDto[];
+}
+
+export interface BatchUserResultDto {
+  /** Username that was processed */
+  username: string;
+  /** Whether the user was created successfully */
+  success: boolean;
+  /** Created user data (if success) */
+  user?: UserEntity;
+  /** Error message (if failed) */
+  error?: string;
+}
+
+export interface BatchCreateUsersResponseDto {
+  /** Total number of users in the request */
+  total: number;
+  /** Number of successfully created users */
+  successCount: number;
+  /** Number of failed user creations */
+  failureCount: number;
+  /** Individual results for each user */
+  results: BatchUserResultDto[];
+  /** Groups that were auto-created during this batch operation */
+  autoCreatedGroups: string[];
+}
+
+export interface BulkDeleteUsersResponseDto {
+  /** Number of users deleted */
+  deletedCount: number;
+  /** Usernames of deleted users */
+  deletedUsernames: string[];
+}
+
 export interface UpdateUserDto {
   password?: string;
   fullName?: string;
@@ -226,6 +275,28 @@ export interface PaginatedSubmissionsResponse {
   data: object[];
   /** Pagination metadata */
   pagination: PaginationMetadata;
+}
+
+export interface ParticipantResponse {
+  _id: string;
+  username: string;
+  contest: string;
+  mapToUser?: string;
+  /** Computed: mapped user's fullName > mapped user's username > participant username */
+  displayName: string;
+  solvedCount: number;
+  totalPenalty: number;
+  /** Current rank in the contest (calculated after each sync batch) */
+  rank: number;
+  solvedProblems: string[];
+  /** Per-problem tracking data */
+  problemData: object;
+  /** Group code from the mapped user */
+  groupCode?: string;
+  /** Group name from the groups collection */
+  groupName?: string;
+  /** Group logo URL from the groups collection */
+  groupLogoUrl?: string;
 }
 
 export interface LinkParticipantDto {
@@ -574,6 +645,60 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
       >({
         path: `/users/${username}`,
         method: 'DELETE',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * @description Create multiple users at once with a single role. Groups are auto-created if they do not exist.
+     *
+     * @tags User
+     * @name BatchCreateUsers
+     * @summary Batch create users
+     * @request POST:/users/batch
+     * @secure
+     */
+    batchCreateUsers: (data: BatchCreateUsersDto, params: RequestParams = {}) =>
+      this.request<BatchCreateUsersResponseDto, any>({
+        path: `/users/batch`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * @description Delete multiple users matching the filter criteria. Requires a text query to prevent accidental mass deletion. The admin user is never deleted.
+     *
+     * @tags User
+     * @name BulkDeleteUsers
+     * @summary Bulk delete users
+     * @request DELETE:/users/bulk
+     * @secure
+     */
+    bulkDeleteUsers: (
+      query: {
+        /**
+         * Text query to filter users by username or fullName (required to prevent accidental mass deletion)
+         * @minLength 1
+         */
+        q: string;
+        /** Filter by role */
+        role?: 'contestant' | 'coach' | 'admin' | 'guest';
+        /** Filter by group code */
+        group?: string;
+        /** Filter by active status */
+        isActive?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BulkDeleteUsersResponseDto, any>({
+        path: `/users/bulk`,
+        method: 'DELETE',
+        query: query,
         secure: true,
         format: 'json',
         ...params,
@@ -1240,10 +1365,11 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * @secure
      */
     getParticipants: (code: string, params: RequestParams = {}) =>
-      this.request<any, any>({
+      this.request<ParticipantResponse[], any>({
         path: `/contests/${code}/participants`,
         method: 'GET',
         secure: true,
+        format: 'json',
         ...params,
       }),
 

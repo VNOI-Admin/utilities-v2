@@ -5,6 +5,9 @@ import { UserEntity } from '@libs/common/dtos/User.entity';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+import { BatchCreateUsersDto } from './dtos/batchCreateUsers.dto';
+import { BatchCreateUsersResponseDto } from './dtos/batchCreateUsersResponse.dto';
+import { BulkDeleteUsersDto, BulkDeleteUsersResponseDto } from './dtos/bulkDeleteUsers.dto';
 import { CreateUserDto } from './dtos/createUser.dto';
 import { GetUsersDto } from './dtos/getUsers.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
@@ -55,6 +58,40 @@ export class UserController {
   @Post('/')
   async createUser(@Body() createUserDto: CreateUserDto) {
     return await this.userService.createUser(createUserDto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Batch create users',
+    description: 'Create multiple users at once with a single role. Groups are auto-created if they do not exist.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Batch creation result with per-user status',
+    type: BatchCreateUsersResponseDto,
+  })
+  @Post('/batch')
+  async batchCreateUsers(@Body() dto: BatchCreateUsersDto) {
+    return await this.userService.batchCreateUsers(dto);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Bulk delete users',
+    description: 'Delete multiple users matching the filter criteria. Requires a text query to prevent accidental mass deletion. The admin user is never deleted.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bulk deletion result',
+    type: BulkDeleteUsersResponseDto,
+  })
+  @Delete('/bulk')
+  async bulkDeleteUsers(@Query() dto: BulkDeleteUsersDto) {
+    return await this.userService.bulkDeleteUsers(dto);
   }
 
   @ApiBearerAuth()

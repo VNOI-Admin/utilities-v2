@@ -1,5 +1,8 @@
 import { CreateUserDto } from './dtos/createUser.dto';
 import { UpdateUserDto } from './dtos/updateUser.dto';
+import { BatchCreateUsersDto } from './dtos/batchCreateUsers.dto';
+import { BatchCreateUsersResponseDto, BatchUserResultDto } from './dtos/batchCreateUsersResponse.dto';
+import { BulkDeleteUsersDto, BulkDeleteUsersResponseDto } from './dtos/bulkDeleteUsers.dto';
 
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { MachineUsage, User, type UserDocument } from '@libs/common-db/schemas/user.schema';
@@ -238,6 +241,203 @@ export class UserService implements OnModuleInit {
     } catch (error) {
       throw new BadRequestException(`Unable to delete user: ${getErrorMessage(error)}`);
     }
+  }
+
+  async bulkDeleteUsers(dto: BulkDeleteUsersDto): Promise<BulkDeleteUsersResponseDto> {
+    // Build filter query - requires text search to prevent accidental mass deletion
+    const filter: Record<string, unknown> = {
+      $or: [
+        { username: { $regex: dto.q, $options: 'i' } },
+        { fullName: { $regex: dto.q, $options: 'i' } },
+      ],
+      // Never delete the admin user
+      username: { $ne: 'admin' },
+    };
+
+    if (dto.role) {
+      filter.role = dto.role;
+    }
+
+    if (dto.group) {
+      filter.group = dto.group;
+    }
+
+    if (dto.isActive !== undefined) {
+      filter.isActive = dto.isActive;
+    }
+
+    // Find matching users first
+    const usersToDelete = await this.userModel.find(filter).exec();
+    const deletedUsernames = usersToDelete.map((u) => u.username);
+
+    // Delete the users
+    const result = await this.userModel.deleteMany(filter).exec();
+
+    return new BulkDeleteUsersResponseDto({
+      deletedCount: result.deletedCount ?? 0,
+      deletedUsernames,
+    });
+  }
+
+  /**
+   * Converts a group name to a code format
+   * Example: "University of Science" -> "university-of-science"
+   */
+  private generateGroupCode(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  /**
+   * Finds or creates a group by name
+   * Returns the group code for use in user creation
+   */
+  async findOrCreateGroupByName(groupName: string): Promise<{
+    code: string;
+    wasCreated: boolean;
+  }> {
+    // First try to find by name (case-insensitive)
+    let group = await this.groupModel.findOne({
+      name: { $regex: new RegExp(`^${groupName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    });
+
+    if (group) {
+      return { code: group.code, wasCreated: false };
+    }
+
+    // Generate code from name
+    const code = this.generateGroupCode(groupName);
+
+    // Check if code already exists (edge case)
+    group = await this.groupModel.findOne({ code });
+    if (group) {
+      return { code: group.code, wasCreated: false };
+    }
+
+    // Create new group
+    const newGroup = await this.groupModel.create({
+      code,
+      name: groupName,
+    });
+
+    return { code: newGroup.code, wasCreated: true };
+  }
+
+  async batchCreateUsers(dto: BatchCreateUsersDto): Promise<BatchCreateUsersResponseDto> {
+    const results: BatchUserResultDto[] = [];
+    const autoCreatedGroups: string[] = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Step 1: Pre-process groups - collect unique group names and resolve them
+    const uniqueGroupNames = [
+      ...new Set(
+        dto.users.filter((u) => u.groupName).map((u) => u.groupName!),
+      ),
+    ];
+
+    const groupNameToCode = new Map<string, string>();
+
+    for (const groupName of uniqueGroupNames) {
+      try {
+        const { code, wasCreated } = await this.findOrCreateGroupByName(groupName);
+        groupNameToCode.set(groupName.toLowerCase(), code);
+        if (wasCreated) {
+          autoCreatedGroups.push(groupName);
+        }
+      } catch (error) {
+        console.error(`Failed to create/find group "${groupName}":`, getErrorMessage(error));
+      }
+    }
+
+    // Step 2: Create users one by one
+    for (const userItem of dto.users) {
+      try {
+        // Check for duplicate username in same batch
+        const existingInBatch = results.find((r) => r.success && r.username === userItem.username);
+        if (existingInBatch) {
+          results.push(
+            new BatchUserResultDto({
+              username: userItem.username,
+              success: false,
+              error: 'Duplicate username in batch',
+            }),
+          );
+          failureCount++;
+          continue;
+        }
+
+        // Resolve group code if group name provided
+        let groupCode: string | undefined;
+        if (userItem.groupName) {
+          groupCode = groupNameToCode.get(userItem.groupName.toLowerCase());
+          if (!groupCode) {
+            results.push(
+              new BatchUserResultDto({
+                username: userItem.username,
+                success: false,
+                error: `Failed to resolve group: ${userItem.groupName}`,
+              }),
+            );
+            failureCount++;
+            continue;
+          }
+        }
+
+        // Hash password
+        const hashedPassword = await argon2.hash(userItem.password);
+
+        // Assign VPN IP
+        const vpnIpAddress = await this.assignVpnIpAddress(dto.role);
+
+        // Generate key pair
+        const keyPair = generateKeyPair();
+
+        // Create user
+        const user = await this.userModel.create({
+          username: userItem.username,
+          fullName: userItem.fullName,
+          password: hashedPassword,
+          role: dto.role,
+          vpnIpAddress,
+          keyPair,
+          machineUsage: new MachineUsage(),
+          isActive: true,
+          group: groupCode,
+        });
+
+        results.push(
+          new BatchUserResultDto({
+            username: userItem.username,
+            success: true,
+            user: new UserEntity(user.toObject()),
+          }),
+        );
+        successCount++;
+      } catch (error) {
+        results.push(
+          new BatchUserResultDto({
+            username: userItem.username,
+            success: false,
+            error: getErrorMessage(error) || 'Unknown error',
+          }),
+        );
+        failureCount++;
+      }
+    }
+
+    return new BatchCreateUsersResponseDto({
+      total: dto.users.length,
+      successCount,
+      failureCount,
+      results,
+      autoCreatedGroups,
+    });
   }
 
   private async assignVpnIpAddress(role: Role): Promise<string> {
