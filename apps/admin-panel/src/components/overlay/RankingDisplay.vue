@@ -3,23 +3,40 @@
     <div class="ranking-label">
       <span>LEADERBOARD</span>
     </div>
-    <div ref="scrollContainer" class="ranking-content">
+    <div class="ranking-content">
       <div v-if="participants.length === 0" class="ranking-empty">
         <p>No participants yet</p>
       </div>
-      <div v-else class="ranking-scroll">
-        <div
-          v-for="participant in sortedParticipants"
-          :key="participant._id"
-          class="ranking-item"
-        >
-          <span class="rank-position">{{ participant.rank }}</span>
-          <span class="participant-name">{{ participant.displayName }}</span>
-          <span class="participant-stats">
-            <span class="solved-count">{{ participant.solvedCount }}</span>
-            <span class="stat-separator">/</span>
-            <span class="penalty">{{ participant.totalPenalty }}</span>
-          </span>
+      <div v-else class="ranking-scroll-wrapper">
+        <div class="ranking-scroll">
+          <!-- First set of participants -->
+          <div
+            v-for="participant in sortedParticipants"
+            :key="`first-${participant._id}`"
+            class="ranking-item"
+          >
+            <span class="rank-position">{{ participant.rank }}</span>
+            <span class="participant-name">{{ participant.displayName }}</span>
+            <span class="participant-stats">
+              <span class="solved-count">{{ participant.solvedCount }}</span>
+              <span class="stat-separator">/</span>
+              <span class="penalty">{{ participant.totalPenalty }}</span>
+            </span>
+          </div>
+          <!-- Duplicate set for seamless loop -->
+          <div
+            v-for="participant in sortedParticipants"
+            :key="`second-${participant._id}`"
+            class="ranking-item"
+          >
+            <span class="rank-position">{{ participant.rank }}</span>
+            <span class="participant-name">{{ participant.displayName }}</span>
+            <span class="participant-stats">
+              <span class="solved-count">{{ participant.solvedCount }}</span>
+              <span class="stat-separator">/</span>
+              <span class="penalty">{{ participant.totalPenalty }}</span>
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -36,17 +53,11 @@ const props = defineProps<{
 }>();
 
 const participants = ref<ParticipantEntity[]>([]);
-const scrollContainer = ref<HTMLElement | null>(null);
 
 // Sort participants by rank
 const sortedParticipants = computed(() => {
   return [...participants.value].sort((a, b) => a.rank - b.rank);
 });
-
-// Scroll state
-let scrollDirection = 1; // 1 for right, -1 for left
-let animationFrameId: number | null = null;
-const scrollSpeed = 0.5; // pixels per frame
 
 // Fetch participants
 const fetchParticipants = async () => {
@@ -57,49 +68,6 @@ const fetchParticipants = async () => {
     participants.value = data;
   } catch (error) {
     console.error('Failed to fetch participants:', error);
-  }
-};
-
-// Auto-scroll function
-const autoScroll = () => {
-  if (!scrollContainer.value) return;
-
-  const container = scrollContainer.value;
-  const maxScroll = container.scrollWidth - container.clientWidth;
-
-  // If content fits in container, no need to scroll
-  if (maxScroll <= 0) {
-    animationFrameId = requestAnimationFrame(autoScroll);
-    return;
-  }
-
-  // Update scroll position
-  container.scrollLeft += scrollSpeed * scrollDirection;
-
-  // Check if we've reached the end or start
-  if (scrollDirection === 1 && container.scrollLeft >= maxScroll) {
-    // Reached the end, reverse direction
-    scrollDirection = -1;
-  } else if (scrollDirection === -1 && container.scrollLeft <= 0) {
-    // Reached the start, reverse direction
-    scrollDirection = 1;
-  }
-
-  animationFrameId = requestAnimationFrame(autoScroll);
-};
-
-// Start auto-scroll
-const startAutoScroll = () => {
-  if (animationFrameId === null) {
-    animationFrameId = requestAnimationFrame(autoScroll);
-  }
-};
-
-// Stop auto-scroll
-const stopAutoScroll = () => {
-  if (animationFrameId !== null) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
   }
 };
 
@@ -114,9 +82,6 @@ watch(() => props.contestId, async (newId) => {
 }, { immediate: true });
 
 onMounted(() => {
-  // Start auto-scroll
-  startAutoScroll();
-
   // Set up polling (fetch every 15 seconds)
   pollingInterval = setInterval(async () => {
     await fetchParticipants();
@@ -124,9 +89,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  // Clean up
-  stopAutoScroll();
-
   if (pollingInterval) {
     clearInterval(pollingInterval);
   }
@@ -163,7 +125,7 @@ onBeforeUnmount(() => {
   flex: 1;
   display: flex;
   align-items: center;
-  overflow-x: hidden;
+  overflow: hidden;
   position: relative;
 }
 
@@ -174,11 +136,26 @@ onBeforeUnmount(() => {
   font-style: italic;
 }
 
+.ranking-scroll-wrapper {
+  width: 100%;
+  overflow: hidden;
+}
+
 .ranking-scroll {
   display: flex;
   gap: 32px;
   align-items: center;
   white-space: nowrap;
+  animation: scroll-left 30s linear infinite;
+}
+
+@keyframes scroll-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .ranking-item {
