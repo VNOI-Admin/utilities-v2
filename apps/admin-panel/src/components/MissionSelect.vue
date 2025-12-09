@@ -4,15 +4,15 @@
     <button
       type="button"
       @click="toggleDropdown"
-      class="input-mission w-full text-left flex items-center justify-between"
+      class="input-mission w-full text-left flex items-center justify-between min-w-0"
       :class="{ 'border-mission-accent': isOpen }"
     >
-      <span v-if="selectedOption" class="truncate">
+      <span v-if="selectedOption" class="truncate flex-1 min-w-0 block">
         <slot name="selected" :option="selectedOption">
           {{ getOptionLabel(selectedOption) }}
         </slot>
       </span>
-      <span v-else class="text-gray-500">{{ placeholder }}</span>
+      <span v-else class="text-gray-500 truncate flex-1 min-w-0 block">{{ placeholder }}</span>
       <ChevronDown
         :size="16"
         :stroke-width="2"
@@ -57,7 +57,7 @@
             type="button"
             @click="selectOption(option)"
             :disabled="isOptionDisabled(option)"
-            class="w-full px-4 py-2.5 text-left text-sm transition-all duration-200 border-l-2 border-transparent"
+            class="w-full px-4 py-2.5 text-left text-sm transition-all duration-200 border-l-2 border-transparent truncate"
             :class="[
               isOptionSelected(option)
                 ? 'bg-mission-accent/10 border-mission-accent text-mission-accent font-semibold'
@@ -67,7 +67,7 @@
             ]"
           >
             <slot name="option" :option="option" :index="index" :selected="isOptionSelected(option)">
-              {{ getOptionLabel(option) }}
+              <span class="block truncate">{{ getOptionLabel(option) }}</span>
             </slot>
           </button>
 

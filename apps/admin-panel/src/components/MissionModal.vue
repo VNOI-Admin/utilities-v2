@@ -37,8 +37,8 @@
               {{ error }}
             </div>
 
-            <!-- Actions (if not using custom footer) -->
-            <div v-if="!$slots.footer && showActions" class="flex items-center gap-3 pt-4">
+            <!-- Actions (if not using custom footer or actions) -->
+            <div v-if="!$slots.footer && !$slots.actions && showActions" class="flex items-center gap-3 pt-4">
               <button
                 v-if="confirmText"
                 type="submit"
@@ -62,6 +62,11 @@
               >
                 {{ cancelText }}
               </button>
+            </div>
+
+            <!-- Custom Actions Slot -->
+            <div v-if="$slots.actions" class="flex items-center justify-end gap-3 pt-4">
+              <slot name="actions" />
             </div>
 
             <!-- Custom Footer Slot -->

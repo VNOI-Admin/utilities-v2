@@ -12,6 +12,7 @@ import { ContestModule } from './contest/contest.module';
 import { GuardsModule } from '@libs/common/guards/guards.module';
 import { PrintingModule } from './printing/printing.module';
 import { GuestModule } from './guest/guest.module';
+import { FloorPlanModule } from './floor-plan/floor-plan.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { GuestModule } from './guest/guest.module';
     GuardsModule,
     ContestModule,
     PrintingModule,
+    FloorPlanModule,
   ],
   controllers: [AppController],
   providers: [AppService],

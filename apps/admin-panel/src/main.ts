@@ -1,6 +1,7 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import Toast from 'vue-toastification';
+import VueKonva from 'vue-konva';
 import 'vue-toastification/dist/index.css';
 import 'video.js/dist/video-js.css';
 import App from './App.vue';
@@ -13,6 +14,7 @@ const pinia = createPinia();
 
 app.use(pinia);
 app.use(router);
+app.use(VueKonva);
 app.use(Toast, {
   position: 'top-right',
   timeout: 3000,

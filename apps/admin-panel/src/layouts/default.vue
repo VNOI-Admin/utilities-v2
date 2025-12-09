@@ -111,7 +111,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { authService } from '~/services/auth';
 import { useToast } from 'vue-toastification';
-import { Home, Users, UserPlus, CheckCircle, Video, Printer, Monitor, UsersRound, Menu, X, LogOut } from 'lucide-vue-next';
+import { Home, Users, UserPlus, CheckCircle, Video, Printer, Monitor, UsersRound, Menu, X, LogOut, Map } from 'lucide-vue-next';
 
 // Detect if device is mobile (touch device or mobile user agent)
 // This persists even on rotation to landscape
@@ -200,6 +200,12 @@ const allMenuItems = [
     label: 'Overlay',
     path: '/overlay',
     iconComponent: Monitor,
+    roles: ['admin']
+  },
+  {
+    label: 'Floor Plans',
+    path: '/floor-plans',
+    iconComponent: Map,
     roles: ['admin']
   },
 ];

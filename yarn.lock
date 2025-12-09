@@ -2878,6 +2878,7 @@ __metadata:
     autoprefixer: "npm:^10.4.17"
     axios: "npm:^1.6.8"
     js-cookie: "npm:^3.0.5"
+    konva: "npm:^10.0.12"
     lucide-vue-next: "npm:^0.554.0"
     pinia: "npm:^2.1.7"
     postcss: "npm:^8.4.33"
@@ -2890,6 +2891,7 @@ __metadata:
     vite-plugin-vue-layouts: "npm:^0.11.0"
     vite-tsconfig-paths: "npm:^4.3.1"
     vue: "npm:^3.5.13"
+    vue-konva: "npm:^3.2.6"
     vue-router: "npm:^4.2.5"
     vue-toastification: "npm:^2.0.0-rc.5"
     vue-tsc: "npm:^2.0.0"
@@ -6567,6 +6569,13 @@ __metadata:
   version: 3.0.3
   resolution: "kleur@npm:3.0.3"
   checksum: 10c0/cd3a0b8878e7d6d3799e54340efe3591ca787d9f95f109f28129bdd2915e37807bf8918bb295ab86afb8c82196beec5a1adcaf29042ce3f2bd932b038fe3aa4b
+  languageName: node
+  linkType: hard
+
+"konva@npm:^10.0.12":
+  version: 10.0.12
+  resolution: "konva@npm:10.0.12"
+  checksum: 10c0/3d8846908a6286937825ac45a5c2e06f7c1fdb891eb1b76b0ccf858d7b7388c4eba62f73de7acc3e1426e28b3fb9bf29af944d2b19ae65a76c9120a24366e7e5
   languageName: node
   linkType: hard
 
@@ -10437,6 +10446,16 @@ __metadata:
     vue-demi-fix: bin/vue-demi-fix.js
     vue-demi-switch: bin/vue-demi-switch.js
   checksum: 10c0/a9ed8712fa36d01bc13c39757f95f30cebf42d557b99e94bff86d8660c81f2911b41220f7affc023d1ffcc19e13999e4a83019991e264787cca2c616e83aea48
+  languageName: node
+  linkType: hard
+
+"vue-konva@npm:^3.2.6":
+  version: 3.2.6
+  resolution: "vue-konva@npm:3.2.6"
+  peerDependencies:
+    konva: ">7"
+    vue: ^3
+  checksum: 10c0/8d8ee44cc18162a3b9df6aafd25bb46ea85f59e97d210fcb8fa6b5baab3c1081701b682dad0b0a759d146950b1b0ae0d93516b6cc92dc3af64c48c915e5f5bf3
   languageName: node
   linkType: hard
 

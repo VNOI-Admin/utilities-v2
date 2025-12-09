@@ -84,6 +84,24 @@ const router = createRouter({
       component: () => import('~/views/OverlayDisplay.vue'),
       meta: { requiresAuth: true, allowedRoles: ['admin'], layout: 'overlay' },
     },
+    {
+      path: '/floor-plans',
+      name: 'FloorPlans',
+      component: () => import('~/views/FloorPlans.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
+      path: '/floor-plans/:code/edit',
+      name: 'FloorPlanEditor',
+      component: () => import('~/views/FloorPlanEditorView.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'], layout: false },
+    },
+    {
+      path: '/floor-plans/:code/view',
+      name: 'FloorPlanViewer',
+      component: () => import('~/views/FloorPlanViewerView.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin', 'coach'], layout: false },
+    },
   ]),
 });
 
