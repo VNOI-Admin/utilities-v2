@@ -137,13 +137,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 const toast = useToast();
 
-// Set initial sidebar state based on device type
-onMounted(() => {
-  // On desktop (non-mobile devices), open sidebar by default
-  if (!isMobileDevice()) {
-    isSidebarOpen.value = true;
-  }
-});
+// Sidebar starts closed by default for all devices
 
 // Close sidebar on route change (for mobile-like behavior)
 watch(() => route.path, () => {

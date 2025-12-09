@@ -44,6 +44,7 @@ export class VpnService implements OnModuleInit {
     const now = new Date();
 
     // Atomically find a free guest account and mark it active
+    // Sort by username to get the lowest numbered guest (guest_001, guest_002, etc.)
     const user = await this.userModel.findOneAndUpdate(
       {
         role: Role.GUEST,
@@ -58,7 +59,10 @@ export class VpnService implements OnModuleInit {
           'machineUsage.lastReportedAt': now,
         },
       },
-      { new: true }
+      {
+        new: true,
+        sort: { username: 1 } // Sort ascending to get the lowest numbered guest first
+      }
     );
 
     if (!user) {
