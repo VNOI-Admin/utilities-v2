@@ -75,10 +75,21 @@ def generate_ip_range(start_ip: str, count: int) -> list[str]:
     return [int_to_ip(start + i) for i in range(count)]
 
 
-def build_ssh_command(ip: str, command: str, key_path: Optional[str] = None) -> list[str]:
+def substitute_inputs(command: str, inputs: Optional[list[str]] = None) -> str:
+    """Replace $1, $2, etc. placeholders with input values."""
+    if not inputs:
+        return command
+    result = command
+    for i, value in enumerate(inputs, start=1):
+        result = result.replace(f"${i}", value)
+    return result
+
+
+def build_ssh_command(ip: str, command: str, key_path: Optional[str] = None, inputs: Optional[list[str]] = None) -> list[str]:
     """Build SSH command list."""
     key_opts = ["-i", key_path] if key_path else []
-    return ["ssh", *SSH_OPTIONS, *key_opts, f"root@{ip}", command]
+    final_command = substitute_inputs(command, inputs)
+    return ["ssh", *SSH_OPTIONS, *key_opts, f"root@{ip}", final_command]
 
 
 def build_scp_command(ip: str, source: str, destination: str, key_path: Optional[str] = None) -> list[str]:
@@ -88,13 +99,13 @@ def build_scp_command(ip: str, source: str, destination: str, key_path: Optional
     return ["scp", *SSH_OPTIONS, *key_opts, source, remote_dest]
 
 
-def execute_on_host(ip: str, script: dict, key_path: Optional[str] = None) -> ExecutionResult:
+def execute_on_host(ip: str, script: dict, key_path: Optional[str] = None, inputs: Optional[list[str]] = None) -> ExecutionResult:
     """Execute script on a single host."""
     script_type = script["type"]
     timeout = script.get("timeout", 10)
 
     if script_type == ScriptType.SSH:
-        cmd = build_ssh_command(ip, script["command"], key_path)
+        cmd = build_ssh_command(ip, script["command"], key_path, inputs)
     elif script_type == ScriptType.SCP:
         cmd = build_scp_command(ip, script["source"], script["destination"], key_path)
     else:
@@ -203,12 +214,17 @@ def run_script(args: argparse.Namespace) -> None:
     script = scripts[args.name]
     ips = generate_ip_range(args.start_ip, args.count)
     key_path = args.key
+    inputs = args.input or []
 
     print(f"Running script '{args.name}' on {args.count} hosts...")
     print(f"IP range: {ips[0]} - {ips[-1]}")
     print(f"Timeout: {script.get('timeout', 10)}s")
     if key_path:
         print(f"SSH key: {key_path}")
+    if inputs:
+        print(f"Inputs: {inputs}")
+        if script["type"] == ScriptType.SSH:
+            print(f"Command: {substitute_inputs(script['command'], inputs)}")
     print("-" * 60)
 
     results: list[ExecutionResult] = []
@@ -217,7 +233,7 @@ def run_script(args: argparse.Namespace) -> None:
     start_time = time.time()
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_ip = {executor.submit(execute_on_host, ip, script, key_path): ip for ip in ips}
+        future_to_ip = {executor.submit(execute_on_host, ip, script, key_path, inputs): ip for ip in ips}
 
         for future in as_completed(future_to_ip):
             result = future.result()
@@ -290,6 +306,9 @@ Examples:
   # Create an SSH script
   python ssh_helper.py create my-script --type ssh --command "uptime" --timeout 15
 
+  # Create an SSH script with placeholders for dynamic input
+  python ssh_helper.py create send-notify --type ssh --command "send-notify $1 $2"
+
   # Create an SCP script
   python ssh_helper.py create copy-config --type scp --source ./config.txt --destination /etc/config.txt
 
@@ -298,6 +317,9 @@ Examples:
 
   # Run a script on 10 hosts starting from 192.168.1.100
   python ssh_helper.py run my-script --start-ip 192.168.1.100 --count 10
+
+  # Run with dynamic inputs (replaces $1, $2 in command)
+  python ssh_helper.py run send-notify --start-ip 192.168.1.100 --count 10 --input "Please do this" --input "and that"
 
   # Run with SSH key
   python ssh_helper.py run my-script --start-ip 192.168.1.100 --count 10 --key ~/.ssh/id_rsa
@@ -338,6 +360,7 @@ Examples:
     run_parser.add_argument("--start-ip", "-i", required=True, help="Starting IP address")
     run_parser.add_argument("--count", "-n", type=int, required=True, help="Number of hosts")
     run_parser.add_argument("--key", "-k", help="Path to SSH private key")
+    run_parser.add_argument("--input", action="append", help="Input values to replace $1, $2, etc. in command (can be used multiple times)")
     run_parser.add_argument("--workers", "-w", type=int, default=10, help="Number of parallel workers (default: 10)")
     run_parser.set_defaults(func=run_script)
 
