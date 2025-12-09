@@ -131,4 +131,17 @@
   .border-glow {
     box-shadow: 0 0 10px currentColor;
   }
+
+  /* Responsive padding utilities */
+  .px-responsive {
+    @apply px-4 md:px-6 lg:px-8;
+  }
+
+  .py-responsive {
+    @apply py-4 md:py-6;
+  }
+
+  .p-responsive {
+    @apply p-4 md:p-6 lg:p-8;
+  }
 }

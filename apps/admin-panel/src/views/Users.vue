@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-mission-black grid-background">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-8 py-6">
-      <div class="flex items-center justify-between mb-4">
+    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <PageHeader
           title="USER_REGISTRY"
           subtitle="SYSTEM USERS / ACCESS CONTROL INTERFACE"
@@ -13,61 +13,64 @@
             class="btn-secondary flex items-center gap-2"
           >
             <Upload :size="20" :stroke-width="2" />
-            <span>BATCH IMPORT</span>
+            <span class="hidden md:inline">BATCH IMPORT</span>
           </button>
           <button
             @click="showCreateModal = true"
             class="btn-primary flex items-center gap-2"
           >
             <Plus :size="20" :stroke-width="2" />
-            <span>CREATE USER</span>
+            <span class="hidden md:inline">CREATE USER</span>
           </button>
         </div>
       </div>
 
       <!-- Filter Bar -->
-      <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center">
         <!-- Search -->
         <SearchInput
           v-model="searchQuery"
           placeholder="SEARCH USERNAME OR NAME..."
         />
 
-        <!-- Role Filter -->
-        <FilterButtonGroup
-          v-model="selectedRole"
-          :options="['all', 'admin', 'coach', 'contestant', 'guest']"
-          label="ROLE:"
-        />
+        <!-- Filters row -->
+        <div class="flex flex-wrap items-center gap-2 md:gap-4">
+          <!-- Role Filter -->
+          <FilterButtonGroup
+            v-model="selectedRole"
+            :options="['all', 'admin', 'coach', 'contestant', 'guest']"
+            label="ROLE:"
+          />
+
+          <!-- Status Filters -->
+          <div class="flex items-center gap-2">
+            <span class="tech-label">STATUS:</span>
+            <ToggleButton
+              v-model="onlineOnly"
+              label="ONLINE"
+              :show-indicator="true"
+            />
+            <ToggleButton
+              v-model="activeOnly"
+              label="ACTIVE"
+            />
+          </div>
+        </div>
 
         <!-- Group Filter -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 w-full md:w-auto">
           <span class="tech-label">GROUP:</span>
           <MissionSelect
             v-model="selectedGroup"
             :options="(groupFilterOptions as any)"
             :searchable="true"
             placeholder="All Groups"
-            container-class="w-64"
-          />
-        </div>
-
-        <!-- Status Filters -->
-        <div class="flex items-center gap-2">
-          <span class="tech-label">STATUS:</span>
-          <ToggleButton
-            v-model="onlineOnly"
-            label="ONLINE"
-            :show-indicator="true"
-          />
-          <ToggleButton
-            v-model="activeOnly"
-            label="ACTIVE"
+            container-class="flex-1 md:w-64"
           />
         </div>
 
         <!-- Stats & Actions -->
-        <div class="ml-auto flex items-center gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto md:ml-auto">
           <StatCounter
             label="TOTAL:"
             :value="filteredUsers.length"
@@ -79,7 +82,7 @@
             title="Delete all users matching the current search filter"
           >
             <Trash2 :size="16" :stroke-width="2" />
-            <span>DELETE MATCHING</span>
+            <span class="hidden md:inline">DELETE MATCHING</span>
           </button>
           <RefreshButton
             :loading="loading"
@@ -90,7 +93,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="p-8">
+    <div class="p-4 md:p-8">
       <!-- Loading State -->
       <div v-if="loading && users.length === 0" class="mission-card overflow-hidden">
         <div class="animate-pulse">
@@ -318,7 +321,7 @@
         <!-- Role -->
         <div>
           <label class="tech-label block mb-2">ROLE *</label>
-          <div class="grid grid-cols-4 gap-2">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
             <button
               v-for="role in ['admin', 'coach', 'contestant', 'guest'] as const"
               :key="role"

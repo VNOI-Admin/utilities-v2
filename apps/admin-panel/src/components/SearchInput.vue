@@ -30,7 +30,7 @@ withDefaults(defineProps<Props>(), {
   placeholder: 'SEARCH...',
   minWidth: '300px',
   inputClass: '',
-  containerClass: 'flex-1 min-w-[300px]',
+  containerClass: 'w-full md:flex-1 md:min-w-[300px]',
 });
 
 defineEmits<{

@@ -7,12 +7,12 @@
         @click.self="handleClose"
       >
         <div
-          class="mission-card w-full mx-4 glow-border overflow-hidden"
+          class="mission-card w-full mx-2 md:mx-4 glow-border overflow-hidden max-h-[90vh] overflow-y-auto"
           :class="maxWidthClass"
           style="animation: slideInModal 0.3s ease-out"
         >
           <!-- Modal Header -->
-          <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+          <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray sticky top-0 z-10">
             <div class="flex items-center justify-between">
               <h2 class="text-xl font-display font-bold text-glow flex items-center gap-2">
                 <span class="text-mission-accent">█</span>
@@ -29,7 +29,7 @@
           </div>
 
           <!-- Modal Body -->
-          <div class="p-6">
+          <div class="p-4 md:p-6">
             <slot />
 
             <!-- Error Message -->
@@ -107,14 +107,15 @@ const emit = defineEmits<{
 }>();
 
 const maxWidthClass = computed(() => {
+  // Apply max-width only on md+ screens, full width on mobile
   const widthMap = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
+    sm: 'md:max-w-sm',
+    md: 'md:max-w-md',
+    lg: 'md:max-w-lg',
+    xl: 'md:max-w-xl',
+    '2xl': 'md:max-w-2xl',
+    '3xl': 'md:max-w-3xl',
+    '4xl': 'md:max-w-4xl',
   };
   return widthMap[props.maxWidth];
 });

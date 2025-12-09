@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-mission-black grid-background">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-8 py-6">
-      <div class="flex items-center justify-between mb-4">
+    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <PageHeader
           title="PRINTING_SYSTEM"
           subtitle="PRINT JOB MANAGEMENT / CLIENT CONTROL INTERFACE"
@@ -13,19 +13,19 @@
           class="btn-primary flex items-center gap-2"
         >
           <Plus :size="20" :stroke-width="2" />
-          <span>CREATE CLIENT</span>
+          <span class="hidden md:inline">CREATE CLIENT</span>
         </button>
       </div>
 
       <!-- Tab Switcher & Filter Bar -->
-      <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center">
         <!-- Tab Switcher -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 w-full md:w-auto">
           <span class="tech-label">VIEW:</span>
-          <div class="flex border border-white/20 rounded overflow-hidden">
+          <div class="flex flex-1 md:flex-none border border-white/20 rounded overflow-hidden">
             <button
               @click="activeTab = 'jobs'"
-              class="px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all duration-300"
+              class="flex-1 md:flex-none px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all duration-300"
               :class="activeTab === 'jobs'
                 ? 'bg-mission-accent text-black font-semibold'
                 : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'"
@@ -34,7 +34,7 @@
             </button>
             <button
               @click="activeTab = 'clients'"
-              class="px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all duration-300"
+              class="flex-1 md:flex-none px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all duration-300"
               :class="activeTab === 'clients'
                 ? 'bg-mission-accent text-black font-semibold'
                 : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'"
@@ -53,7 +53,7 @@
         />
 
         <!-- Stats -->
-        <div class="ml-auto flex items-center gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto md:ml-auto">
           <StatCounter
             v-if="activeTab === 'jobs'"
             label="JOBS:"
@@ -76,7 +76,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="p-8">
+    <div class="p-4 md:p-8">
       <!-- Jobs Tab -->
       <div v-if="activeTab === 'jobs'">
         <!-- Loading State -->

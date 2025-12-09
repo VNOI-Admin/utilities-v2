@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-mission-black grid-background">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-8 py-6">
+    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
       <div class="flex items-center justify-between mb-4">
         <PageHeader
           title="COACH_VIEW"

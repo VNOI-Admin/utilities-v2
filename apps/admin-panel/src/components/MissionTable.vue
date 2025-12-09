@@ -1,51 +1,57 @@
 <template>
   <div class="mission-card overflow-hidden">
-    <!-- Table Header -->
-    <div
-      class="grid gap-4 px-6 py-4 bg-mission-gray border-b border-white/10"
-      :style="{ gridTemplateColumns: gridTemplateColumns }"
-    >
-      <slot name="header" />
-    </div>
-
-    <!-- Table Rows -->
-    <div class="divide-y divide-white/5">
-      <div
-        v-for="(item, index) in items"
-        :key="getItemKey(item, index)"
-        @click="handleRowClick(item, index)"
-        class="grid gap-4 px-6 py-4 transition-all duration-300 group relative overflow-hidden"
-        :class="[
-          clickable ? 'cursor-pointer hover:bg-mission-accent/5 hover:border-l-4 hover:border-mission-accent' : '',
-          rowClass
-        ]"
-        :style="[
-          { gridTemplateColumns: gridTemplateColumns },
-          animateRows ? { animationDelay: `${index * 30}ms`, animation: 'slideInRow 0.4s ease-out backwards' } : {}
-        ]"
-      >
-        <!-- Scan line effect on hover -->
+    <!-- Scrollable wrapper for mobile -->
+    <div class="overflow-x-auto">
+      <!-- Set min-width to prevent columns from collapsing on mobile -->
+      <div :style="{ minWidth: minWidth }">
+        <!-- Table Header -->
         <div
-          v-if="clickable"
-          class="absolute inset-0 border-l-4 border-transparent group-hover:border-mission-accent transition-all duration-300"
-        ></div>
-
-        <!-- Row Content -->
-        <slot name="row" :item="item" :index="index" />
-
-        <!-- Hover arrow -->
-        <div
-          v-if="clickable && showHoverArrow"
-          class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-0 translate-x-2"
+          class="grid gap-4 px-4 md:px-6 py-4 bg-mission-gray border-b border-white/10"
+          :style="{ gridTemplateColumns: gridTemplateColumns }"
         >
-          <ChevronRight :size="20" :stroke-width="2" class="text-mission-accent" />
+          <slot name="header" />
         </div>
 
-        <!-- Bottom glow line -->
-        <div
-          v-if="showGlowLine"
-          class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-mission-accent to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"
-        ></div>
+        <!-- Table Rows -->
+        <div class="divide-y divide-white/5">
+          <div
+            v-for="(item, index) in items"
+            :key="getItemKey(item, index)"
+            @click="handleRowClick(item, index)"
+            class="grid gap-4 px-4 md:px-6 py-4 transition-all duration-300 group relative overflow-hidden"
+            :class="[
+              clickable ? 'cursor-pointer hover:bg-mission-accent/5 hover:border-l-4 hover:border-mission-accent' : '',
+              rowClass
+            ]"
+            :style="[
+              { gridTemplateColumns: gridTemplateColumns },
+              animateRows ? { animationDelay: `${index * 30}ms`, animation: 'slideInRow 0.4s ease-out backwards' } : {}
+            ]"
+          >
+            <!-- Scan line effect on hover -->
+            <div
+              v-if="clickable"
+              class="absolute inset-0 border-l-4 border-transparent group-hover:border-mission-accent transition-all duration-300"
+            ></div>
+
+            <!-- Row Content -->
+            <slot name="row" :item="item" :index="index" />
+
+            <!-- Hover arrow -->
+            <div
+              v-if="clickable && showHoverArrow"
+              class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-0 translate-x-2"
+            >
+              <ChevronRight :size="20" :stroke-width="2" class="text-mission-accent" />
+            </div>
+
+            <!-- Bottom glow line -->
+            <div
+              v-if="showGlowLine"
+              class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-mission-accent to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"
+            ></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -56,6 +62,7 @@ import { ChevronRight } from 'lucide-vue-next';
 interface Props {
   items: T[];
   gridTemplateColumns?: string;
+  minWidth?: string;
   clickable?: boolean;
   rowClass?: string;
   itemKey?: string | ((item: T) => string | number);
@@ -66,6 +73,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
+  minWidth: '700px',
   clickable: false,
   rowClass: '',
   animateRows: true,

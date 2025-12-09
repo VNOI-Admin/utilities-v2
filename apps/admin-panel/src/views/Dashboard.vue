@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen p-8">
+  <div class="min-h-screen p-4 md:p-8">
     <!-- Page Header -->
-    <div class="mb-8">
+    <div class="mb-6 md:mb-8">
       <h1 class="text-4xl font-display font-bold text-glow mb-2">
         MISSION<span class="text-mission-accent">_</span>CONTROL
       </h1>

@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-mission-black grid-background">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-8 py-6">
-      <div class="flex items-center justify-between mb-4">
+    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <PageHeader
           title="GROUP_REGISTRY"
           subtitle="ORGANIZATION MANAGEMENT"
@@ -12,12 +12,12 @@
           class="btn-primary flex items-center gap-2"
         >
           <Plus :size="20" :stroke-width="2" />
-          <span>CREATE GROUP</span>
+          <span class="hidden md:inline">CREATE GROUP</span>
         </button>
       </div>
 
       <!-- Filter Bar -->
-      <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center">
         <!-- Search -->
         <SearchInput
           v-model="searchQuery"
@@ -25,7 +25,7 @@
         />
 
         <!-- Stats -->
-        <div class="ml-auto flex items-center gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto md:ml-auto">
           <StatCounter
             label="TOTAL:"
             :value="filteredGroups.length"
@@ -39,7 +39,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="p-8">
+    <div class="p-4 md:p-8">
       <!-- Loading State -->
       <div v-if="loading && groups.length === 0" class="mission-card overflow-hidden">
         <div class="animate-pulse">
@@ -58,23 +58,26 @@
 
       <!-- Groups Table -->
       <div v-else class="mission-card overflow-hidden">
-        <!-- Table Header -->
-        <div class="grid grid-cols-12 gap-4 px-6 py-4 bg-mission-gray border-b border-white/10">
-          <div class="col-span-1 tech-label">LOGO</div>
-          <div class="col-span-3 tech-label">CODE</div>
-          <div class="col-span-6 tech-label">NAME</div>
-          <div class="col-span-2 tech-label text-center">ACTIONS</div>
-        </div>
+        <!-- Scrollable wrapper for mobile -->
+        <div class="overflow-x-auto">
+          <div class="min-w-[500px]">
+            <!-- Table Header -->
+            <div class="grid grid-cols-12 gap-4 px-4 md:px-6 py-4 bg-mission-gray border-b border-white/10">
+              <div class="col-span-1 tech-label">LOGO</div>
+              <div class="col-span-3 tech-label">CODE</div>
+              <div class="col-span-6 tech-label">NAME</div>
+              <div class="col-span-2 tech-label text-center">ACTIONS</div>
+            </div>
 
-        <!-- Table Rows -->
-        <div class="divide-y divide-white/5">
-          <div
-            v-for="(group, index) in filteredGroups"
-            :key="group.code"
-            class="grid grid-cols-12 gap-4 px-6 py-4 transition-all duration-300 hover:bg-mission-accent/5 group relative overflow-hidden"
-            :style="{ animationDelay: `${index * 30}ms` }"
-            style="animation: slideInRow 0.4s ease-out backwards"
-          >
+            <!-- Table Rows -->
+            <div class="divide-y divide-white/5">
+              <div
+                v-for="(group, index) in filteredGroups"
+                :key="group.code"
+                class="grid grid-cols-12 gap-4 px-4 md:px-6 py-4 transition-all duration-300 hover:bg-mission-accent/5 group relative overflow-hidden"
+                :style="{ animationDelay: `${index * 30}ms` }"
+                style="animation: slideInRow 0.4s ease-out backwards"
+              >
             <!-- Logo -->
             <div class="col-span-1 flex items-center">
               <div v-if="group.logoUrl" class="w-10 h-10 rounded border border-white/10 overflow-hidden bg-white/5 flex items-center justify-center">
@@ -110,8 +113,10 @@
               </button>
             </div>
 
-            <!-- Bottom glow line -->
-            <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-mission-accent to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+              <!-- Bottom glow line -->
+              <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-mission-accent to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -125,9 +130,9 @@
           class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           @click.self="closeCreateModal"
         >
-          <div class="mission-card w-full max-w-lg mx-4 glow-border overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+          <div class="mission-card w-full max-w-lg mx-2 md:mx-4 glow-border overflow-hidden max-h-[90vh] overflow-y-auto" style="animation: slideInModal 0.3s ease-out">
             <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+            <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray sticky top-0 z-10">
               <div class="flex items-center justify-between">
                 <h2 class="text-xl font-display font-bold text-glow flex items-center gap-2">
                   <span class="text-mission-accent">█</span>
@@ -143,7 +148,7 @@
             </div>
 
             <!-- Modal Body -->
-            <form @submit.prevent="handleCreateGroup" class="p-6 space-y-4">
+            <form @submit.prevent="handleCreateGroup" class="p-4 md:p-6 space-y-4">
               <!-- Group Code -->
               <div>
                 <label class="tech-label block mb-2">GROUP CODE *</label>
@@ -214,9 +219,9 @@
           class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           @click.self="showDeleteModal = false"
         >
-          <div class="mission-card w-full max-w-md mx-4 glow-border overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+          <div class="mission-card w-full max-w-md mx-2 md:mx-4 glow-border overflow-hidden max-h-[90vh] overflow-y-auto" style="animation: slideInModal 0.3s ease-out">
             <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+            <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray sticky top-0 z-10">
               <div class="flex items-center justify-between">
                 <h2 class="text-xl font-display font-bold text-glow flex items-center gap-2">
                   <span class="text-mission-red">█</span>
@@ -232,7 +237,7 @@
             </div>
 
             <!-- Modal Body -->
-            <div class="p-6 space-y-4">
+            <div class="p-4 md:p-6 space-y-4">
               <p class="text-gray-300">
                 Are you sure you want to delete group
                 <span class="font-mono text-mission-accent">{{ groupToDelete?.code }}</span>?

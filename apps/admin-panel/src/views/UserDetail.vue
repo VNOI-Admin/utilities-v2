@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-mission-black grid-background">
     <!-- Header -->
-    <header class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-50">
+    <header class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40">
       <div class="container mx-auto px-6 py-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-4">

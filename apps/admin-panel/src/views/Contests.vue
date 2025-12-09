@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-mission-black grid-background">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-8 py-6">
-      <div class="flex items-center justify-between mb-4">
+    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <PageHeader
           title="CONTEST_ARENA"
           subtitle="COMPETITION CONTROL / VNOJ SYNC INTERFACE"
@@ -12,12 +12,12 @@
           class="btn-primary flex items-center gap-2"
         >
           <Plus :size="20" :stroke-width="2" />
-          <span>CREATE CONTEST</span>
+          <span class="hidden md:inline">CREATE CONTEST</span>
         </button>
       </div>
 
       <!-- Filter Bar -->
-      <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center">
         <!-- Search -->
         <SearchInput
           v-model="searchQuery"
@@ -32,7 +32,7 @@
         />
 
         <!-- Stats -->
-        <div class="ml-auto flex items-center gap-4">
+        <div class="flex items-center gap-4 w-full md:w-auto md:ml-auto">
           <StatCounter
             label="TOTAL:"
             :value="filteredContests.length"
@@ -46,7 +46,7 @@
     </div>
 
     <!-- Main Content -->
-    <div class="p-8">
+    <div class="p-4 md:p-8">
       <!-- Loading State -->
       <div v-if="loading && contests.length === 0" class="mission-card overflow-hidden">
         <div class="animate-pulse">
@@ -65,26 +65,29 @@
 
       <!-- Contests Table -->
       <div v-else class="mission-card overflow-hidden">
-        <!-- Table Header -->
-        <div class="grid grid-cols-12 gap-4 px-6 py-4 bg-mission-gray border-b border-white/10">
-          <div class="col-span-2 tech-label">CODE</div>
-          <div class="col-span-3 tech-label">NAME</div>
-          <div class="col-span-2 tech-label">STATUS</div>
-          <div class="col-span-2 tech-label">START TIME</div>
-          <div class="col-span-2 tech-label">END TIME</div>
-          <div class="col-span-1 tech-label text-center">STATS</div>
-        </div>
+        <!-- Scrollable wrapper for mobile -->
+        <div class="overflow-x-auto">
+          <div class="min-w-[700px]">
+            <!-- Table Header -->
+            <div class="grid grid-cols-12 gap-4 px-4 md:px-6 py-4 bg-mission-gray border-b border-white/10">
+              <div class="col-span-2 tech-label">CODE</div>
+              <div class="col-span-3 tech-label">NAME</div>
+              <div class="col-span-2 tech-label">STATUS</div>
+              <div class="col-span-2 tech-label">START TIME</div>
+              <div class="col-span-2 tech-label">END TIME</div>
+              <div class="col-span-1 tech-label text-center">STATS</div>
+            </div>
 
-        <!-- Table Rows -->
-        <div class="divide-y divide-white/5">
-          <div
-            v-for="(contest, index) in filteredContests"
-            :key="contest.code"
-            @click="navigateToContest(contest.code)"
-            class="grid grid-cols-12 gap-4 px-6 py-4 cursor-pointer transition-all duration-300 hover:bg-mission-accent/5 hover:border-l-4 hover:border-mission-accent group relative overflow-hidden"
-            :style="{ animationDelay: `${index * 30}ms` }"
-            style="animation: slideInRow 0.4s ease-out backwards"
-          >
+            <!-- Table Rows -->
+            <div class="divide-y divide-white/5">
+              <div
+                v-for="(contest, index) in filteredContests"
+                :key="contest.code"
+                @click="navigateToContest(contest.code)"
+                class="grid grid-cols-12 gap-4 px-4 md:px-6 py-4 cursor-pointer transition-all duration-300 hover:bg-mission-accent/5 hover:border-l-4 hover:border-mission-accent group relative overflow-hidden"
+                :style="{ animationDelay: `${index * 30}ms` }"
+                style="animation: slideInRow 0.4s ease-out backwards"
+              >
             <!-- Scan line effect on hover -->
             <div class="absolute inset-0 border-l-4 border-transparent group-hover:border-mission-accent transition-all duration-300"></div>
 
@@ -147,8 +150,10 @@
               <ChevronRight :size="20" class="text-mission-accent" stroke-width="2" />
             </div>
 
-            <!-- Bottom glow line -->
-            <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-mission-accent to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+              <!-- Bottom glow line -->
+              <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-mission-accent to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -162,9 +167,9 @@
           class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           @click.self="closeCreateModal"
         >
-          <div class="mission-card w-full max-w-lg mx-4 glow-border overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+          <div class="mission-card w-full max-w-lg mx-2 md:mx-4 glow-border overflow-hidden max-h-[90vh] overflow-y-auto" style="animation: slideInModal 0.3s ease-out">
             <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+            <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray sticky top-0 z-10">
               <div class="flex items-center justify-between">
                 <h2 class="text-xl font-display font-bold text-glow flex items-center gap-2">
                   <span class="text-mission-accent">█</span>
@@ -180,7 +185,7 @@
             </div>
 
             <!-- Modal Body -->
-            <form @submit.prevent="handleCreateContest" class="p-6 space-y-4">
+            <form @submit.prevent="handleCreateContest" class="p-4 md:p-6 space-y-4">
               <!-- Contest Code -->
               <div>
                 <label class="tech-label block mb-2">VNOJ CONTEST CODE *</label>
