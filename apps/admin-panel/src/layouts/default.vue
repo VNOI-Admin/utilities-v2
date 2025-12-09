@@ -106,7 +106,7 @@
 </style>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { authService } from '~/services/auth';
