@@ -202,6 +202,22 @@
                   @click="syncParticipants"
                 />
                 <button
+                  @click="quickMapAll"
+                  :disabled="quickMappingAll"
+                  class="border transition-all duration-300 flex items-center gap-2 text-xs px-4 py-2 font-mono uppercase tracking-wider"
+                  :class="quickMappingAll
+                    ? 'border-white/10 text-gray-600 cursor-not-allowed'
+                    : 'border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark'"
+                >
+                  <RotateCw
+                    v-if="quickMappingAll"
+                    :size="16"
+                    :stroke-width="2"
+                    class="animate-spin"
+                  />
+                  <span>{{ quickMappingAll ? 'MAPPING...' : 'QUICK MAP ALL' }}</span>
+                </button>
+                <button
                   @click="showAddParticipantModal = true"
                   class="btn-primary flex items-center gap-2 text-xs"
                 >
@@ -1187,6 +1203,9 @@ const newParticipant = ref({
   password: '',
 });
 
+// Quick map all state
+const quickMappingAll = ref(false);
+
 // Delete participant modal state
 const showDeleteParticipantModal = ref(false);
 const deletingParticipant = ref(false);
@@ -1815,6 +1834,81 @@ async function handleDeleteParticipant() {
     console.error('Remove participant error:', error);
   } finally {
     deletingParticipant.value = false;
+  }
+}
+
+async function quickMapAll() {
+  quickMappingAll.value = true;
+
+  try {
+    // Get all unmapped participants
+    const unmappedParticipants = participants.value.filter(p => !p.mapToUser);
+
+    if (unmappedParticipants.length === 0) {
+      toast.info('No unmapped participants found');
+      return;
+    }
+
+    let mapped = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    // Process each unmapped participant
+    for (const participant of unmappedParticipants) {
+      // Find users with matching username and CONTESTANT role
+      const matchingUsers = availableUsers.value.filter(
+        user => user.username === participant.username && user.role === 'contestant'
+      );
+
+      if (matchingUsers.length === 0) {
+        // Skip if no matching user found
+        skipped++;
+      } else if (matchingUsers.length === 1) {
+        // Map if exactly one matching user found
+        try {
+          await internalApi.contest.linkParticipant(participant._id, {
+            user: matchingUsers[0].username,
+          });
+
+          // Update local state
+          contestsStore.updateParticipant(participant._id, { mapToUser: matchingUsers[0].username });
+          const index = participants.value.findIndex(p => p._id === participant._id);
+          if (index !== -1) {
+            participants.value[index].mapToUser = matchingUsers[0].username;
+          }
+
+          mapped++;
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+          const responseMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+          errors.push(`Failed to map ${participant.username}: ${responseMessage || errorMessage}`);
+        }
+      } else {
+        // Error if multiple matching users found
+        errors.push(
+          `Multiple CONTESTANT users found for participant "${participant.username}" (${matchingUsers.length} matches). Please map manually.`
+        );
+      }
+    }
+
+    // Show summary toast
+    if (mapped > 0) {
+      toast.success(`Quick map complete: ${mapped} mapped, ${skipped} skipped`);
+    } else {
+      toast.info(`Quick map complete: ${mapped} mapped, ${skipped} skipped`);
+    }
+
+    // Show errors if any
+    if (errors.length > 0) {
+      for (const error of errors) {
+        toast.warning(error, { timeout: 5000 });
+      }
+    }
+  } catch (error: unknown) {
+    toast.error('Failed to quick map participants');
+    console.error('Quick map all error:', error);
+  } finally {
+    quickMappingAll.value = false;
   }
 }
 
