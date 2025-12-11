@@ -6,8 +6,10 @@ Supports SSH commands and SCP file transfers with parallel execution.
 
 import argparse
 import json
+import queue
 import subprocess
 import sys
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -202,6 +204,48 @@ def delete_script(args: argparse.Namespace) -> None:
     print(f"Script '{args.name}' deleted successfully.")
 
 
+def result_printer_worker(result_queue: queue.Queue, total_hosts: int, progress_lock: threading.Lock) -> list[ExecutionResult]:
+    """Worker thread for printing results as they arrive."""
+    results: list[ExecutionResult] = []
+    completed = 0
+
+    while completed < total_hosts:
+        try:
+            result = result_queue.get(timeout=1)
+            if result is None:  # Sentinel value to stop
+                break
+
+            results.append(result)
+            completed += 1
+
+            status_symbol = {
+                ResultStatus.SUCCESS: "✓",
+                ResultStatus.TIMEOUT: "⏱",
+                ResultStatus.FAILED: "✗",
+            }[result.status]
+
+            status_color = {
+                ResultStatus.SUCCESS: "\033[92m",
+                ResultStatus.TIMEOUT: "\033[93m",
+                ResultStatus.FAILED: "\033[91m",
+            }[result.status]
+
+            reset_color = "\033[0m"
+
+            with progress_lock:
+                print(f"  {status_color}{status_symbol}{reset_color} {result.ip}: {result.status.value}", end="")
+                if result.return_code is not None and result.return_code != 0:
+                    print(f" (exit code: {result.return_code})", end="")
+                if result.error_message:
+                    print(f" - {result.error_message[:50]}...", end="") if len(result.error_message) > 50 else print(f" - {result.error_message}", end="")
+                print(f" [{completed}/{total_hosts}]")
+
+        except queue.Empty:
+            continue
+
+    return results
+
+
 def run_script(args: argparse.Namespace) -> None:
     """Run a script on multiple hosts."""
     scripts = load_scripts()
@@ -219,6 +263,7 @@ def run_script(args: argparse.Namespace) -> None:
     print(f"Running script '{args.name}' on {args.count} hosts...")
     print(f"IP range: {ips[0]} - {ips[-1]}")
     print(f"Timeout: {script.get('timeout', 10)}s")
+    print(f"Workers: {args.workers}")
     if key_path:
         print(f"SSH key: {key_path}")
     if inputs:
@@ -227,38 +272,34 @@ def run_script(args: argparse.Namespace) -> None:
             print(f"Command: {substitute_inputs(script['command'], inputs)}")
     print("-" * 60)
 
-    results: list[ExecutionResult] = []
-    max_workers = min(args.workers, len(ips))
+    # Create queue for results and lock for thread-safe printing
+    result_queue: queue.Queue = queue.Queue()
+    progress_lock = threading.Lock()
+    printer_results_container = []
 
+    def printer_wrapper():
+        results = result_printer_worker(result_queue, len(ips), progress_lock)
+        printer_results_container.extend(results)
+
+    # Start dedicated result printer thread
+    printer_thread = threading.Thread(target=printer_wrapper, daemon=False)
+    printer_thread.start()
+
+    max_workers = min(args.workers, len(ips))
     start_time = time.time()
 
+    # Execute tasks and queue results for async processing
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_ip = {executor.submit(execute_on_host, ip, script, key_path, inputs): ip for ip in ips}
 
         for future in as_completed(future_to_ip):
             result = future.result()
-            results.append(result)
+            result_queue.put(result)
 
-            status_symbol = {
-                ResultStatus.SUCCESS: "",
-                ResultStatus.TIMEOUT: "�",
-                ResultStatus.FAILED: "",
-            }[result.status]
+    # Wait for printer thread to finish processing all results
+    printer_thread.join()
 
-            status_color = {
-                ResultStatus.SUCCESS: "\033[92m",
-                ResultStatus.TIMEOUT: "\033[93m",
-                ResultStatus.FAILED: "\033[91m",
-            }[result.status]
-
-            reset_color = "\033[0m"
-            print(f"  {status_color}{status_symbol}{reset_color} {result.ip}: {result.status.value}", end="")
-            if result.return_code is not None and result.return_code != 0:
-                print(f" (exit code: {result.return_code})", end="")
-            if result.error_message:
-                print(f" - {result.error_message[:50]}...", end="") if len(result.error_message) > 50 else print(f" - {result.error_message}", end="")
-            print()
-
+    results = printer_results_container
     elapsed_time = time.time() - start_time
 
     # Summary
@@ -358,8 +399,9 @@ Examples:
     run_parser = subparsers.add_parser("run", help="Run a script on multiple hosts")
     run_parser.add_argument("name", help="Script name to run")
     run_parser.add_argument("--start-ip", "-i", required=True, help="Starting IP address")
-    run_parser.add_argument("--count", "-n", type=int, required=True, help="Number of hosts")
-    run_parser.add_argument("--key", "-k", help="Path to SSH private key")
+    run_parser.add_argument("--count", "-n", type=int, help="Number of hosts", default=1)
+    # default key to ~/.ssh/id_icpc
+    run_parser.add_argument("--key", "-k", help="Path to SSH private key", default=str(Path.home() / ".ssh" / "id_icpc"))
     run_parser.add_argument("--input", action="append", help="Input values to replace $1, $2, etc. in command (can be used multiple times)")
     run_parser.add_argument("--workers", "-w", type=int, default=10, help="Number of parallel workers (default: 10)")
     run_parser.set_defaults(func=run_script)

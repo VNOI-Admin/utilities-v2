@@ -38,6 +38,11 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 let player: ReturnType<typeof videojs> | null = null;
 
+// Detect mobile devices (iOS, Android)
+const isMobile = () => {
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+};
+
 function initializePlayer() {
   if (!videoElement.value || !props.src) {
     error.value = 'Stream source not available';
@@ -56,6 +61,8 @@ function initializePlayer() {
   error.value = null;
 
   try {
+    const mobile = isMobile();
+
     player = videojs(videoElement.value, {
       autoplay: props.autoplay,
       muted: props.muted,
@@ -71,10 +78,11 @@ function initializePlayer() {
       }],
       html5: {
         vhs: {
-          overrideNative: true,
+          // Use native HLS on mobile devices for better performance and compatibility
+          overrideNative: !mobile,
         },
-        nativeAudioTracks: false,
-        nativeVideoTracks: false,
+        nativeAudioTracks: mobile,
+        nativeVideoTracks: mobile,
       },
     });
 
