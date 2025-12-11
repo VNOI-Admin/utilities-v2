@@ -86,10 +86,32 @@ export const useContestsStore = defineStore('contests', () => {
     const start = new Date(contest.start_time);
     const end = new Date(contest.end_time);
 
-    if (contest.frozen_at) return 'frozen';
+    // Check if frozen_at exists and current time is past frozen_at
+    if (contest.frozen_at && now >= new Date(contest.frozen_at)) {
+      return 'frozen';
+    }
+
     if (now < start) return 'upcoming';
     if (now >= start && now <= end) return 'ongoing';
     return 'past';
+  };
+
+  // Check if contest is in pre-freeze window (5 minutes before frozen_at)
+  const isInPreFreezeWindow = (contest: ContestEntity): boolean => {
+    if (!contest.frozen_at) return false;
+
+    const now = new Date();
+    const frozenAt = new Date(contest.frozen_at);
+    const fiveMinutesBeforeFreeze = new Date(frozenAt.getTime() - 5 * 60 * 1000);
+
+    // Return true if we're between 5 minutes before and the actual freeze time
+    return now >= fiveMinutesBeforeFreeze && now < frozenAt;
+  };
+
+  // Check if contest should show frozen design (pre-freeze or frozen)
+  const shouldShowFrozenDesign = (contest: ContestEntity): boolean => {
+    console.log('Checking frozen design for contest:', contest.code);
+    return isInPreFreezeWindow(contest) || getContestStatus(contest) === 'frozen';
   };
 
   // Computed - Contests with status
@@ -198,6 +220,8 @@ export const useContestsStore = defineStore('contests', () => {
     contestsWithStatus,
     getContestsByFilter,
     getContestStatus,
+    isInPreFreezeWindow,
+    shouldShowFrozenDesign,
 
     // Actions
     setContests,

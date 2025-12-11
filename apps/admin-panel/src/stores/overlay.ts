@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { internalApi } from '~/services/api';
+import { useContestsStore } from './contests';
 
 export interface GlobalConfig {
   contestId: string;
@@ -252,8 +253,33 @@ export const useOverlayStore = defineStore('overlay', () => {
     }
   }
 
+  async function fetchCurrentContest() {
+    try {
+      const contestId = globalConfig.value.contestId;
+      if (!contestId) return;
+
+      const contestsStore = useContestsStore();
+
+      // Fetch the contest data from the API
+      const contest = await internalApi.contest.findOne(contestId);
+
+      // Update or add the contest to the contests store
+      const existingContest = contestsStore.getContestByCode(contestId);
+      if (existingContest) {
+        contestsStore.updateContest(contestId, contest);
+      } else {
+        contestsStore.addContest(contest);
+      }
+
+      console.log('Loaded contest into store:', contestId, contest);
+    } catch (e: any) {
+      console.error('Error fetching current contest:', e);
+    }
+  }
+
   async function fetchAllDisplayData() {
     await fetchGlobalConfig();
+    await fetchCurrentContest();
     await fetchLayoutConfig();
     await fetchAnnouncements();
     await fetchSubmissions();
@@ -308,6 +334,7 @@ export const useOverlayStore = defineStore('overlay', () => {
     fetchRankingConfig,
     updateRankingConfig,
     fetchSubmissions,
+    fetchCurrentContest,
     fetchLayoutConfig,
     fetchAllDisplayData,
     startPolling,

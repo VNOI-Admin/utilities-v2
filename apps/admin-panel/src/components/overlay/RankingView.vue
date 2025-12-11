@@ -3,11 +3,27 @@
     <div class="ranking-header">
       <div class="ranking-title">
         <span class="title-text">LEADERBOARD</span>
-        <span class="ranking-range">{{ rangeText }}</span>
+        <span v-if="!showFrozenDesign" class="ranking-range">{{ rangeText }}</span>
+        <span v-else class="frozen-badge">FROZEN</span>
       </div>
     </div>
 
-    <div class="ranking-table-wrapper">
+    <!-- Frozen Design -->
+    <div v-if="showFrozenDesign" class="frozen-overlay">
+      <div class="frozen-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2v20M17 7l-5 5-5-5M17 17l-5-5-5 5M2 12h20M7 7l5 5 5-5M7 17l5-5 5 5" />
+        </svg>
+      </div>
+      <div class="frozen-text">
+        <div class="frozen-title">SCOREBOARD FROZEN</div>
+        <div class="frozen-subtitle">{{ frozenMessage }}</div>
+        <div class="frozen-description">Rankings and submissions are temporarily hidden</div>
+      </div>
+    </div>
+
+    <!-- Normal Ranking Table -->
+    <div v-else class="ranking-table-wrapper">
       <table class="ranking-table">
         <thead>
           <tr class="table-header">
@@ -86,6 +102,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { internalApi } from '~/services/api';
 import type { ParticipantResponse } from '@libs/api/internal';
 import type { ProblemEntity } from '~/stores/contests';
+import { useContestsStore } from '~/stores/contests';
 
 const props = defineProps<{
   contestId: string;
@@ -95,6 +112,26 @@ const props = defineProps<{
 const ITEMS_PER_PAGE = 15;
 const participants = ref<ParticipantResponse[]>([]);
 const problems = ref<ProblemEntity[]>([]);
+const contestsStore = useContestsStore();
+
+// Get current contest
+const currentContest = computed(() => {
+  if (!props.contestId) return null;
+  return contestsStore.getContestByCode(props.contestId);
+});
+
+// Check if frozen design should be shown
+const showFrozenDesign = computed(() => {
+  if (!currentContest.value) return false;
+  return contestsStore.shouldShowFrozenDesign(currentContest.value);
+});
+
+// Frozen message
+const frozenMessage = computed(() => {
+  if (!currentContest.value) return '';
+  const isInPreFreeze = contestsStore.isInPreFreezeWindow(currentContest.value);
+  return isInPreFreeze ? 'Scoreboard will freeze soon...' : 'Final rankings will be revealed at the end';
+});
 
 // Sort participants by rank
 const sortedParticipants = computed(() => {
@@ -538,5 +575,102 @@ onBeforeUnmount(() => {
 
 .ranking-table-wrapper::-webkit-scrollbar-thumb:hover {
   background: rgba(212, 168, 87, 0.5);
+}
+
+/* Frozen Badge */
+.frozen-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  animation: badgePulse 2s ease-in-out infinite;
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(231, 76, 60, 0);
+  }
+}
+
+/* Frozen Overlay Styles */
+.frozen-overlay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 60px 40px;
+  background: linear-gradient(135deg, rgba(90, 140, 184, 0.08) 0%, rgba(74, 124, 168, 0.12) 100%);
+  border-radius: 12px;
+  animation: frozenPulse 4s ease-in-out infinite;
+}
+
+@keyframes frozenPulse {
+  0%, 100% {
+    background: linear-gradient(135deg, rgba(90, 140, 184, 0.08) 0%, rgba(74, 124, 168, 0.12) 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, rgba(90, 140, 184, 0.12) 0%, rgba(74, 124, 168, 0.16) 100%);
+  }
+}
+
+.frozen-icon {
+  color: #5a8cb8;
+  opacity: 0.6;
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-12px) rotate(3deg);
+  }
+  75% {
+    transform: translateY(-12px) rotate(-3deg);
+  }
+}
+
+.frozen-text {
+  text-align: center;
+  max-width: 600px;
+}
+
+.frozen-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #5a8cb8;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.frozen-subtitle {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  letter-spacing: 0.02em;
+  margin-bottom: 12px;
+}
+
+.frozen-description {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
 }
 </style>

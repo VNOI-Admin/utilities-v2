@@ -1,35 +1,51 @@
 <template>
   <div class="single-contestant-view">
-    <!-- Full Size Stream (Background) -->
-    <transition name="stream-fade">
-      <div v-if="showStream" class="video-stream">
-        <VideoPlayer
-          :src="streamUrl"
-          :autoplay="true"
-          :muted="true"
-          :controls="false"
-        />
+    <!-- Frozen Design -->
+    <div v-if="showFrozenDesign" class="frozen-overlay">
+      <div class="frozen-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 2v20M17 7l-5 5-5-5M17 17l-5-5-5 5M2 12h20M7 7l5 5 5-5M7 17l5-5 5 5" />
+        </svg>
       </div>
-    </transition>
-
-    <!-- Picture-in-Picture Webcam (Bottom Right, 20%) -->
-    <transition name="webcam-slide">
-      <div v-if="showWebcam" class="video-webcam-pip">
-        <VideoPlayer
-          :src="webcamUrl"
-          :autoplay="true"
-          :muted="true"
-          :controls="false"
-        />
-        <div class="video-label">WEBCAM</div>
+      <div class="frozen-text">
+        <div class="frozen-title">CONTEST FROZEN</div>
+        <div class="frozen-subtitle">{{ frozenMessage }}</div>
       </div>
-    </transition>
+    </div>
 
-    <!-- Team Info Float (Bottom Left) -->
-    <TeamInfoFloat
-      :username="displayName"
-      :rank="teamRank"
-    />
+    <!-- Normal View -->
+    <template v-else>
+      <!-- Full Size Stream (Background) -->
+      <transition name="stream-fade">
+        <div v-if="showStream" class="video-stream">
+          <VideoPlayer
+            :src="streamUrl"
+            :autoplay="true"
+            :muted="true"
+            :controls="false"
+          />
+        </div>
+      </transition>
+
+      <!-- Picture-in-Picture Webcam (Bottom Right, 20%) -->
+      <transition name="webcam-slide">
+        <div v-if="showWebcam" class="video-webcam-pip">
+          <VideoPlayer
+            :src="webcamUrl"
+            :autoplay="true"
+            :muted="true"
+            :controls="false"
+          />
+          <div class="video-label">WEBCAM</div>
+        </div>
+      </transition>
+
+      <!-- Team Info Float (Bottom Left) -->
+      <TeamInfoFloat
+        :username="displayName"
+        :rank="teamRank"
+      />
+    </template>
   </div>
 </template>
 
@@ -40,16 +56,38 @@ import VideoPlayer from '~/components/VideoPlayer.vue';
 import TeamInfoFloat from './TeamInfoFloat.vue';
 import type { SingleContestantConfig } from '~/stores/overlay';
 import { useOverlayStore } from '~/stores/overlay';
+import { useContestsStore } from '~/stores/contests';
 
 const props = defineProps<{
   config: SingleContestantConfig;
 }>();
 
 const overlayStore = useOverlayStore();
+const contestsStore = useContestsStore();
 const streamUrl = ref('');
 const webcamUrl = ref('');
 const teamRank = ref(0);
 const displayName = ref(props.config.username); // Initialize with username as fallback
+
+// Get current contest
+const currentContest = computed(() => {
+  const contestId = overlayStore.activeContestId;
+  if (!contestId) return null;
+  return contestsStore.getContestByCode(contestId);
+});
+
+// Check if frozen design should be shown
+const showFrozenDesign = computed(() => {
+  if (!currentContest.value) return false;
+  return contestsStore.shouldShowFrozenDesign(currentContest.value);
+});
+
+// Frozen message
+const frozenMessage = computed(() => {
+  if (!currentContest.value) return '';
+  const isInPreFreeze = contestsStore.isInPreFreezeWindow(currentContest.value);
+  return isInPreFreeze ? 'Stream will be hidden soon...' : 'Stream hidden during freeze';
+});
 
 const showStream = computed(() => {
   const mode = props.config.displayMode || 'both';
@@ -238,5 +276,77 @@ watch(() => overlayStore.activeContestId, (newContestId) => {
 .webcam-slide-leave-to {
   opacity: 0;
   transform: translate(20px, 20px) scale(0.8);
+}
+
+/* Frozen Overlay Styles */
+.frozen-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  background: linear-gradient(135deg, rgba(90, 140, 184, 0.25) 0%, rgba(74, 124, 168, 0.35) 100%);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  z-index: 100;
+  animation: frozenPulse 4s ease-in-out infinite;
+}
+
+@keyframes frozenPulse {
+  0%, 100% {
+    background: linear-gradient(135deg, rgba(90, 140, 184, 0.25) 0%, rgba(74, 124, 168, 0.35) 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, rgba(90, 140, 184, 0.35) 0%, rgba(74, 124, 168, 0.45) 100%);
+  }
+}
+
+.frozen-icon {
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.9;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  animation: iconFloat 3s ease-in-out infinite;
+}
+
+@keyframes iconFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-12px) rotate(3deg);
+  }
+  75% {
+    transform: translateY(-12px) rotate(-3deg);
+  }
+}
+
+.frozen-text {
+  text-align: center;
+  max-width: 600px;
+}
+
+.frozen-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 36px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.08em;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.frozen-subtitle {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 </style>

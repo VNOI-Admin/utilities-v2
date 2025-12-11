@@ -4,7 +4,21 @@
       <h3>RECENT SUBMISSIONS</h3>
     </div>
 
-    <div class="submissions-list">
+    <!-- Frozen Design -->
+    <div v-if="showFrozenDesign" class="frozen-overlay">
+      <div class="frozen-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2v20M17 7l-5 5-5-5M17 17l-5-5-5 5" />
+        </svg>
+      </div>
+      <div class="frozen-text">
+        <div class="frozen-title">SCOREBOARD FROZEN</div>
+        <div class="frozen-subtitle">{{ frozenMessage }}</div>
+      </div>
+    </div>
+
+    <!-- Normal Submissions List -->
+    <div v-else class="submissions-list">
       <transition-group name="submission-slide">
         <div
           v-for="(submission, index) in submissions.slice(0, 10)"
@@ -31,11 +45,35 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { Submission } from '~/stores/overlay';
+import { useOverlayStore } from '~/stores/overlay';
+import { useContestsStore } from '~/stores/contests';
 
 defineProps<{
   submissions: Submission[];
 }>();
+
+const overlayStore = useOverlayStore();
+const contestsStore = useContestsStore();
+
+const currentContest = computed(() => {
+  const contestId = overlayStore.activeContestId;
+  if (!contestId) return null;
+  console.log('Fetching contest for ID:', contestId);
+  return contestsStore.getContestByCode(contestId);
+});
+
+const showFrozenDesign = computed(() => {
+  if (!currentContest.value) return false;
+  return contestsStore.shouldShowFrozenDesign(currentContest.value);
+});
+
+const frozenMessage = computed(() => {
+  if (!currentContest.value) return '';
+  const isInPreFreeze = contestsStore.isInPreFreezeWindow(currentContest.value);
+  return isInPreFreeze ? 'Freezing in progress...' : 'Submissions hidden';
+});
 </script>
 
 <style scoped>
@@ -215,5 +253,65 @@ defineProps<{
 
 .submission-slide-move {
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Frozen Overlay Styles */
+.frozen-overlay {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 40px 20px;
+  background: linear-gradient(135deg, rgba(90, 140, 184, 0.1) 0%, rgba(74, 124, 168, 0.15) 100%);
+  border-radius: 8px;
+  animation: frozenPulse 3s ease-in-out infinite;
+}
+
+@keyframes frozenPulse {
+  0%, 100% {
+    background: linear-gradient(135deg, rgba(90, 140, 184, 0.1) 0%, rgba(74, 124, 168, 0.15) 100%);
+  }
+  50% {
+    background: linear-gradient(135deg, rgba(90, 140, 184, 0.15) 0%, rgba(74, 124, 168, 0.2) 100%);
+  }
+}
+
+.frozen-icon {
+  color: #5a8cb8;
+  opacity: 0.8;
+  animation: iconBounce 2s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.frozen-text {
+  text-align: center;
+}
+
+.frozen-title {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #5a8cb8;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.frozen-subtitle {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6c757d;
+  letter-spacing: 0.02em;
 }
 </style>
