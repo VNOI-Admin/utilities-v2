@@ -17,7 +17,7 @@ export class GroupController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(Role.ADMIN, Role.COACH)
   @ApiOperation({ summary: 'Get all groups' })
   @ApiResponse({
     status: 200,
