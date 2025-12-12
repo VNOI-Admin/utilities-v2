@@ -242,7 +242,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { internalApi } from '~/services/api';
 import { useOverlayStore } from '~/stores/overlay';
@@ -330,7 +330,7 @@ async function loadUser() {
     };
 
     // Load participant rank if contest is set
-    await loadParticipantRank();
+    // await loadParticipantRank(); // Disabled: coaches don't have access to contest endpoints
   } catch (err: any) {
     console.error('Failed to load user:', err);
     error.value = err?.response?.data?.message || 'Failed to load user feed';
@@ -377,17 +377,18 @@ async function loadParticipantRank() {
 }
 
 // Watch for contest changes in overlay store
-watch(
-  () => overlayStore.activeContestId,
-  async (newContestId) => {
-    if (newContestId && user.value) {
-      await loadParticipantRank();
-    } else {
-      participantRank.value = null;
-      participantData.value = null;
-    }
-  }
-);
+// Disabled: coaches don't have access to contest endpoints
+// watch(
+//   () => overlayStore.activeContestId,
+//   async (newContestId) => {
+//     if (newContestId && user.value) {
+//       await loadParticipantRank();
+//     } else {
+//       participantRank.value = null;
+//       participantData.value = null;
+//     }
+//   }
+// );
 
 onMounted(async () => {
   // Fetch overlay global config to get current contest
