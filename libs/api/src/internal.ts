@@ -379,6 +379,150 @@ export interface UpdatePrintClientDto {
   isActive?: boolean;
 }
 
+export interface CreateFloorPlanDto {
+  code: string;
+  name: string;
+  description?: string;
+  /** @default true */
+  isActive?: boolean;
+}
+
+export interface GridPositionEntity {
+  x: number;
+  y: number;
+}
+
+export interface GridSizeEntity {
+  width: number;
+  height: number;
+}
+
+export interface FloorTableEntity {
+  id: string;
+  label: string;
+  position: GridPositionEntity;
+  size: GridSizeEntity;
+  boundUsername?: string;
+}
+
+export interface FloorWallEntity {
+  id: string;
+  start: GridPositionEntity;
+  length: number;
+  orientation: string;
+}
+
+export interface FloorCommentEntity {
+  id: string;
+  text: string;
+  position: GridPositionEntity;
+  size: GridSizeEntity;
+}
+
+export interface FloorEntity {
+  id: string;
+  name: string;
+  gridWidth: number;
+  gridHeight: number;
+  startingPoint?: GridPositionEntity;
+  tables: FloorTableEntity[];
+  walls: FloorWallEntity[];
+  comments: FloorCommentEntity[];
+}
+
+export interface FloorPlanEntity {
+  code: string;
+  name: string;
+  description?: string;
+  floors: FloorEntity[];
+  isActive: boolean;
+  /** @format date-time */
+  createdAt?: string;
+  /** @format date-time */
+  updatedAt?: string;
+}
+
+export interface UpdateFloorPlanDto {
+  name?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+export interface GridPositionDto {
+  x: number;
+  y: number;
+}
+
+export interface CreateFloorDto {
+  name: string;
+  /** @default 20 */
+  gridWidth?: number;
+  /** @default 20 */
+  gridHeight?: number;
+  startingPoint?: GridPositionDto;
+}
+
+export interface UpdateFloorDto {
+  name?: string;
+  gridWidth?: number;
+  gridHeight?: number;
+  startingPoint?: GridPositionDto;
+}
+
+export interface GridSizeDto {
+  /** @default 1 */
+  width: number;
+  /** @default 1 */
+  height: number;
+}
+
+export interface CreateTableDto {
+  label: string;
+  position: GridPositionDto;
+  size?: GridSizeDto;
+  boundUsername?: string;
+}
+
+export interface UpdateTableDto {
+  label?: string;
+  position?: GridPositionDto;
+  size?: GridSizeDto;
+}
+
+export interface CopyTableDto {
+  newPosition: GridPositionDto;
+  newLabel?: string;
+  boundUsername?: string;
+}
+
+export interface BindTableDto {
+  username: string;
+}
+
+export interface CreateWallDto {
+  start: GridPositionDto;
+  length: number;
+  orientation: 'horizontal' | 'vertical';
+}
+
+export interface UpdateWallDto {
+  start?: GridPositionDto;
+  length?: number;
+  orientation?: 'horizontal' | 'vertical';
+}
+
+export interface CreateCommentDto {
+  text: string;
+  position: GridPositionDto;
+  size?: GridSizeDto;
+}
+
+export interface UpdateCommentDto {
+  text?: string;
+  position?: GridPositionDto;
+  size?: GridSizeDto;
+}
+
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
 import axios from 'axios';
 
@@ -1467,6 +1611,23 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * No description
      *
      * @tags Contest
+     * @name ForceSyncSubmissions
+     * @summary Force-sync all submissions from VNOJ API and fill any missing submissions
+     * @request POST:/contests/{code}/force-sync-submissions
+     * @secure
+     */
+    forceSyncSubmissions: (code: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/contests/${code}/force-sync-submissions`,
+        method: 'POST',
+        secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
      * @name RemoveParticipant
      * @summary Remove participant from contest
      * @request DELETE:/contests/participants/{participantId}
@@ -1658,6 +1819,440 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         body: data,
         secure: true,
         type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+  };
+  floorPlan = {
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name CreateFloorPlan
+     * @summary Create floor plan
+     * @request POST:/floor-plan
+     * @secure
+     */
+    createFloorPlan: (data: CreateFloorPlanDto, params: RequestParams = {}) =>
+      this.request<FloorPlanEntity, any>({
+        path: `/floor-plan`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name GetFloorPlans
+     * @summary Get all floor plans
+     * @request GET:/floor-plan
+     * @secure
+     */
+    getFloorPlans: (params: RequestParams = {}) =>
+      this.request<FloorPlanEntity[], any>({
+        path: `/floor-plan`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name GetFloorPlan
+     * @summary Get floor plan by code
+     * @request GET:/floor-plan/{code}
+     * @secure
+     */
+    getFloorPlan: (code: string, params: RequestParams = {}) =>
+      this.request<FloorPlanEntity, any>({
+        path: `/floor-plan/${code}`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name UpdateFloorPlan
+     * @summary Update floor plan
+     * @request PATCH:/floor-plan/{code}
+     * @secure
+     */
+    updateFloorPlan: (code: string, data: UpdateFloorPlanDto, params: RequestParams = {}) =>
+      this.request<FloorPlanEntity, any>({
+        path: `/floor-plan/${code}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name DeleteFloorPlan
+     * @summary Delete floor plan
+     * @request DELETE:/floor-plan/{code}
+     * @secure
+     */
+    deleteFloorPlan: (code: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+        },
+        any
+      >({
+        path: `/floor-plan/${code}`,
+        method: 'DELETE',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name AddFloor
+     * @summary Add floor to plan
+     * @request POST:/floor-plan/{code}/floors
+     * @secure
+     */
+    addFloor: (code: string, data: CreateFloorDto, params: RequestParams = {}) =>
+      this.request<FloorEntity, any>({
+        path: `/floor-plan/${code}/floors`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name GetFloor
+     * @summary Get floor
+     * @request GET:/floor-plan/{code}/floors/{floorId}
+     * @secure
+     */
+    getFloor: (code: string, floorId: string, params: RequestParams = {}) =>
+      this.request<FloorEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}`,
+        method: 'GET',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name UpdateFloor
+     * @summary Update floor
+     * @request PATCH:/floor-plan/{code}/floors/{floorId}
+     * @secure
+     */
+    updateFloor: (code: string, floorId: string, data: UpdateFloorDto, params: RequestParams = {}) =>
+      this.request<FloorEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name DeleteFloor
+     * @summary Delete floor
+     * @request DELETE:/floor-plan/{code}/floors/{floorId}
+     * @secure
+     */
+    deleteFloor: (code: string, floorId: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+        },
+        any
+      >({
+        path: `/floor-plan/${code}/floors/${floorId}`,
+        method: 'DELETE',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name CreateTable
+     * @summary Create table
+     * @request POST:/floor-plan/{code}/floors/{floorId}/tables
+     * @secure
+     */
+    createTable: (code: string, floorId: string, data: CreateTableDto, params: RequestParams = {}) =>
+      this.request<FloorTableEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/tables`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name UpdateTable
+     * @summary Update table
+     * @request PATCH:/floor-plan/{code}/floors/{floorId}/tables/{tableId}
+     * @secure
+     */
+    updateTable: (code: string, floorId: string, tableId: string, data: UpdateTableDto, params: RequestParams = {}) =>
+      this.request<FloorTableEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/tables/${tableId}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name DeleteTable
+     * @summary Delete table
+     * @request DELETE:/floor-plan/{code}/floors/{floorId}/tables/{tableId}
+     * @secure
+     */
+    deleteTable: (code: string, floorId: string, tableId: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+        },
+        any
+      >({
+        path: `/floor-plan/${code}/floors/${floorId}/tables/${tableId}`,
+        method: 'DELETE',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name CopyTable
+     * @summary Copy table
+     * @request POST:/floor-plan/{code}/floors/{floorId}/tables/{tableId}/copy
+     * @secure
+     */
+    copyTable: (code: string, floorId: string, tableId: string, data: CopyTableDto, params: RequestParams = {}) =>
+      this.request<FloorTableEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/tables/${tableId}/copy`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name BindTable
+     * @summary Bind user to table
+     * @request POST:/floor-plan/{code}/floors/{floorId}/tables/{tableId}/bind
+     * @secure
+     */
+    bindTable: (code: string, floorId: string, tableId: string, data: BindTableDto, params: RequestParams = {}) =>
+      this.request<FloorTableEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/tables/${tableId}/bind`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name UnbindTable
+     * @summary Unbind user from table
+     * @request DELETE:/floor-plan/{code}/floors/{floorId}/tables/{tableId}/bind
+     * @secure
+     */
+    unbindTable: (code: string, floorId: string, tableId: string, params: RequestParams = {}) =>
+      this.request<FloorTableEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/tables/${tableId}/bind`,
+        method: 'DELETE',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name CreateWall
+     * @summary Create wall
+     * @request POST:/floor-plan/{code}/floors/{floorId}/walls
+     * @secure
+     */
+    createWall: (code: string, floorId: string, data: CreateWallDto, params: RequestParams = {}) =>
+      this.request<FloorWallEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/walls`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name UpdateWall
+     * @summary Update wall
+     * @request PATCH:/floor-plan/{code}/floors/{floorId}/walls/{wallId}
+     * @secure
+     */
+    updateWall: (code: string, floorId: string, wallId: string, data: UpdateWallDto, params: RequestParams = {}) =>
+      this.request<FloorWallEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/walls/${wallId}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name DeleteWall
+     * @summary Delete wall
+     * @request DELETE:/floor-plan/{code}/floors/{floorId}/walls/{wallId}
+     * @secure
+     */
+    deleteWall: (code: string, floorId: string, wallId: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+        },
+        any
+      >({
+        path: `/floor-plan/${code}/floors/${floorId}/walls/${wallId}`,
+        method: 'DELETE',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name CreateComment
+     * @summary Create comment
+     * @request POST:/floor-plan/{code}/floors/{floorId}/comments
+     * @secure
+     */
+    createComment: (code: string, floorId: string, data: CreateCommentDto, params: RequestParams = {}) =>
+      this.request<FloorCommentEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/comments`,
+        method: 'POST',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name UpdateComment
+     * @summary Update comment
+     * @request PATCH:/floor-plan/{code}/floors/{floorId}/comments/{commentId}
+     * @secure
+     */
+    updateComment: (
+      code: string,
+      floorId: string,
+      commentId: string,
+      data: UpdateCommentDto,
+      params: RequestParams = {},
+    ) =>
+      this.request<FloorCommentEntity, any>({
+        path: `/floor-plan/${code}/floors/${floorId}/comments/${commentId}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Floor Plan
+     * @name DeleteComment
+     * @summary Delete comment
+     * @request DELETE:/floor-plan/{code}/floors/{floorId}/comments/{commentId}
+     * @secure
+     */
+    deleteComment: (code: string, floorId: string, commentId: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          success?: boolean;
+        },
+        any
+      >({
+        path: `/floor-plan/${code}/floors/${floorId}/comments/${commentId}`,
+        method: 'DELETE',
+        secure: true,
         format: 'json',
         ...params,
       }),

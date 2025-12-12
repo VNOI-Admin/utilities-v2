@@ -69,12 +69,23 @@ def update_print_status(job_id, status):
 
 def print_job(filepath):
     try:
+        # Print the actual file
         process = subprocess.run(
             ["lpr", f"-P", PRINTER, "-o", "sides=one-sided", "-o", f"page-ranges={PAGE_RANGES}", "-o", "media=A4", "-o", "orientation-requested=3", "-o", "prettyprint", "-o", "fit-to-page", filepath],
             check=True,
             capture_output=True
         )
         print(f"Printed {filepath}")
+
+        # Print an empty divider page
+        subprocess.run(
+            ["lpr", f"-P", PRINTER, "-o", "sides=one-sided", "-o", "media=A4"],
+            input=b"\f",  # Form feed character to print a blank page
+            check=True,
+            capture_output=True
+        )
+        print(f"Printed divider page")
+
         return True
     except Exception as e:
         print(f"Failed to print {filepath}: {e}")

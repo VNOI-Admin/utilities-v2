@@ -38,9 +38,9 @@ export class SyncSubmissionsProcessor extends WorkerHost {
 
       this.logger.log(`Found ${ongoingContests.length} ongoing contests`);
 
-      // Process each contest
+      // Process each contest (with regular sync, not force-sync)
       for (const contest of ongoingContests) {
-        await this.syncContestSubmissions(contest);
+        await this.syncContestSubmissions(contest, false);
       }
 
       this.logger.log('Sync submissions completed');
@@ -50,20 +50,47 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     }
   }
 
-  private async syncContestSubmissions(contest: ContestDocument): Promise<void> {
+  /**
+   * Force-sync all submissions for a specific contest
+   * This method can be called from the API to manually trigger a full resync
+   */
+  async forceSyncContest(contestCode: string): Promise<void> {
+    const contest = await this.contestModel.findOne({ code: contestCode }).exec();
+    if (!contest) {
+      throw new Error(`Contest with code ${contestCode} not found`);
+    }
+
+    await this.syncContestSubmissions(contest, true);
+  }
+
+  private async syncContestSubmissions(contest: ContestDocument, forceSync = false): Promise<void> {
     try {
-      this.logger.log(`Syncing submissions for contest ${contest.code}`);
+      this.logger.log(`Syncing submissions for contest ${contest.code} (forceSync: ${forceSync})`);
 
-      // Find the latest submission for this contest to determine from_timestamp
-      const latestSubmission = await this.submissionModel
-        .findOne({ contest_code: contest.code })
-        .sort({ submittedAt: -1 })
-        .exec();
+      let fromTimestamp: string;
 
-      // Use latest submission timestamp or contest start time if no submissions exist
-      const fromTimestamp = latestSubmission
-        ? latestSubmission.submittedAt.toISOString()
-        : contest.start_time.toISOString();
+      if (forceSync) {
+        // For force-sync, start from contest start time to get ALL submissions
+        fromTimestamp = contest.start_time.toISOString();
+        this.logger.log(`Force-sync: Starting from contest start time ${fromTimestamp}`);
+      } else {
+        // For regular sync, find the latest submission and move the starting point back 10 minutes
+        const latestSubmission = await this.submissionModel
+          .findOne({ contest_code: contest.code })
+          .sort({ submittedAt: -1 })
+          .exec();
+
+        if (latestSubmission) {
+          // Move the starting point back 10 minutes (600000 ms) to ensure we catch all submissions
+          const lookbackTime = new Date(latestSubmission.submittedAt.getTime() - 10 * 60 * 1000);
+          fromTimestamp = lookbackTime.toISOString();
+          this.logger.log(`Regular sync: Starting from ${fromTimestamp} (10 minutes before last submission)`);
+        } else {
+          // No submissions exist, start from contest start time
+          fromTimestamp = contest.start_time.toISOString();
+          this.logger.log(`Regular sync: No submissions found, starting from contest start time ${fromTimestamp}`);
+        }
+      }
 
       // Fetch submissions from VNOJ
       const vnojSubmissions = await this.vnojApi.contest.getSubmissions(contest.code, {
@@ -83,6 +110,7 @@ export class SyncSubmissionsProcessor extends WorkerHost {
       );
 
       // Save all submissions with upsert (using external_id as unique identifier)
+      // This automatically skips already-fetched submissions due to the unique index on external_id
       await this.saveSubmissions(contest, vnojSubmissions);
 
       this.logger.log(`Saved submissions for contest ${contest.code}`);

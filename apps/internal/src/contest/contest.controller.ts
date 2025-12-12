@@ -111,6 +111,13 @@ export class ContestController {
     return this.contestService.resyncContest(code);
   }
 
+  @Post(':code/force-sync-submissions')
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Force-sync all submissions from VNOJ API and fill any missing submissions' })
+  async forceSyncSubmissions(@Param('code') code: string) {
+    return this.contestService.forceSyncSubmissions(code);
+  }
+
   @Post(':code/participants')
   @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Manually add participants to contest' })

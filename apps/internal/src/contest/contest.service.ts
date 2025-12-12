@@ -739,6 +739,260 @@ export class ContestService {
     }
   }
 
+  async forceSyncSubmissions(code: string): Promise<{
+    totalFetched: number;
+    totalSaved: number;
+    message: string;
+  }> {
+    // Verify contest exists
+    const contest = await this.findOne(code);
+
+    try {
+      // Force-sync: Fetch ALL submissions from contest start time
+      const fromTimestamp = contest.start_time.toISOString();
+
+      console.log(`Force-syncing submissions for contest ${code} from ${fromTimestamp}`);
+
+      // Fetch all submissions from VNOJ
+      const vnojSubmissions = await this.vnojApi.contest.getSubmissions(code, {
+        from_timestamp: fromTimestamp,
+      });
+
+      console.log(`Fetched ${vnojSubmissions.length} submissions from VNOJ`);
+
+      if (vnojSubmissions.length === 0) {
+        return {
+          totalFetched: 0,
+          totalSaved: 0,
+          message: 'No submissions found for this contest',
+        };
+      }
+
+      // Sort submissions by time (oldest first) for correct chronological processing
+      vnojSubmissions.sort(
+        (a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime(),
+      );
+
+      // Prepare bulk upsert operations (same logic as sync processor)
+      const bulkOps = vnojSubmissions.map((vnojSub) => {
+        const submissionStatus = this.mapVnojResultToStatus(vnojSub.submissionStatus);
+        const submittedAt = new Date(vnojSub.submittedAt);
+        const penaltyMinutes = Math.floor(
+          (submittedAt.getTime() - contest.start_time.getTime()) / 60000,
+        );
+
+        return {
+          updateOne: {
+            filter: { external_id: vnojSub.id },
+            update: {
+              $set: {
+                submittedAt,
+                judgedAt: vnojSub.judgedAt ? new Date(vnojSub.judgedAt) : undefined,
+                author: vnojSub.author,
+                submissionStatus,
+                contest_code: contest.code,
+                problem_code: this.stripContestPrefix(vnojSub.problem_code, contest.code),
+                external_id: vnojSub.id,
+                'data.penalty': penaltyMinutes,
+              },
+            },
+            upsert: true,
+          },
+        };
+      });
+
+      // Execute bulk upsert (automatically skips already-fetched submissions)
+      const bulkResult = await this.submissionModel.bulkWrite(bulkOps);
+      const totalSaved = (bulkResult.upsertedCount || 0) + (bulkResult.modifiedCount || 0);
+
+      console.log(`Saved ${totalSaved} submissions (${bulkResult.upsertedCount} new, ${bulkResult.modifiedCount} updated)`);
+
+      // Recalculate participant data
+      await this.recalculateParticipantData(contest);
+
+      // Update participant ranks
+      await this.updateParticipantRanks(contest.code);
+
+      return {
+        totalFetched: vnojSubmissions.length,
+        totalSaved,
+        message: `Successfully force-synced ${totalSaved} submissions (${bulkResult.upsertedCount} new, ${bulkResult.modifiedCount} updated)`,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to force-sync submissions:', error);
+      throw new BadRequestException(
+        `Failed to force-sync submissions from VNOJ API. Error: ${errorMessage}`,
+      );
+    }
+  }
+
+  private mapVnojResultToStatus(result: string): string {
+    const statusMap: Record<string, string> = {
+      AC: 'AC',
+      WA: 'WA',
+      RTE: 'RTE',
+      RE: 'RE',
+      IR: 'IR',
+      OLE: 'OLE',
+      MLE: 'MLE',
+      TLE: 'TLE',
+      IE: 'IE',
+      AB: 'AB',
+      CE: 'CE',
+    };
+
+    return statusMap[result] || 'UNKNOWN';
+  }
+
+  private async recalculateParticipantData(contest: ContestDocument): Promise<void> {
+    console.log(`Recalculating participant data for contest ${contest.code}`);
+
+    // Get all participants for this contest
+    const participants = await this.participantModel.find({ contest: contest.code }).exec();
+
+    const penaltyPerWrong = contest.penalty || 20;
+
+    interface SubmissionInfo {
+      status: string;
+      submittedAt: Date;
+    }
+
+    interface ProblemStat {
+      _id: string;
+      submissions: SubmissionInfo[];
+    }
+
+    // Process each participant
+    for (const participant of participants) {
+      // Aggregate submissions for this participant
+      const problemStats = await this.submissionModel.aggregate<ProblemStat>([
+        {
+          $match: {
+            contest_code: contest.code,
+            author: participant.username,
+          },
+        },
+        {
+          $sort: { submittedAt: 1 }, // Sort by submission time
+        },
+        {
+          $group: {
+            _id: '$problem_code',
+            submissions: {
+              $push: {
+                status: '$submissionStatus',
+                submittedAt: '$submittedAt',
+              },
+            },
+          },
+        },
+      ]);
+
+      const problemData = new Map<string, { solveTime: number; wrongTries: number }>();
+      const solvedProblems: string[] = [];
+      let solvedCount = 0;
+      let totalPenalty = 0;
+
+      for (const problemStat of problemStats) {
+        const problemCode = problemStat._id;
+        const submissions = problemStat.submissions;
+
+        // Find first AC
+        const firstACIndex = submissions.findIndex((sub) => sub.status === 'AC');
+
+        if (firstACIndex !== -1) {
+          // Problem is solved
+          const firstAC = submissions[firstACIndex];
+          const solveTime = Math.floor(
+            (new Date(firstAC.submittedAt).getTime() - contest.start_time.getTime()) / 60000,
+          );
+
+          // Count wrong tries before first AC (excluding CE and IE)
+          const wrongTries = submissions
+            .slice(0, firstACIndex)
+            .filter((sub) => !['CE', 'IE', 'AC'].includes(sub.status))
+            .length;
+
+          problemData.set(problemCode, {
+            solveTime,
+            wrongTries,
+          });
+
+          solvedProblems.push(problemCode);
+          solvedCount++;
+
+          // Calculate penalty for this problem
+          const problemPenalty = solveTime + wrongTries * penaltyPerWrong;
+          totalPenalty += problemPenalty;
+        } else {
+          // Problem not solved, count all non-AC wrong submissions
+          const wrongTries = submissions
+            .filter((sub) => !['CE', 'IE', 'AC'].includes(sub.status))
+            .length;
+
+          if (wrongTries > 0) {
+            problemData.set(problemCode, {
+              solveTime: 0,
+              wrongTries,
+            });
+          }
+        }
+      }
+
+      // Update participant with calculated data
+      await this.participantModel.updateOne(
+        { _id: participant._id },
+        {
+          $set: {
+            problemData,
+            solvedProblems,
+            solvedCount,
+            totalPenalty,
+          },
+        },
+      );
+    }
+
+    console.log(`Recalculated data for ${participants.length} participants in contest ${contest.code}`);
+  }
+
+  private async updateParticipantRanks(contestCode: string): Promise<void> {
+    try {
+      console.log(`Updating participant ranks for contest ${contestCode}`);
+
+      // Fetch all participants for the contest, sorted by ICPC ranking rules
+      const participants = await this.participantModel
+        .find({ contest: contestCode })
+        .sort({ solvedCount: -1, totalPenalty: 1 })
+        .exec();
+
+      if (participants.length === 0) {
+        console.log(`No participants found for contest ${contestCode}`);
+        return;
+      }
+
+      // Update rank for each participant using bulkWrite for efficiency
+      const bulkOps = participants.map((participant, index) => {
+        const rank = index + 1; // Rank is 1-indexed
+        return {
+          updateOne: {
+            filter: { _id: participant._id },
+            update: { $set: { rank } },
+          },
+        };
+      });
+
+      const result = await this.participantModel.bulkWrite(bulkOps);
+      console.log(
+        `Updated ranks for ${result.modifiedCount} participants in contest ${contestCode}`,
+      );
+    } catch (error) {
+      console.error(`Error updating participant ranks for contest ${contestCode}:`, error);
+      // Don't throw - rank updates are not critical enough to fail the sync
+    }
+  }
+
   /**
    * Strip the contest prefix from a problem code.
    * Problem codes from VNOJ are in format: contestId_problemCode (e.g., "abc123_A")

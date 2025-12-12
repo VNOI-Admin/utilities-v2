@@ -30,6 +30,20 @@
             </div>
           </div>
           <div class="flex items-center gap-4">
+            <!-- Force Sync Submissions button -->
+            <button
+              @click="forceSyncSubmissions"
+              :disabled="forceSyncingSubmissions"
+              class="px-4 py-2 border border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+              :class="{ 'opacity-50 cursor-not-allowed': forceSyncingSubmissions }"
+            >
+              <RotateCw
+                :size="16"
+                :stroke-width="2"
+                :class="{ 'animate-spin': forceSyncingSubmissions }"
+              />
+              <span>{{ forceSyncingSubmissions ? 'FORCE SYNCING...' : 'FORCE SYNC' }}</span>
+            </button>
             <!-- Resync button -->
             <button
               @click="resyncContest"
@@ -1171,6 +1185,7 @@ const syncingParticipants = ref(false);
 
 // Resync state
 const resyncingContest = ref(false);
+const forceSyncingSubmissions = ref(false);
 
 // Submission state
 const submissionSearch = ref('');
@@ -1675,6 +1690,30 @@ async function resyncContest() {
     console.error('Resync contest error:', err);
   } finally {
     resyncingContest.value = false;
+  }
+}
+
+async function forceSyncSubmissions() {
+  if (!contest.value) return;
+
+  forceSyncingSubmissions.value = true;
+
+  try {
+    const result = await internalApi.contest.forceSyncSubmissions(contest.value.code);
+
+    // Reload submissions and participants to reflect updated data
+    await Promise.all([
+      loadSubmissions(),
+      loadParticipants(),
+    ]);
+
+    // Show detailed success message
+    toast.success(result.message);
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Failed to force-sync submissions');
+    console.error('Force-sync submissions error:', err);
+  } finally {
+    forceSyncingSubmissions.value = false;
   }
 }
 
