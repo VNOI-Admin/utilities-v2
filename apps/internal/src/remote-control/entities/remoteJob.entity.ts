@@ -5,7 +5,7 @@ import { Expose } from 'class-transformer';
 export class RemoteJobEntity {
   @Expose()
   @ApiProperty()
-  id: string;
+  jobId: string;
 
   @Expose()
   @ApiProperty()
@@ -35,8 +35,8 @@ export class RemoteJobEntity {
   @ApiProperty({ type: [String] })
   targets: string[];
 
-  constructor(data: ConstructorType<RemoteJobEntity> & { _id?: any }) {
-    this.id = data.id ?? data._id?.toString();
+  constructor(data: ConstructorType<RemoteJobEntity>) {
+    this.jobId = data.jobId;
     this.scriptName = data.scriptName;
     this.scriptHash = data.scriptHash;
     this.args = data.args;
@@ -46,4 +46,3 @@ export class RemoteJobEntity {
     this.targets = data.targets;
   }
 }
-

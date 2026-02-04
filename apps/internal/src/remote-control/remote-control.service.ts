@@ -17,6 +17,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { type Observable, Subject, finalize, firstValueFrom } from 'rxjs';
+import * as uuid from 'uuid';
 import type { AgentJobUpdateDto } from './dtos/agentJobUpdate.dto';
 import type { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
 import type { CreateRemoteControlJobDto } from './dtos/createJob.dto';
@@ -141,7 +142,10 @@ export class RemoteControlService {
       throw new BadRequestException('Duplicate targets');
     }
 
+    const jobId = uuid.v4();
+
     const job = await this.jobModel.create({
+      jobId,
       scriptName: dto.scriptName,
       scriptHash: script.hash,
       args: dto.args ?? [],
@@ -153,7 +157,7 @@ export class RemoteControlService {
     const now = new Date();
     await this.runModel.insertMany(
       targets.map((target) => ({
-        jobId: job.id,
+        jobId: job.jobId,
         target,
         status: RemoteJobRunStatus.PENDING,
         exitCode: null,
@@ -165,7 +169,7 @@ export class RemoteControlService {
     );
 
     // Fire-and-forget dispatch
-    this.dispatchToAgents(job.id, {
+    this.dispatchToAgents(job.jobId, {
       scriptName: job.scriptName,
       scriptHash: job.scriptHash,
       args: job.args,
@@ -200,7 +204,7 @@ export class RemoteControlService {
         status: query.runStatus,
       });
       if (!jobIds.length) return [];
-      filter._id = { $in: jobIds };
+      filter.jobId = { $in: jobIds };
     }
 
     return this.jobModel
@@ -210,7 +214,7 @@ export class RemoteControlService {
   }
 
   async getJob(jobId: string): Promise<RemoteJob> {
-    const job = await this.jobModel.findById(jobId).lean();
+    const job = await this.jobModel.findOne({ jobId }).lean();
     if (!job) throw new NotFoundException('Job not found');
     return job;
   }
@@ -253,7 +257,7 @@ export class RemoteControlService {
   }
 
   async cancelJob(jobId: string, dto: CancelRemoteControlJobDto) {
-    const job = await this.jobModel.findById(jobId).lean();
+    const job = await this.jobModel.findOne({ jobId }).lean();
     if (!job) throw new NotFoundException('Job not found');
 
     this.validateTargets(job.targets, dto.targets);
@@ -285,7 +289,7 @@ export class RemoteControlService {
     jobId: string,
     dto: RefreshRemoteControlJobDto,
   ): Promise<{ accepted: true } | { jobId: string; runs: RemoteJobRun[] }> {
-    const job = await this.jobModel.findById(jobId).lean();
+    const job = await this.jobModel.findOne({ jobId }).lean();
     if (!job) throw new NotFoundException('Job not found');
 
     this.validateTargets(job.targets, dto.targets);
