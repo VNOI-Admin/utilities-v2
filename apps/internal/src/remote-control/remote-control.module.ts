@@ -6,7 +6,9 @@ import { RemoteJobRun, RemoteJobRunSchema } from '@libs/common-db/schemas/remote
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RemoteControlAgentController } from './remote-control-agent.controller';
 import { RemoteControlAgentClient } from './remote-control-agent-client.service';
+import { RemoteControlEventsService } from './remote-control-events.service';
 import { RemoteControlJobsController } from './remote-control-jobs.controller';
 import { RemoteControlJobsService } from './remote-control-jobs.service';
 import { RemoteControlScriptsController } from './remote-control-scripts.controller';
@@ -23,7 +25,12 @@ import { RemoteControlScriptsService } from './remote-control-scripts.service';
       { name: User.name, schema: UserSchema },
     ]),
   ],
-  controllers: [RemoteControlScriptsController, RemoteControlJobsController],
-  providers: [RemoteControlAgentClient, RemoteControlScriptsService, RemoteControlJobsService],
+  controllers: [RemoteControlScriptsController, RemoteControlJobsController, RemoteControlAgentController],
+  providers: [
+    RemoteControlAgentClient,
+    RemoteControlEventsService,
+    RemoteControlScriptsService,
+    RemoteControlJobsService,
+  ],
 })
 export class RemoteControlModule {}

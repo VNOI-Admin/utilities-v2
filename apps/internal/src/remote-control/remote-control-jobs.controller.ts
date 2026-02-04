@@ -1,7 +1,8 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Body, ClassSerializerInterceptor, Controller, Get, Param, Post, Query, Request, SerializeOptions, UseGuards, UseInterceptors } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, ClassSerializerInterceptor, Controller, Get, Param, Post, Query, Request, SerializeOptions, Sse, UseGuards, UseInterceptors, type MessageEvent } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Observable } from 'rxjs';
 import { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
 import { CreateRemoteControlJobDto } from './dtos/createJob.dto';
 import { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
@@ -12,13 +13,17 @@ import { RemoteJobCancelResponseEntity } from './entities/remoteJobCancel.entity
 import { RemoteJobRefreshSyncResponseEntity } from './entities/remoteJobRefresh.entity';
 import { RemoteJobRunEntity } from './entities/remoteJobRun.entity';
 import { RemoteControlJobsService } from './remote-control-jobs.service';
+import { RemoteControlEventsService } from './remote-control-events.service';
 
 @ApiTags('Remote Control')
 @Controller('remote-control/jobs')
 @UseInterceptors(ClassSerializerInterceptor)
 @SerializeOptions({ excludeExtraneousValues: true })
 export class RemoteControlJobsController {
-  constructor(private readonly remoteControlJobsService: RemoteControlJobsService) {}
+  constructor(
+    private readonly remoteControlJobsService: RemoteControlJobsService,
+    private readonly remoteControlEventsService: RemoteControlEventsService,
+  ) {}
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
@@ -137,5 +142,15 @@ export class RemoteControlJobsController {
       jobId: res.jobId,
       runs: res.runs.map((run) => new RemoteJobRunEntity(run as any)),
     });
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Subscribe to per-job updates' })
+  @ApiProduces('text/event-stream')
+  @Sse('/:jobId/events')
+  sse(@Param('jobId') jobId: string): Observable<MessageEvent> {
+    return this.remoteControlEventsService.subscribe(jobId);
   }
 }

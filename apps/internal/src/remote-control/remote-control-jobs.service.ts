@@ -6,15 +6,20 @@ import { getErrorMessage } from '@libs/common/helper/error';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { AgentJobUpdateDto } from './dtos/agentJobUpdate.dto';
 import { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
 import { CreateRemoteControlJobDto } from './dtos/createJob.dto';
 import { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
 import { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
 import { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
 import { RemoteControlAgentClient } from './remote-control-agent-client.service';
+import { RemoteControlEventsService } from './remote-control-events.service';
+import { truncateLog } from './utils/truncateLog';
 
 @Injectable()
 export class RemoteControlJobsService {
+  private readonly maxLogBytes = 256 * 1024;
+
   constructor(
     @InjectModel(RemoteControlScript.name)
     private remoteControlScriptModel: Model<RemoteControlScriptDocument>,
@@ -25,6 +30,7 @@ export class RemoteControlJobsService {
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
     private remoteControlAgentClient: RemoteControlAgentClient,
+    private remoteControlEventsService: RemoteControlEventsService,
   ) {}
 
   async createJob(createdBy: string, dto: CreateRemoteControlJobDto): Promise<RemoteJob> {
@@ -144,6 +150,32 @@ export class RemoteControlJobsService {
     return run;
   }
 
+  async applyAgentUpdate(jobId: string, target: string, dto: AgentJobUpdateDto): Promise<void> {
+    const run = await this.remoteJobRunModel.findOne({ jobId, target });
+    if (!run) {
+      throw new BadRequestException('Job run not found');
+    }
+
+    if (dto.status === RemoteJobRunStatus.RUNNING) {
+      run.status = RemoteJobRunStatus.RUNNING;
+      run.startedAt = run.startedAt ?? new Date(dto.reportedAt);
+    }
+
+    if (dto.log) {
+      run.log = truncateLog(dto.log, this.maxLogBytes);
+    }
+
+    if (dto.exitCode !== undefined && dto.exitCode !== null) {
+      run.exitCode = dto.exitCode;
+      run.status = dto.exitCode === 0 ? RemoteJobRunStatus.SUCCESS : RemoteJobRunStatus.FAILED;
+      run.finishedAt = run.finishedAt ?? new Date(dto.reportedAt);
+    }
+
+    await run.save();
+
+    this.emitJobRunUpdated(jobId, run);
+  }
+
   async cancelJob(jobId: string, dto: CancelRemoteControlJobDto) {
     const job = await this.remoteJobModel.findById(jobId).lean();
     if (!job) {
@@ -214,7 +246,7 @@ export class RemoteControlJobsService {
           run.exitCode = agentState.exitCode;
 
           if (dto.includeLog && typeof agentState.log === 'string') {
-            run.log = agentState.log;
+            run.log = truncateLog(agentState.log, this.maxLogBytes);
           }
 
           if (agentState.startedAt) {
@@ -236,6 +268,7 @@ export class RemoteControlJobsService {
           }
 
           await run.save();
+          this.emitJobRunUpdated(jobId, run);
         } catch {
           // Best-effort: ignore agent errors for sync refresh, keep last known state.
         }
@@ -288,6 +321,8 @@ export class RemoteControlJobsService {
     run.log = message;
     run.finishedAt = run.finishedAt ?? new Date();
     await run.save();
+
+    this.emitJobRunUpdated(jobId, run);
   }
 
   private async getVpnIpByTargets(targets: string[]): Promise<Map<string, string>> {
@@ -311,5 +346,16 @@ export class RemoteControlJobsService {
     if (invalid.length) {
       throw new BadRequestException(`Invalid targets: ${invalid.join(', ')}`);
     }
+  }
+
+  private emitJobRunUpdated(jobId: string, run: RemoteJobRunDocument) {
+    this.remoteControlEventsService.emitJobRunUpdated(jobId, {
+      jobId,
+      target: run.target,
+      status: run.status,
+      exitCode: run.exitCode ?? null,
+      log: run.log ?? undefined,
+      updatedAt: run.updatedAt?.toISOString() ?? new Date().toISOString(),
+    });
   }
 }
