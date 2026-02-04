@@ -13,6 +13,7 @@ import { GuardsModule } from '@libs/common/guards/guards.module';
 import { PrintingModule } from './printing/printing.module';
 import { GuestModule } from './guest/guest.module';
 import { FloorPlanModule } from './floor-plan/floor-plan.module';
+import { RemoteControlModule } from './remote-control/remote-control.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { FloorPlanModule } from './floor-plan/floor-plan.module';
     ContestModule,
     PrintingModule,
     FloorPlanModule,
+    RemoteControlModule,
   ],
   controllers: [AppController],
   providers: [AppService],
