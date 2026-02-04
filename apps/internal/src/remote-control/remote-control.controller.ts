@@ -1,4 +1,4 @@
-import { OptionalAccessTokenAuth } from '@libs/common/decorators/optionalAccessTokenAuth.decorator';
+import { AccessTokenOptional } from '@libs/common/decorators/accessTokenOptional.decorator';
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
@@ -36,13 +36,6 @@ import { RemoteJobRefreshSyncResponseEntity } from './entities/remoteJobRefresh.
 import { RemoteJobRunEntity } from './entities/remoteJobRun.entity';
 import { RemoteControlService } from './remote-control.service';
 
-// Reusable decorator compositions
-const AdminAuth = () => (target: any, key: string, descriptor: PropertyDescriptor) => {
-  ApiBearerAuth()(target, key, descriptor);
-  UseGuards(AccessTokenGuard)(target, key, descriptor);
-  RequiredRoles(Role.ADMIN)(target, key, descriptor);
-};
-
 @ApiTags('Remote Control')
 @Controller('remote-control')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -54,7 +47,9 @@ export class RemoteControlController {
   // Scripts
   // ───────────────────────────────────────────────────────────────────────────
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'List scripts' })
   @ApiResponse({ status: 200, type: [RemoteControlScriptSummaryEntity] })
   @Get('/scripts')
@@ -63,7 +58,9 @@ export class RemoteControlController {
     return scripts.map((s) => new RemoteControlScriptSummaryEntity(s as any));
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Create script' })
   @ApiResponse({ status: 200, type: RemoteControlScriptEntity })
   @Post('/scripts')
@@ -72,9 +69,11 @@ export class RemoteControlController {
     return new RemoteControlScriptEntity(script as any);
   }
 
+  // Admin (via token) OR Contestant (via IP) - AccessTokenGuard passes through
+  // if no valid token, then IPAddressGuard authenticates by IP
   @ApiBearerAuth()
+  @AccessTokenOptional()
   @UseGuards(AccessTokenGuard, IPAddressGuard)
-  @OptionalAccessTokenAuth()
   @RequiredRoles(Role.ADMIN, Role.CONTESTANT)
   @ApiOperation({ summary: 'Get script by name' })
   @ApiResponse({ status: 200, type: RemoteControlScriptEntity })
@@ -84,7 +83,9 @@ export class RemoteControlController {
     return new RemoteControlScriptEntity(script as any);
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Update script content' })
   @ApiResponse({ status: 200, type: RemoteControlScriptEntity })
   @Patch('/scripts/:name')
@@ -93,7 +94,9 @@ export class RemoteControlController {
     return new RemoteControlScriptEntity(script as any);
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Delete script' })
   @ApiResponse({
     status: 200,
@@ -108,7 +111,9 @@ export class RemoteControlController {
   // Jobs
   // ───────────────────────────────────────────────────────────────────────────
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Create job (fan-out run)' })
   @ApiResponse({ status: 200, type: RemoteJobEntity })
   @Post('/jobs')
@@ -117,7 +122,9 @@ export class RemoteControlController {
     return new RemoteJobEntity(job as any);
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'List jobs' })
   @ApiResponse({ status: 200, type: [RemoteJobEntity] })
   @Get('/jobs')
@@ -126,7 +133,9 @@ export class RemoteControlController {
     return jobs.map((j) => new RemoteJobEntity(j as any));
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Get job' })
   @ApiResponse({ status: 200, type: RemoteJobEntity })
   @Get('/jobs/:jobId')
@@ -135,7 +144,9 @@ export class RemoteControlController {
     return new RemoteJobEntity(job as any);
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'List runs in a job' })
   @ApiResponse({ status: 200, type: [RemoteJobRunEntity] })
   @Get('/jobs/:jobId/runs')
@@ -144,7 +155,9 @@ export class RemoteControlController {
     return runs.map((r) => new RemoteJobRunEntity(r as any));
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Get a run' })
   @ApiResponse({ status: 200, type: RemoteJobRunEntity })
   @Get('/jobs/:jobId/runs/:target')
@@ -153,7 +166,9 @@ export class RemoteControlController {
     return new RemoteJobRunEntity(run as any);
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Cancel selected targets in a job' })
   @ApiResponse({ status: 200, type: RemoteJobCancelResponseEntity })
   @Post('/jobs/:jobId/cancel')
@@ -162,7 +177,9 @@ export class RemoteControlController {
     return new RemoteJobCancelResponseEntity(res as any);
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Request on-demand status/log refresh' })
   @ApiResponse({
     status: 200,
@@ -185,7 +202,9 @@ export class RemoteControlController {
     });
   }
 
-  @AdminAuth()
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Subscribe to per-job updates' })
   @ApiProduces('text/event-stream')
   @Sse('/jobs/:jobId/events')
