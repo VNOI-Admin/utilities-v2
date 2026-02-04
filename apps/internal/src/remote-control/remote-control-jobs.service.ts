@@ -1,13 +1,17 @@
 import { RemoteControlScript, type RemoteControlScriptDocument } from '@libs/common-db/schemas/remoteControlScript.schema';
 import { RemoteJob, type RemoteJobDocument } from '@libs/common-db/schemas/remoteJob.schema';
 import { RemoteJobRun, RemoteJobRunStatus, type RemoteJobRunDocument } from '@libs/common-db/schemas/remoteJobRun.schema';
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { getErrorMessage } from '@libs/common/helper/error';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
 import { CreateRemoteControlJobDto } from './dtos/createJob.dto';
 import { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
 import { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
+import { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
+import { RemoteControlAgentClient } from './remote-control-agent-client.service';
 
 @Injectable()
 export class RemoteControlJobsService {
@@ -18,6 +22,9 @@ export class RemoteControlJobsService {
     private remoteJobModel: Model<RemoteJobDocument>,
     @InjectModel(RemoteJobRun.name)
     private remoteJobRunModel: Model<RemoteJobRunDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
+    private remoteControlAgentClient: RemoteControlAgentClient,
   ) {}
 
   async createJob(createdBy: string, dto: CreateRemoteControlJobDto): Promise<RemoteJob> {
@@ -56,6 +63,13 @@ export class RemoteControlJobsService {
           updatedAt: now,
         })),
       );
+
+      await this.dispatchRunRequests(job.id, {
+        scriptName: job.scriptName,
+        scriptHash: job.scriptHash,
+        args: job.args,
+        env: job.env,
+      });
 
       return job.toObject();
     } catch (error) {
@@ -129,5 +143,173 @@ export class RemoteControlJobsService {
     }
     return run;
   }
-}
 
+  async cancelJob(jobId: string, dto: CancelRemoteControlJobDto) {
+    const job = await this.remoteJobModel.findById(jobId).lean();
+    if (!job) {
+      throw new BadRequestException('Job not found');
+    }
+
+    this.ensureTargetsSubset(job.targets, dto.targets);
+
+    const vpnIpByTarget = await this.getVpnIpByTargets(dto.targets);
+
+    const results = await Promise.all(
+      dto.targets.map(async (target) => {
+        const vpnIpAddress = vpnIpByTarget.get(target);
+        if (!vpnIpAddress) {
+          return { target, accepted: false, message: 'target vpn ip not found' };
+        }
+
+        try {
+          await this.remoteControlAgentClient.cancelJob(vpnIpAddress, jobId);
+          return { target, accepted: true, message: 'cancel requested' };
+        } catch (error) {
+          return { target, accepted: false, message: getErrorMessage(error) };
+        }
+      }),
+    );
+
+    return { jobId, results };
+  }
+
+  async refreshJob(jobId: string, dto: RefreshRemoteControlJobDto) {
+    const job = await this.remoteJobModel.findById(jobId).lean();
+    if (!job) {
+      throw new BadRequestException('Job not found');
+    }
+
+    this.ensureTargetsSubset(job.targets, dto.targets);
+
+    const vpnIpByTarget = await this.getVpnIpByTargets(dto.targets);
+
+    if (dto.mode === 'async') {
+      await Promise.allSettled(
+        dto.targets.map(async (target) => {
+          const vpnIpAddress = vpnIpByTarget.get(target);
+          if (!vpnIpAddress) {
+            return;
+          }
+          await this.remoteControlAgentClient.reportJob(vpnIpAddress, jobId, dto.includeLog);
+        }),
+      );
+
+      return { accepted: true };
+    }
+
+    await Promise.allSettled(
+      dto.targets.map(async (target) => {
+        const vpnIpAddress = vpnIpByTarget.get(target);
+        if (!vpnIpAddress) {
+          return;
+        }
+
+        try {
+          const agentState = await this.remoteControlAgentClient.getJob(vpnIpAddress, jobId, dto.includeLog);
+          const run = await this.remoteJobRunModel.findOne({ jobId, target });
+          if (!run) {
+            return;
+          }
+
+          run.exitCode = agentState.exitCode;
+
+          if (dto.includeLog && typeof agentState.log === 'string') {
+            run.log = agentState.log;
+          }
+
+          if (agentState.startedAt) {
+            run.startedAt = new Date(agentState.startedAt);
+          }
+
+          if (agentState.finishedAt) {
+            run.finishedAt = new Date(agentState.finishedAt);
+          }
+
+          if (agentState.exitCode !== null && agentState.exitCode !== undefined) {
+            run.status = agentState.exitCode === 0 ? RemoteJobRunStatus.SUCCESS : RemoteJobRunStatus.FAILED;
+            run.finishedAt = run.finishedAt ?? new Date();
+          } else if (agentState.status === RemoteJobRunStatus.RUNNING) {
+            run.status = RemoteJobRunStatus.RUNNING;
+            run.startedAt = run.startedAt ?? new Date();
+          } else if (agentState.status === RemoteJobRunStatus.PENDING) {
+            run.status = RemoteJobRunStatus.PENDING;
+          }
+
+          await run.save();
+        } catch {
+          // Best-effort: ignore agent errors for sync refresh, keep last known state.
+        }
+      }),
+    );
+
+    const runs = await this.remoteJobRunModel.find({ jobId, target: { $in: dto.targets } }).sort({ target: 1 }).lean();
+
+    return { jobId, runs };
+  }
+
+  private async dispatchRunRequests(
+    jobId: string,
+    payload: {
+      scriptName: string;
+      scriptHash: string;
+      args: string[];
+      env: Record<string, string>;
+    },
+  ) {
+    const runs = await this.remoteJobRunModel.find({ jobId }).select({ target: 1 }).lean();
+    const targets = runs.map((run) => run.target);
+    const vpnIpByTarget = await this.getVpnIpByTargets(targets);
+
+    await Promise.allSettled(
+      targets.map(async (target) => {
+        const vpnIpAddress = vpnIpByTarget.get(target);
+        if (!vpnIpAddress) {
+          await this.markRunDispatchFailed(jobId, target, 'target vpn ip not found');
+          return;
+        }
+
+        try {
+          await this.remoteControlAgentClient.runJob(vpnIpAddress, jobId, payload);
+        } catch (error) {
+          await this.markRunDispatchFailed(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
+        }
+      }),
+    );
+  }
+
+  private async markRunDispatchFailed(jobId: string, target: string, message: string) {
+    const run = await this.remoteJobRunModel.findOne({ jobId, target });
+    if (!run) {
+      return;
+    }
+
+    run.status = RemoteJobRunStatus.FAILED;
+    run.exitCode = run.exitCode ?? null;
+    run.log = message;
+    run.finishedAt = run.finishedAt ?? new Date();
+    await run.save();
+  }
+
+  private async getVpnIpByTargets(targets: string[]): Promise<Map<string, string>> {
+    const users = await this.userModel
+      .find({ username: { $in: targets } })
+      .select({ username: 1, vpnIpAddress: 1 })
+      .lean();
+
+    const map = new Map<string, string>();
+    for (const user of users) {
+      if (user.vpnIpAddress) {
+        map.set(user.username, user.vpnIpAddress);
+      }
+    }
+    return map;
+  }
+
+  private ensureTargetsSubset(jobTargets: string[], requestedTargets: string[]) {
+    const allowed = new Set(jobTargets);
+    const invalid = requestedTargets.filter((t) => !allowed.has(t));
+    if (invalid.length) {
+      throw new BadRequestException(`Invalid targets: ${invalid.join(', ')}`);
+    }
+  }
+}
