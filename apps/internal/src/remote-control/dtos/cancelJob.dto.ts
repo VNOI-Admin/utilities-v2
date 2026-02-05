@@ -8,4 +8,3 @@ export class CancelRemoteControlJobDto {
   @IsString({ each: true })
   targets!: string[];
 }
-

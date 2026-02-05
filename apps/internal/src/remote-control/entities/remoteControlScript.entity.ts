@@ -37,4 +37,3 @@ export class RemoteControlScriptEntity extends RemoteControlScriptSummaryEntity 
     this.content = data.content;
   }
 }
-

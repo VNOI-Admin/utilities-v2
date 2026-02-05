@@ -2,10 +2,7 @@ import {
   RemoteControlScript,
   type RemoteControlScriptDocument,
 } from '@libs/common-db/schemas/remoteControlScript.schema';
-import {
-  RemoteJob,
-  type RemoteJobDocument,
-} from '@libs/common-db/schemas/remoteJob.schema';
+import { RemoteJob, type RemoteJobDocument } from '@libs/common-db/schemas/remoteJob.schema';
 import {
   RemoteJobRun,
   type RemoteJobRunDocument,
@@ -14,12 +11,7 @@ import {
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { getErrorMessage } from '@libs/common/helper/error';
 import { HttpService } from '@nestjs/axios';
-import {
-  BadRequestException,
-  Injectable,
-  type MessageEvent,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, type MessageEvent, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -82,10 +74,7 @@ export class RemoteControlService {
     return this.scriptModel.find().select('-content').sort({ name: 1 }).lean();
   }
 
-  async createScript(
-    name: string,
-    content: string,
-  ): Promise<RemoteControlScript> {
+  async createScript(name: string, content: string): Promise<RemoteControlScript> {
     const existing = await this.scriptModel.exists({ name });
     if (existing) throw new BadRequestException('Script already exists');
 
@@ -102,10 +91,7 @@ export class RemoteControlService {
     return script;
   }
 
-  async updateScriptContent(
-    name: string,
-    content: string,
-  ): Promise<RemoteControlScript> {
+  async updateScriptContent(name: string, content: string): Promise<RemoteControlScript> {
     const script = await this.scriptModel.findOne({ name });
     if (!script) throw new NotFoundException('Script not found');
 
@@ -116,18 +102,12 @@ export class RemoteControlService {
 
   async deleteScript(name: string): Promise<{ success: true }> {
     const result = await this.scriptModel.deleteOne({ name });
-    if (result.deletedCount === 0)
-      throw new NotFoundException('Script not found');
+    if (result.deletedCount === 0) throw new NotFoundException('Script not found');
     return { success: true };
   }
 
-  async createJob(
-    createdBy: string,
-    dto: CreateRemoteControlJobDto,
-  ): Promise<RemoteJob> {
-    const script = await this.scriptModel
-      .findOne({ name: dto.scriptName })
-      .lean();
+  async createJob(createdBy: string, dto: CreateRemoteControlJobDto): Promise<RemoteJob> {
+    const script = await this.scriptModel.findOne({ name: dto.scriptName }).lean();
     if (!script) throw new BadRequestException('Script not found');
 
     const { targets } = dto;
@@ -201,10 +181,7 @@ export class RemoteControlService {
     return job;
   }
 
-  async listRuns(
-    jobId: string,
-    query: GetRemoteControlJobRunsDto,
-  ): Promise<RemoteJobRun[]> {
+  async listRuns(jobId: string, query: GetRemoteControlJobRunsDto): Promise<RemoteJobRun[]> {
     const filter: Record<string, any> = { jobId };
     if (query.status) filter.status = query.status;
     return this.runModel.find(filter).sort({ target: 1 }).lean();
@@ -216,11 +193,7 @@ export class RemoteControlService {
     return run;
   }
 
-  async applyAgentUpdate(
-    jobId: string,
-    target: string,
-    dto: AgentJobUpdateDto,
-  ): Promise<void> {
+  async applyAgentUpdate(jobId: string, target: string, dto: AgentJobUpdateDto): Promise<void> {
     const run = await this.updateRun(jobId, target, {
       log: dto.log,
       exitCode: dto.exitCode,
@@ -284,9 +257,7 @@ export class RemoteControlService {
 
     // Sync mode: pull status from agents and update DB
     await Promise.allSettled(
-      dto.targets.map((target) =>
-        this.syncRunFromAgent(jobId, target, ipMap.get(target), dto.includeLog),
-      ),
+      dto.targets.map((target) => this.syncRunFromAgent(jobId, target, ipMap.get(target), dto.includeLog)),
     );
 
     const runs = await this.runModel
@@ -323,11 +294,7 @@ export class RemoteControlService {
     );
   }
 
-  private agentGet<T>(
-    ip: string,
-    path: string,
-    params: Record<string, string> = {},
-  ) {
+  private agentGet<T>(ip: string, path: string, params: Record<string, string> = {}) {
     return firstValueFrom(
       this.http.get<T>(`http://${ip}:${this.agentPort}${path}`, {
         timeout: HTTP_TIMEOUT_MS,
@@ -336,11 +303,7 @@ export class RemoteControlService {
     );
   }
 
-  private async dispatchToAgents(
-    jobId: string,
-    targets: string[],
-    payload: AgentJobPayload,
-  ) {
+  private async dispatchToAgents(jobId: string, targets: string[], payload: AgentJobPayload) {
     const ipMap = await this.resolveVpnIps(targets);
 
     await Promise.allSettled(
@@ -352,11 +315,7 @@ export class RemoteControlService {
         try {
           await this.agentPost(ip, `/jobs/${jobId}/run`, payload);
         } catch (error) {
-          await this.failRun(
-            jobId,
-            target,
-            `dispatch failed: ${getErrorMessage(error)}`,
-          );
+          await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
         }
       }),
     );
@@ -369,22 +328,13 @@ export class RemoteControlService {
     });
   }
 
-  private async syncRunFromAgent(
-    jobId: string,
-    target: string,
-    ip: string | undefined,
-    includeLog: boolean,
-  ) {
+  private async syncRunFromAgent(jobId: string, target: string, ip: string | undefined, includeLog: boolean) {
     if (!ip) return;
 
     try {
-      const { data: agent } = await this.agentGet<AgentJobStatus>(
-        ip,
-        `/jobs/${jobId}`,
-        {
-          includeLog: String(includeLog),
-        },
-      );
+      const { data: agent } = await this.agentGet<AgentJobStatus>(ip, `/jobs/${jobId}`, {
+        includeLog: String(includeLog),
+      });
 
       await this.updateRun(jobId, target, {
         exitCode: agent.exitCode ?? undefined,
@@ -399,11 +349,7 @@ export class RemoteControlService {
     }
   }
 
-  private async updateRun(
-    jobId: string,
-    target: string,
-    input: RunUpdateInput,
-  ): Promise<RemoteJobRunDocument | null> {
+  private async updateRun(jobId: string, target: string, input: RunUpdateInput): Promise<RemoteJobRunDocument | null> {
     const update: Record<string, any> = {};
     if (input.status !== undefined) update.status = input.status;
     if (input.exitCode != null) update.exitCode = input.exitCode;
@@ -411,11 +357,7 @@ export class RemoteControlService {
 
     if (Object.keys(update).length === 0) return null;
 
-    const run = await this.runModel.findOneAndUpdate(
-      { jobId, target },
-      update,
-      { new: true },
-    );
+    const run = await this.runModel.findOneAndUpdate({ jobId, target }, update, { new: true });
     if (run) this.emitRunUpdate(jobId, run);
     return run;
   }

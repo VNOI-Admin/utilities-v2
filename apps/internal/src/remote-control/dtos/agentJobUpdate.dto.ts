@@ -17,4 +17,3 @@ export class AgentJobUpdateDto {
   @IsString()
   log?: string;
 }
-

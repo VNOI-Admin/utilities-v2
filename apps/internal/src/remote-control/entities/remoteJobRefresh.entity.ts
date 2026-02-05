@@ -17,4 +17,3 @@ export class RemoteJobRefreshSyncResponseEntity {
     this.runs = data.runs;
   }
 }
-

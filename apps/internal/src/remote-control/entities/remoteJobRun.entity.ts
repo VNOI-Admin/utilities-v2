@@ -1,5 +1,5 @@
-import { ConstructorType } from '@libs/common/serializers/type';
 import { RemoteJobRunStatus } from '@libs/common-db/schemas/remoteJobRun.schema';
+import { ConstructorType } from '@libs/common/serializers/type';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 
@@ -42,4 +42,3 @@ export class RemoteJobRunEntity {
     this.updatedAt = data.updatedAt;
   }
 }
-

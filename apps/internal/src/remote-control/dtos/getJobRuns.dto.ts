@@ -8,4 +8,3 @@ export class GetRemoteControlJobRunsDto {
   @IsEnum(RemoteJobRunStatus)
   status?: RemoteJobRunStatus;
 }
-

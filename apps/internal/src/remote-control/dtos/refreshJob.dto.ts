@@ -16,4 +16,3 @@ export class RefreshRemoteControlJobDto {
   @IsIn(['sync', 'async'])
   mode!: 'sync' | 'async';
 }
-

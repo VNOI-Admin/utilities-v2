@@ -23,4 +23,3 @@ export class CreateRemoteControlJobDto {
   @IsString({ each: true })
   targets!: string[];
 }
-
