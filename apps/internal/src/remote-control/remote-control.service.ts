@@ -45,6 +45,12 @@ interface AgentJobStatus {
   log?: string;
 }
 
+interface RunUpdateInput {
+  status?: RemoteJobRunStatus;
+  exitCode?: number | null;
+  log?: string;
+}
+
 interface JobStream {
   subject: Subject<MessageEvent>;
   subscribers: number;
@@ -215,15 +221,12 @@ export class RemoteControlService {
     target: string,
     dto: AgentJobUpdateDto,
   ): Promise<void> {
-    const run = await this.runModel.findOne({ jobId, target });
+    const run = await this.updateRun(jobId, target, {
+      log: dto.log,
+      exitCode: dto.exitCode,
+      status: dto.status,
+    });
     if (!run) throw new NotFoundException('Job run not found');
-
-    if (dto.log) run.log = dto.log;
-    if (dto.exitCode != null) run.exitCode = dto.exitCode;
-    if (dto.status) run.status = dto.status;
-
-    await run.save();
-    this.emitRunUpdate(jobId, run);
   }
 
   async cancelJob(jobId: string, dto: CancelRemoteControlJobDto) {
@@ -360,15 +363,10 @@ export class RemoteControlService {
   }
 
   private async failRun(jobId: string, target: string, message: string) {
-    const run = await this.runModel.findOneAndUpdate(
-      { jobId, target },
-      {
-        status: RemoteJobRunStatus.FAILED,
-        log: message,
-      },
-      { new: true },
-    );
-    if (run) this.emitRunUpdate(jobId, run);
+    await this.updateRun(jobId, target, {
+      status: RemoteJobRunStatus.FAILED,
+      log: message,
+    });
   }
 
   private async syncRunFromAgent(
@@ -388,30 +386,38 @@ export class RemoteControlService {
         },
       );
 
-      const update: Record<string, any> = {};
+      await this.updateRun(jobId, target, {
+        exitCode: agent.exitCode ?? undefined,
+        status: agent.status as RemoteJobRunStatus,
+        log: includeLog ? agent.log : undefined,
+      });
+    } catch (error) {
+      console.warn(
+        `[RemoteControl] Failed to sync run from agent for job ${jobId}, target ${target}:`,
+        getErrorMessage(error),
+      );
+    }
+  }
 
-      if (agent.exitCode != null) {
-        update.exitCode = agent.exitCode;
-        update.status = agent.status;
-      } else if (agent.status === RemoteJobRunStatus.RUNNING) {
-        update.status = RemoteJobRunStatus.RUNNING;
-      } else if (agent.status === RemoteJobRunStatus.PENDING) {
-        update.status = RemoteJobRunStatus.PENDING;
-      }
+  private async updateRun(
+    jobId: string,
+    target: string,
+    input: RunUpdateInput,
+  ): Promise<RemoteJobRunDocument | null> {
+    const update: Record<string, any> = {};
+    if (input.status !== undefined) update.status = input.status;
+    if (input.exitCode != null) update.exitCode = input.exitCode;
+    if (input.log !== undefined) update.log = input.log;
 
-      if (includeLog && typeof agent.log === 'string') {
-        update.log = agent.log;
-      }
+    if (Object.keys(update).length === 0) return null;
 
-      if (Object.keys(update).length > 0) {
-        const run = await this.runModel.findOneAndUpdate(
-          { jobId, target },
-          update,
-          { new: true },
-        );
-        if (run) this.emitRunUpdate(jobId, run);
-      }
-    } catch {}
+    const run = await this.runModel.findOneAndUpdate(
+      { jobId, target },
+      update,
+      { new: true },
+    );
+    if (run) this.emitRunUpdate(jobId, run);
+    return run;
   }
 
   private async resolveVpnIps(targets: string[]): Promise<Map<string, string>> {
