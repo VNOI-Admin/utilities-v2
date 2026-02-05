@@ -16,9 +16,5 @@ export class AgentJobUpdateDto {
   @IsOptional()
   @IsString()
   log?: string;
-
-  @ApiProperty({ required: true, description: 'ISO date (UTC)' })
-  @IsDateString()
-  reportedAt!: string;
 }
 

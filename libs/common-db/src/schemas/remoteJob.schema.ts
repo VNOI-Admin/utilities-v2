@@ -32,7 +32,6 @@ export class RemoteJob {
 
 export const RemoteJobSchema = SchemaFactory.createForClass(RemoteJob);
 
-RemoteJobSchema.index({ jobId: 1 });
 RemoteJobSchema.index({ createdAt: -1 });
 RemoteJobSchema.index({ scriptName: 1, createdAt: -1 });
 RemoteJobSchema.index({ createdBy: 1, createdAt: -1 });

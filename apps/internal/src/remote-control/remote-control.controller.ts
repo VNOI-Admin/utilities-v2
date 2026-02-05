@@ -43,10 +43,6 @@ import { RemoteControlService } from './remote-control.service';
 export class RemoteControlController {
   constructor(private readonly service: RemoteControlService) {}
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Scripts
-  // ───────────────────────────────────────────────────────────────────────────
-
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
@@ -69,8 +65,6 @@ export class RemoteControlController {
     return new RemoteControlScriptEntity(script as any);
   }
 
-  // Admin (via token) OR Contestant (via IP) - AccessTokenGuard passes through
-  // if no valid token, then IPAddressGuard authenticates by IP
   @ApiBearerAuth()
   @AccessTokenOptional()
   @UseGuards(AccessTokenGuard, IPAddressGuard)
@@ -107,14 +101,10 @@ export class RemoteControlController {
     return this.service.deleteScript(name);
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Jobs
-  // ───────────────────────────────────────────────────────────────────────────
-
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create job (fan-out run)' })
+  @ApiOperation({ summary: 'Create job' })
   @ApiResponse({ status: 200, type: RemoteJobEntity })
   @Post('/jobs')
   async createJob(@Request() req: any, @Body() dto: CreateRemoteControlJobDto) {
@@ -211,10 +201,6 @@ export class RemoteControlController {
   subscribe(@Param('jobId') jobId: string): Observable<MessageEvent> {
     return this.service.subscribe(jobId);
   }
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // Agent Callback
-  // ───────────────────────────────────────────────────────────────────────────
 
   @UseGuards(IPAddressGuard)
   @RequiredRoles(Role.CONTESTANT)

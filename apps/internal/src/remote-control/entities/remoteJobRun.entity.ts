@@ -29,14 +29,6 @@ export class RemoteJobRunEntity {
   log: string | null;
 
   @Expose()
-  @ApiProperty({ required: false, nullable: true })
-  startedAt: Date | null;
-
-  @Expose()
-  @ApiProperty({ required: false, nullable: true })
-  finishedAt: Date | null;
-
-  @Expose()
   @ApiProperty()
   updatedAt: Date;
 
@@ -47,8 +39,6 @@ export class RemoteJobRunEntity {
     this.status = data.status;
     this.exitCode = data.exitCode ?? null;
     this.log = data.log ?? null;
-    this.startedAt = data.startedAt ?? null;
-    this.finishedAt = data.finishedAt ?? null;
     this.updatedAt = data.updatedAt;
   }
 }

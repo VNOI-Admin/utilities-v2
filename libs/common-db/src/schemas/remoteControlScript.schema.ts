@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type Document } from 'mongoose';
 
@@ -31,6 +32,10 @@ RemoteControlScriptSchema.pre('save', function (next) {
     this.createdAt = now;
   }
   this.updatedAt = now;
+
+  if (this.isModified('content')) {
+    this.hash = createHash('sha256').update(this.content).digest('hex');
+  }
+
   next();
 });
-

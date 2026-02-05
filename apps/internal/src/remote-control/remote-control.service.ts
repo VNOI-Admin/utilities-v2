@@ -1,9 +1,11 @@
-import { createHash } from 'crypto';
 import {
   RemoteControlScript,
   type RemoteControlScriptDocument,
 } from '@libs/common-db/schemas/remoteControlScript.schema';
-import { RemoteJob, type RemoteJobDocument } from '@libs/common-db/schemas/remoteJob.schema';
+import {
+  RemoteJob,
+  type RemoteJobDocument,
+} from '@libs/common-db/schemas/remoteJob.schema';
 import {
   RemoteJobRun,
   type RemoteJobRunDocument,
@@ -12,7 +14,12 @@ import {
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { getErrorMessage } from '@libs/common/helper/error';
 import { HttpService } from '@nestjs/axios';
-import { BadRequestException, Injectable, type MessageEvent, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  type MessageEvent,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -25,10 +32,6 @@ import type { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
 import type { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
 import type { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface AgentJobPayload {
   scriptName: string;
   scriptHash: string;
@@ -40,8 +43,6 @@ interface AgentJobStatus {
   status: string;
   exitCode: number | null;
   log?: string;
-  startedAt: string | null;
-  finishedAt: string | null;
 }
 
 interface JobStream {
@@ -49,28 +50,8 @@ interface JobStream {
   subscribers: number;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────────────────────────────────────
-
-const MAX_LOG_BYTES = 256 * 1024;
 const HTTP_TIMEOUT_MS = 5000;
 const DEFAULT_AGENT_PORT = 9010;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Utilities
-// ─────────────────────────────────────────────────────────────────────────────
-
-const sha256 = (input: string) => createHash('sha256').update(input).digest('hex');
-
-const truncateLog = (log: string, maxBytes: number) =>
-  Buffer.byteLength(log, 'utf8') <= maxBytes ? log : Buffer.from(log, 'utf8').subarray(0, maxBytes).toString('utf8');
-
-const deriveStatus = (exitCode: number) => (exitCode === 0 ? RemoteJobRunStatus.SUCCESS : RemoteJobRunStatus.FAILED);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Service
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable()
 export class RemoteControlService {
@@ -91,22 +72,20 @@ export class RemoteControlService {
     this.agentPort = rawPort ? Number(rawPort) : DEFAULT_AGENT_PORT;
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Scripts
-  // ───────────────────────────────────────────────────────────────────────────
-
   async listScripts(): Promise<RemoteControlScript[]> {
     return this.scriptModel.find().select('-content').sort({ name: 1 }).lean();
   }
 
-  async createScript(name: string, content: string): Promise<RemoteControlScript> {
+  async createScript(
+    name: string,
+    content: string,
+  ): Promise<RemoteControlScript> {
     const existing = await this.scriptModel.exists({ name });
     if (existing) throw new BadRequestException('Script already exists');
 
     const script = await this.scriptModel.create({
       name,
       content,
-      hash: sha256(content),
     });
     return script.toObject();
   }
@@ -117,24 +96,32 @@ export class RemoteControlService {
     return script;
   }
 
-  async updateScriptContent(name: string, content: string): Promise<RemoteControlScript> {
-    const script = await this.scriptModel.findOneAndUpdate({ name }, { content, hash: sha256(content) }, { new: true });
+  async updateScriptContent(
+    name: string,
+    content: string,
+  ): Promise<RemoteControlScript> {
+    const script = await this.scriptModel.findOne({ name });
     if (!script) throw new NotFoundException('Script not found');
+
+    script.content = content;
+    await script.save();
     return script.toObject();
   }
 
   async deleteScript(name: string): Promise<{ success: true }> {
     const result = await this.scriptModel.deleteOne({ name });
-    if (result.deletedCount === 0) throw new NotFoundException('Script not found');
+    if (result.deletedCount === 0)
+      throw new NotFoundException('Script not found');
     return { success: true };
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Jobs
-  // ───────────────────────────────────────────────────────────────────────────
-
-  async createJob(createdBy: string, dto: CreateRemoteControlJobDto): Promise<RemoteJob> {
-    const script = await this.scriptModel.findOne({ name: dto.scriptName }).lean();
+  async createJob(
+    createdBy: string,
+    dto: CreateRemoteControlJobDto,
+  ): Promise<RemoteJob> {
+    const script = await this.scriptModel
+      .findOne({ name: dto.scriptName })
+      .lean();
     if (!script) throw new BadRequestException('Script not found');
 
     const { targets } = dto;
@@ -154,22 +141,15 @@ export class RemoteControlService {
       createdBy,
     });
 
-    const now = new Date();
     await this.runModel.insertMany(
       targets.map((target) => ({
         jobId: job.jobId,
         target,
-        status: RemoteJobRunStatus.PENDING,
-        exitCode: null,
-        log: null,
-        startedAt: null,
-        finishedAt: null,
-        updatedAt: now,
       })),
     );
 
     // Fire-and-forget dispatch
-    this.dispatchToAgents(job.jobId, {
+    this.dispatchToAgents(job.jobId, targets, {
       scriptName: job.scriptName,
       scriptHash: job.scriptHash,
       args: job.args,
@@ -187,16 +167,8 @@ export class RemoteControlService {
 
     if (query.from || query.to) {
       filter.createdAt = {};
-      if (query.from) {
-        const from = new Date(query.from);
-        if (Number.isNaN(from.valueOf())) throw new BadRequestException('Invalid from date');
-        filter.createdAt.$gte = from;
-      }
-      if (query.to) {
-        const to = new Date(query.to);
-        if (Number.isNaN(to.valueOf())) throw new BadRequestException('Invalid to date');
-        filter.createdAt.$lte = to;
-      }
+      if (query.from) filter.createdAt.$gte = query.from;
+      if (query.to) filter.createdAt.$lte = query.to;
     }
 
     if (query.runStatus) {
@@ -207,10 +179,14 @@ export class RemoteControlService {
       filter.jobId = { $in: jobIds };
     }
 
-    return this.jobModel
+    const cursor = this.jobModel
       .find(filter)
       .sort(query.orderBy ?? { createdAt: -1 })
-      .lean();
+      .skip(query.skip ?? 0);
+
+    if (query.limit) cursor.limit(query.limit);
+
+    return cursor.lean();
   }
 
   async getJob(jobId: string): Promise<RemoteJob> {
@@ -219,7 +195,10 @@ export class RemoteControlService {
     return job;
   }
 
-  async listRuns(jobId: string, query: GetRemoteControlJobRunsDto): Promise<RemoteJobRun[]> {
+  async listRuns(
+    jobId: string,
+    query: GetRemoteControlJobRunsDto,
+  ): Promise<RemoteJobRun[]> {
     const filter: Record<string, any> = { jobId };
     if (query.status) filter.status = query.status;
     return this.runModel.find(filter).sort({ target: 1 }).lean();
@@ -231,26 +210,17 @@ export class RemoteControlService {
     return run;
   }
 
-  async applyAgentUpdate(jobId: string, target: string, dto: AgentJobUpdateDto): Promise<void> {
+  async applyAgentUpdate(
+    jobId: string,
+    target: string,
+    dto: AgentJobUpdateDto,
+  ): Promise<void> {
     const run = await this.runModel.findOne({ jobId, target });
     if (!run) throw new NotFoundException('Job run not found');
 
-    const reportedAt = new Date(dto.reportedAt);
-
-    if (dto.status === RemoteJobRunStatus.RUNNING) {
-      run.status = RemoteJobRunStatus.RUNNING;
-      run.startedAt ??= reportedAt;
-    }
-
-    if (dto.log) {
-      run.log = truncateLog(dto.log, MAX_LOG_BYTES);
-    }
-
-    if (dto.exitCode != null) {
-      run.exitCode = dto.exitCode;
-      run.status = deriveStatus(dto.exitCode);
-      run.finishedAt ??= reportedAt;
-    }
+    if (dto.log) run.log = dto.log;
+    if (dto.exitCode != null) run.exitCode = dto.exitCode;
+    if (dto.status) run.status = dto.status;
 
     await run.save();
     this.emitRunUpdate(jobId, run);
@@ -311,7 +281,9 @@ export class RemoteControlService {
 
     // Sync mode: pull status from agents and update DB
     await Promise.allSettled(
-      dto.targets.map((target) => this.syncRunFromAgent(jobId, target, ipMap.get(target), dto.includeLog)),
+      dto.targets.map((target) =>
+        this.syncRunFromAgent(jobId, target, ipMap.get(target), dto.includeLog),
+      ),
     );
 
     const runs = await this.runModel
@@ -320,10 +292,6 @@ export class RemoteControlService {
       .lean();
     return { jobId, runs };
   }
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // SSE
-  // ───────────────────────────────────────────────────────────────────────────
 
   subscribe(jobId: string): Observable<MessageEvent> {
     let stream = this.jobStreams.get(jobId);
@@ -344,38 +312,32 @@ export class RemoteControlService {
     );
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Private: Agent Communication
-  // ───────────────────────────────────────────────────────────────────────────
-
-  private agentUrl(ip: string, path: string) {
-    return `http://${ip}:${this.agentPort}${path}`;
-  }
-
   private agentPost(ip: string, path: string, body: object) {
     return firstValueFrom(
-      this.http.post(this.agentUrl(ip, path), body, {
+      this.http.post(`http://${ip}:${this.agentPort}${path}`, body, {
         timeout: HTTP_TIMEOUT_MS,
       }),
     );
   }
 
-  private agentGet<T>(ip: string, path: string, params: Record<string, string> = {}) {
+  private agentGet<T>(
+    ip: string,
+    path: string,
+    params: Record<string, string> = {},
+  ) {
     return firstValueFrom(
-      this.http.get<T>(this.agentUrl(ip, path), {
+      this.http.get<T>(`http://${ip}:${this.agentPort}${path}`, {
         timeout: HTTP_TIMEOUT_MS,
         params,
       }),
     );
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // Private: Job Dispatch
-  // ───────────────────────────────────────────────────────────────────────────
-
-  private async dispatchToAgents(jobId: string, payload: AgentJobPayload) {
-    const runs = await this.runModel.find({ jobId }).select('target').lean();
-    const targets = runs.map((r) => r.target);
+  private async dispatchToAgents(
+    jobId: string,
+    targets: string[],
+    payload: AgentJobPayload,
+  ) {
     const ipMap = await this.resolveVpnIps(targets);
 
     await Promise.allSettled(
@@ -387,7 +349,11 @@ export class RemoteControlService {
         try {
           await this.agentPost(ip, `/jobs/${jobId}/run`, payload);
         } catch (error) {
-          await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
+          await this.failRun(
+            jobId,
+            target,
+            `dispatch failed: ${getErrorMessage(error)}`,
+          );
         }
       }),
     );
@@ -399,50 +365,54 @@ export class RemoteControlService {
       {
         status: RemoteJobRunStatus.FAILED,
         log: message,
-        finishedAt: new Date(),
       },
       { new: true },
     );
     if (run) this.emitRunUpdate(jobId, run);
   }
 
-  private async syncRunFromAgent(jobId: string, target: string, ip: string | undefined, includeLog: boolean) {
+  private async syncRunFromAgent(
+    jobId: string,
+    target: string,
+    ip: string | undefined,
+    includeLog: boolean,
+  ) {
     if (!ip) return;
 
     try {
-      const { data: agent } = await this.agentGet<AgentJobStatus>(ip, `/jobs/${jobId}`, {
-        includeLog: String(includeLog),
-      });
+      const { data: agent } = await this.agentGet<AgentJobStatus>(
+        ip,
+        `/jobs/${jobId}`,
+        {
+          includeLog: String(includeLog),
+        },
+      );
 
       const update: Record<string, any> = {};
 
       if (agent.exitCode != null) {
         update.exitCode = agent.exitCode;
-        update.status = deriveStatus(agent.exitCode);
-        update.finishedAt = agent.finishedAt ? new Date(agent.finishedAt) : new Date();
+        update.status = agent.status;
       } else if (agent.status === RemoteJobRunStatus.RUNNING) {
         update.status = RemoteJobRunStatus.RUNNING;
-        if (agent.startedAt) update.startedAt = new Date(agent.startedAt);
       } else if (agent.status === RemoteJobRunStatus.PENDING) {
         update.status = RemoteJobRunStatus.PENDING;
       }
 
       if (includeLog && typeof agent.log === 'string') {
-        update.log = truncateLog(agent.log, MAX_LOG_BYTES);
+        update.log = agent.log;
       }
 
       if (Object.keys(update).length > 0) {
-        const run = await this.runModel.findOneAndUpdate({ jobId, target }, update, { new: true });
+        const run = await this.runModel.findOneAndUpdate(
+          { jobId, target },
+          update,
+          { new: true },
+        );
         if (run) this.emitRunUpdate(jobId, run);
       }
-    } catch {
-      // Best-effort: ignore agent errors, keep last known state
-    }
+    } catch {}
   }
-
-  // ───────────────────────────────────────────────────────────────────────────
-  // Private: Helpers
-  // ───────────────────────────────────────────────────────────────────────────
 
   private async resolveVpnIps(targets: string[]): Promise<Map<string, string>> {
     const users = await this.userModel

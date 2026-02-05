@@ -27,12 +27,6 @@ export class RemoteJobRun {
   @Prop({ required: false, default: null })
   log?: string | null;
 
-  @Prop({ required: false, default: null })
-  startedAt?: Date | null;
-
-  @Prop({ required: false, default: null })
-  finishedAt?: Date | null;
-
   @Prop({ required: false })
   updatedAt?: Date;
 }

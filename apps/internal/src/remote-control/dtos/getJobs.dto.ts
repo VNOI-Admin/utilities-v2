@@ -1,9 +1,10 @@
-import { SortDto } from '@libs/common/dtos/sort.dto';
 import { RemoteJobRunStatus } from '@libs/common-db/schemas/remoteJobRun.schema';
+import { PaginatedSortDto } from '@libs/common/dtos/sort.dto';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsDate, IsEnum, IsOptional, IsString } from 'class-validator';
 
-export class GetRemoteControlJobsDto extends SortDto {
+export class GetRemoteControlJobsDto extends PaginatedSortDto {
   @ApiProperty({ required: false, enum: RemoteJobRunStatus })
   @IsOptional()
   @IsEnum(RemoteJobRunStatus)
@@ -21,12 +22,13 @@ export class GetRemoteControlJobsDto extends SortDto {
 
   @ApiProperty({ required: false, description: 'ISO date (UTC)' })
   @IsOptional()
-  @IsDateString()
-  from?: string;
+  @Transform(({ value }) => (value ? new Date(value) : undefined))
+  @IsDate()
+  from?: Date;
 
   @ApiProperty({ required: false, description: 'ISO date (UTC)' })
   @IsOptional()
-  @IsDateString()
-  to?: string;
+  @Transform(({ value }) => (value ? new Date(value) : undefined))
+  @IsDate()
+  to?: Date;
 }
-
