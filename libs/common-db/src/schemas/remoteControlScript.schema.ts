@@ -26,16 +26,19 @@ export const RemoteControlScriptSchema = SchemaFactory.createForClass(RemoteCont
 
 RemoteControlScriptSchema.index({ name: 1 }, { unique: true });
 
+RemoteControlScriptSchema.pre('validate', function (next) {
+  if (this.isModified('content')) {
+    this.hash = createHash('sha256').update(this.content).digest('hex');
+  }
+  next();
+});
+
 RemoteControlScriptSchema.pre('save', function (next) {
   const now = new Date();
   if (!this.createdAt) {
     this.createdAt = now;
   }
   this.updatedAt = now;
-
-  if (this.isModified('content')) {
-    this.hash = createHash('sha256').update(this.content).digest('hex');
-  }
 
   next();
 });

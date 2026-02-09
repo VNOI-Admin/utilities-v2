@@ -21,10 +21,10 @@ export class RemoteJobRun {
   @Prop({ required: true, enum: Object.values(RemoteJobRunStatus), default: RemoteJobRunStatus.PENDING })
   status!: RemoteJobRunStatus;
 
-  @Prop({ required: false, default: null })
+  @Prop({ required: false, default: null, type: Number })
   exitCode?: number | null;
 
-  @Prop({ required: false, default: null })
+  @Prop({ required: false, default: null, type: String })
   log?: string | null;
 
   @Prop({ required: false })
