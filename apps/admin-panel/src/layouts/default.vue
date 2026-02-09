@@ -111,7 +111,22 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { authService } from '~/services/auth';
 import { useToast } from 'vue-toastification';
-import { Home, Users, UserPlus, CheckCircle, Video, Printer, Monitor, UsersRound, Menu, X, LogOut, Map } from 'lucide-vue-next';
+import {
+  CheckCircle,
+  FileCode,
+  Home,
+  ListChecks,
+  LogOut,
+  Map,
+  Menu,
+  Monitor,
+  Printer,
+  UserPlus,
+  Users,
+  UsersRound,
+  Video,
+  X,
+} from 'lucide-vue-next';
 
 // Detect if device is mobile (touch device or mobile user agent)
 // This persists even on rotation to landscape
@@ -188,6 +203,18 @@ const allMenuItems = [
     label: 'Print Jobs',
     path: '/printing',
     iconComponent: Printer,
+    roles: ['admin']
+  },
+  {
+    label: 'Scripts',
+    path: '/remote-control/scripts',
+    iconComponent: FileCode,
+    roles: ['admin']
+  },
+  {
+    label: 'Jobs',
+    path: '/remote-control/jobs',
+    iconComponent: ListChecks,
     roles: ['admin']
   },
   {

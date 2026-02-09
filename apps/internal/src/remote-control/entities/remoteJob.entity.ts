@@ -35,6 +35,23 @@ export class RemoteJobEntity {
   @ApiProperty({ type: [String] })
   targets: string[];
 
+  @Expose()
+  @ApiProperty({
+    type: Object,
+    properties: {
+      pending: { type: 'number' },
+      running: { type: 'number' },
+      success: { type: 'number' },
+      failed: { type: 'number' },
+    },
+  })
+  statusCounts: {
+    pending: number;
+    running: number;
+    success: number;
+    failed: number;
+  };
+
   constructor(data: ConstructorType<RemoteJobEntity>) {
     this.jobId = data.jobId;
     this.scriptName = data.scriptName;
@@ -44,5 +61,6 @@ export class RemoteJobEntity {
     this.createdBy = data.createdBy;
     this.createdAt = data.createdAt;
     this.targets = data.targets;
+    this.statusCounts = data.statusCounts;
   }
 }

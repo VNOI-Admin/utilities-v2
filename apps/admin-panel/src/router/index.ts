@@ -73,6 +73,24 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] },
     },
     {
+      path: '/remote-control/scripts',
+      name: 'RemoteControlScripts',
+      component: () => import('~/views/RemoteControlScripts.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
+      path: '/remote-control/jobs',
+      name: 'RemoteControlJobs',
+      component: () => import('~/views/RemoteControlJobs.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
+      path: '/remote-control/jobs/:jobId',
+      name: 'RemoteControlJobDetail',
+      component: () => import('~/views/RemoteControlJobDetail.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
       path: '/overlay',
       name: 'Overlay',
       component: () => import('~/views/Overlay.vue'),

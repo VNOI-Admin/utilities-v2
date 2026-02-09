@@ -116,7 +116,6 @@ export class RemoteControlService {
     }
 
     const jobId = uuid.v4();
-
     const job = await this.jobModel.create({
       jobId,
       scriptName: dto.scriptName,
@@ -125,14 +124,25 @@ export class RemoteControlService {
       env: dto.env ?? {},
       targets,
       createdBy,
+      statusCounts: {
+        pending: targets.length,
+        running: 0,
+        success: 0,
+        failed: 0,
+      },
     });
 
-    await this.runModel.insertMany(
-      targets.map((target) => ({
-        jobId: job.jobId,
-        target,
-      })),
-    );
+    try {
+      await this.runModel.insertMany(
+        targets.map((target) => ({
+          jobId: job.jobId,
+          target,
+        })),
+      );
+    } catch (error) {
+      await this.jobModel.deleteOne({ jobId: job.jobId });
+      throw error;
+    }
 
     // Fire-and-forget dispatch
     this.dispatchToAgents(job.jobId, targets, {
@@ -176,7 +186,7 @@ export class RemoteControlService {
   }
 
   async getJob(jobId: string): Promise<RemoteJob> {
-    const job = await this.jobModel.findOne({ jobId }).lean();
+    const job = await this.jobModel.findOne({ jobId }).lean<RemoteJob>();
     if (!job) throw new NotFoundException('Job not found');
     return job;
   }
@@ -349,17 +359,47 @@ export class RemoteControlService {
     }
   }
 
-  private async updateRun(jobId: string, target: string, input: RunUpdateInput): Promise<RemoteJobRunDocument | null> {
+  private async updateRun(jobId: string, target: string, input: RunUpdateInput): Promise<RemoteJobRun | null> {
+    if (input.status === undefined && input.exitCode == null && input.log === undefined) {
+      return null;
+    }
+
     const update: Record<string, any> = {};
     if (input.status !== undefined) update.status = input.status;
     if (input.exitCode != null) update.exitCode = input.exitCode;
     if (input.log !== undefined) update.log = input.log;
 
-    if (Object.keys(update).length === 0) return null;
+    if (input.status === undefined) {
+      const updatedRunDoc = await this.runModel.findOneAndUpdate({ jobId, target }, update, { new: true });
+      if (!updatedRunDoc) return null;
+      const updatedRun = updatedRunDoc.toObject();
+      this.emitRunUpdate(jobId, updatedRun);
+      return updatedRun;
+    }
 
-    const run = await this.runModel.findOneAndUpdate({ jobId, target }, update, { new: true });
-    if (run) this.emitRunUpdate(jobId, run);
-    return run;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const currentRunDoc = await this.runModel.findOne({ jobId, target });
+      if (!currentRunDoc) return null;
+
+      const previousStatus = currentRunDoc.status;
+
+      const updatedRunDoc = await this.runModel.findOneAndUpdate(
+        { jobId, target, status: previousStatus },
+        update,
+        { new: true },
+      );
+      if (!updatedRunDoc) continue;
+
+      if (previousStatus !== input.status) {
+        await this.applyJobStatusTransition(jobId, previousStatus, input.status);
+      }
+
+      const updatedRun = updatedRunDoc.toObject();
+      this.emitRunUpdate(jobId, updatedRun);
+      return updatedRun;
+    }
+
+    return null;
   }
 
   private async resolveVpnIps(targets: string[]): Promise<Map<string, string>> {
@@ -379,7 +419,36 @@ export class RemoteControlService {
     }
   }
 
-  private emitRunUpdate(jobId: string, run: RemoteJobRunDocument) {
+  private async applyJobStatusTransition(
+    jobId: string,
+    from: RemoteJobRunStatus,
+    to: RemoteJobRunStatus,
+  ) {
+    if (from === to) return;
+
+    const pendingDelta = this.getStatusDelta(from, to, RemoteJobRunStatus.PENDING);
+    const runningDelta = this.getStatusDelta(from, to, RemoteJobRunStatus.RUNNING);
+    const failedDelta = this.getStatusDelta(from, to, RemoteJobRunStatus.FAILED);
+    const successDelta = this.getStatusDelta(from, to, RemoteJobRunStatus.SUCCESS);
+
+    await this.jobModel.updateOne(
+      { jobId },
+      {
+        $inc: {
+          'statusCounts.pending': pendingDelta,
+          'statusCounts.running': runningDelta,
+          'statusCounts.failed': failedDelta,
+          'statusCounts.success': successDelta,
+        },
+      },
+    );
+  }
+
+  private getStatusDelta(from: RemoteJobRunStatus, to: RemoteJobRunStatus, value: RemoteJobRunStatus) {
+    return (to === value ? 1 : 0) - (from === value ? 1 : 0);
+  }
+
+  private emitRunUpdate(jobId: string, run: RemoteJobRun) {
     const stream = this.jobStreams.get(jobId);
     if (!stream) return;
 
@@ -391,7 +460,7 @@ export class RemoteControlService {
         status: run.status,
         exitCode: run.exitCode ?? null,
         log: run.log ?? undefined,
-        updatedAt: run.updatedAt?.toISOString() ?? new Date().toISOString(),
+        updatedAt: new Date(run.updatedAt!).toISOString(),
       },
     });
   }

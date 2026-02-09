@@ -23,6 +23,23 @@ export class RemoteJob {
   @Prop({ type: [String], required: true })
   targets!: string[];
 
+  @Prop({
+    type: Object,
+    required: true,
+    default: {
+      pending: 0,
+      running: 0,
+      success: 0,
+      failed: 0,
+    },
+  })
+  statusCounts!: {
+    pending: number;
+    running: number;
+    success: number;
+    failed: number;
+  };
+
   @Prop({ required: true })
   createdBy!: string;
 

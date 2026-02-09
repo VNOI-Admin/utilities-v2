@@ -27,7 +27,7 @@ export class RemoteJobRun {
   @Prop({ required: false, default: null, type: String })
   log?: string | null;
 
-  @Prop({ required: false })
+  @Prop({ required: false, default: () => new Date() })
   updatedAt?: Date;
 }
 
@@ -37,7 +37,7 @@ RemoteJobRunSchema.index({ jobId: 1, target: 1 }, { unique: true });
 RemoteJobRunSchema.index({ jobId: 1, status: 1 });
 RemoteJobRunSchema.index({ updatedAt: -1 });
 
-RemoteJobRunSchema.pre('save', function (next) {
-  this.updatedAt = new Date();
+RemoteJobRunSchema.pre(['save', 'findOneAndUpdate'], function (next) {
+  this.set('updatedAt', new Date());
   next();
 });

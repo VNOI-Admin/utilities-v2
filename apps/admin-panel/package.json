@@ -12,6 +12,7 @@
   "dependencies": {
     "@vueuse/core": "^11.3.0",
     "axios": "^1.6.8",
+    "highlight.js": "^11.11.1",
     "js-cookie": "^3.0.5",
     "konva": "^10.0.12",
     "lucide-vue-next": "^0.554.0",

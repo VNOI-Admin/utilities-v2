@@ -227,6 +227,7 @@ declare global {
   const usePrintingStore: typeof import('./stores/printing')['usePrintingStore']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
+  const useRemoteControlStore: typeof import('./stores/remoteControl')['useRemoteControlStore']
   const useResizeObserver: typeof import('@vueuse/core')['useResizeObserver']
   const useRoute: typeof import('vue-router')['useRoute']
   const useRouter: typeof import('vue-router')['useRouter']
@@ -534,6 +535,7 @@ declare module 'vue' {
     readonly usePrintingStore: UnwrapRef<typeof import('./stores/printing')['usePrintingStore']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
+    readonly useRemoteControlStore: UnwrapRef<typeof import('./stores/remoteControl')['useRemoteControlStore']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
