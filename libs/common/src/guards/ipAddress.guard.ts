@@ -14,6 +14,11 @@ export class IPAddressGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
 
+    // Fallthrough: if user already set by previous guard, skip authentication
+    if (request['user']) {
+      return true;
+    }
+
     const user = await this.userModel
       .findOne({
         vpnIpAddress: request.headers['x-real-ip'] ?? request.headers['x-forwarded-for'] ?? request.ip,

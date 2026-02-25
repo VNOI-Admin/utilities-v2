@@ -23,9 +23,21 @@ export class AccessTokenGuard implements CanActivate {
   ) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+
+    // Fallthrough: if user already set by previous guard, skip authentication
+    if (request['user']) {
+      return true;
+    }
+
+    // Check if token auth is optional (for OR logic with other guards)
+    const isOptional =
+      this.reflector.getAllAndOverride<boolean>('accessToken.optional', [context.getHandler(), context.getClass()]) ??
+      false;
+
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
+      if (isOptional) return true;
       throw new UnauthorizedException('Unauthorized');
     }
     try {
@@ -52,8 +64,7 @@ export class AccessTokenGuard implements CanActivate {
         throw new UnauthorizedException('User not authorized to access this resource');
       }
     } catch (e) {
-      // console.log(e);
-
+      if (isOptional) return true;
       throw new UnauthorizedException('Unauthorized');
     }
     return true;

@@ -2877,6 +2877,7 @@ __metadata:
     "@vueuse/core": "npm:^11.3.0"
     autoprefixer: "npm:^10.4.17"
     axios: "npm:^1.6.8"
+    highlight.js: "npm:^11.11.1"
     js-cookie: "npm:^3.0.5"
     konva: "npm:^10.0.12"
     lucide-vue-next: "npm:^0.554.0"
@@ -5431,6 +5432,13 @@ __metadata:
   version: 1.0.0
   resolution: "hexoid@npm:1.0.0"
   checksum: 10c0/9c45e8ba676b9eb88455631ebceec4c829a8374a583410dc735472ab9808bf11339fcd074633c3fa30e420901b894d8a92ffd5e2e21eddd41149546e05a91f69
+  languageName: node
+  linkType: hard
+
+"highlight.js@npm:^11.11.1":
+  version: 11.11.1
+  resolution: "highlight.js@npm:11.11.1"
+  checksum: 10c0/40f53ac19dac079891fcefd5bd8a21cf2e8931fd47da5bd1dca73b7e4375c1defed0636fc39120c639b9c44119b7d110f7f0c15aa899557a5a1c8910f3c0144c
   languageName: node
   linkType: hard
 
