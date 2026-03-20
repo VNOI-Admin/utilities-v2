@@ -9,6 +9,7 @@ import { MachineUsage, User, type UserDocument } from '@libs/common-db/schemas/u
 import { Role } from '@libs/common/decorators/role.decorator';
 import { UserEntity } from '@libs/common/dtos/User.entity';
 import { getErrorMessage } from '@libs/common/helper/error';
+import { roleHasVpn } from '@libs/common/helper/vpn';
 import { generateKeyPair } from '@libs/utils/crypto/keygen';
 import { BadRequestException, Injectable, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -126,7 +127,7 @@ export class UserService implements OnModuleInit {
       const userEntity = new UserEntity(user);
 
       // Add stream URLs if requested
-      if (withStream && user.vpnIpAddress && livestreamProxy) {
+      if (withStream && roleHasVpn(user.role) && user.vpnIpAddress && livestreamProxy) {
         userEntity.streamUrl = `${livestreamProxy}/${user.vpnIpAddress}/stream.m3u8`;
         userEntity.webcamUrl = `${livestreamProxy}/${user.vpnIpAddress}/webcam.m3u8`;
       }
@@ -154,11 +155,7 @@ export class UserService implements OnModuleInit {
       // Hash the password
       const hashedPassword = await argon2.hash(createUserDto.password);
 
-      // Assign VPN IP address
-      const vpnIpAddress = await this.assignVpnIpAddress(createUserDto.role);
-
-      // Generate key pair
-      const keyPair = generateKeyPair();
+      const { vpnIpAddress, keyPair } = await this.buildVpnCredentials(createUserDto.role);
 
       // Validate group if provided
       let validatedGroup: string | undefined;
@@ -210,8 +207,9 @@ export class UserService implements OnModuleInit {
     // If role is being changed, reassign VPN IP and generate new key pair
     if (updateUserDto.role && updateUserDto.role !== user.role) {
       user.role = updateUserDto.role;
-      user.vpnIpAddress = await this.assignVpnIpAddress(updateUserDto.role);
-      user.keyPair = generateKeyPair();
+      const { vpnIpAddress, keyPair } = await this.buildVpnCredentials(updateUserDto.role);
+      user.vpnIpAddress = vpnIpAddress;
+      user.keyPair = keyPair;
     }
 
     if (updateUserDto.group) {
@@ -396,11 +394,7 @@ export class UserService implements OnModuleInit {
         // Hash password
         const hashedPassword = await argon2.hash(userItem.password);
 
-        // Assign VPN IP
-        const vpnIpAddress = await this.assignVpnIpAddress(dto.role);
-
-        // Generate key pair
-        const keyPair = generateKeyPair();
+        const { vpnIpAddress, keyPair } = await this.buildVpnCredentials(dto.role);
 
         // Create user
         const user = await this.userModel.create({
@@ -444,7 +438,31 @@ export class UserService implements OnModuleInit {
     });
   }
 
+  private async buildVpnCredentials(role: Role): Promise<{
+    vpnIpAddress: string | null;
+    keyPair: UserDocument['keyPair'];
+  }> {
+    if (!roleHasVpn(role)) {
+      return {
+        vpnIpAddress: null,
+        keyPair: {
+          publicKey: null,
+          privateKey: null,
+        },
+      };
+    }
+
+    return {
+      vpnIpAddress: await this.assignVpnIpAddress(role),
+      keyPair: generateKeyPair(),
+    };
+  }
+
   private async assignVpnIpAddress(role: Role): Promise<string> {
+    if (!roleHasVpn(role)) {
+      throw new Error(`Role ${role} does not support VPN access`);
+    }
+
     const users = await this.userModel.find({ role }).exec();
 
     let vpnBaseSubnet: number;
@@ -452,9 +470,6 @@ export class UserService implements OnModuleInit {
     switch (role) {
       case Role.CONTESTANT:
         vpnBaseSubnet = ip.toLong(this.configService.get('WG_CONTESTANT_BASE_SUBNET') as string);
-        break;
-      case Role.COACH:
-        vpnBaseSubnet = ip.toLong(this.configService.get('WG_COACH_BASE_SUBNET') as string);
         break;
       case Role.ADMIN:
         vpnBaseSubnet = ip.toLong(this.configService.get('WG_ADMIN_BASE_SUBNET') as string);
@@ -466,7 +481,10 @@ export class UserService implements OnModuleInit {
         throw new Error('Invalid role');
     }
 
-    const ipAddresses = users.map((user) => ip.toLong(user.vpnIpAddress));
+    const ipAddresses = users
+      .map((user) => user.vpnIpAddress)
+      .filter((vpnIpAddress): vpnIpAddress is string => vpnIpAddress !== null)
+      .map((vpnIpAddress) => ip.toLong(vpnIpAddress));
 
     for (let i = 1; i <= users.length + 1; i++) {
       if (!ipAddresses.includes(vpnBaseSubnet + i)) {

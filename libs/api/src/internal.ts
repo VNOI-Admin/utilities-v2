@@ -23,7 +23,7 @@ export interface UserEntity {
   username: string;
   fullName: string;
   isActive: boolean;
-  vpnIpAddress: string;
+  vpnIpAddress: string | null;
   role: string;
   machineUsage: MachineUsageEntity;
   group: string;

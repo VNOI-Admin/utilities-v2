@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
+import { roleHasVpn } from '../helper/vpn';
 import { ConstructorType } from '../serializers/type';
 
 export class MachineUsageEntity {
@@ -51,8 +52,8 @@ export class UserEntity {
   isActive: boolean;
 
   @Expose()
-  @ApiProperty()
-  vpnIpAddress: string;
+  @ApiProperty({ required: false, nullable: true })
+  vpnIpAddress: string | null;
 
   @Expose()
   @ApiProperty()
@@ -79,11 +80,11 @@ export class UserEntity {
     this.username = data.username;
     this.fullName = data.fullName;
     this.isActive = data.isActive;
-    this.vpnIpAddress = data.vpnIpAddress;
+    this.vpnIpAddress = roleHasVpn(data.role) ? (data.vpnIpAddress ?? null) : null;
     this.role = data.role;
     this.machineUsage = new MachineUsageEntity(data.machineUsage);
     this.group = data.group;
-    this.streamUrl = data.streamUrl;
-    this.webcamUrl = data.webcamUrl;
+    this.streamUrl = roleHasVpn(data.role) ? data.streamUrl : undefined;
+    this.webcamUrl = roleHasVpn(data.role) ? data.webcamUrl : undefined;
   }
 }

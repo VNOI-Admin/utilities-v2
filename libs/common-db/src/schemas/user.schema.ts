@@ -5,8 +5,8 @@ import { type Document } from 'mongoose';
 export type UserDocument = User & Document;
 
 export type KeyPairType = {
-  publicKey: string;
-  privateKey: string;
+  publicKey: string | null;
+  privateKey: string | null;
 };
 
 @Schema({ _id: false })
@@ -49,7 +49,7 @@ export class User {
 
   // Allow null for several documents. For non-null, unique is enforced.
   @Prop({ unique: true, sparse: true })
-  vpnIpAddress!: string;
+  vpnIpAddress!: string | null;
 
   @Prop({ required: true, default: true })
   isActive!: boolean;
