@@ -4,12 +4,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Group, GroupSchema } from 'libs/common-db/src/schemas/group.schema';
 
 import { GroupModule } from '../group/group.module';
+import { VpnSyncModule } from '../vpn-sync/vpn-sync.module';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
 
 @Module({
   imports: [
     forwardRef(() => GroupModule),
+    VpnSyncModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Group.name, schema: GroupSchema },
