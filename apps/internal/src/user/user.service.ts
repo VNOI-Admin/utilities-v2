@@ -38,7 +38,7 @@ export class UserService implements OnModuleInit {
       console.log('Initializing admin user...');
       admin = await this.userModel.create({
         username: 'admin',
-        password: 'admin',
+        password: await argon2.hash('admin'),
         role: 'admin',
         isActive: true,
         refreshToken: null,
