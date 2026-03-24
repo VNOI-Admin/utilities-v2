@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 // TODO: Add more colors here
 const statusColor = {
   WA: '#eab308',
+  AC: '#22c55e',
 } as const;
 
 export type Params = {
