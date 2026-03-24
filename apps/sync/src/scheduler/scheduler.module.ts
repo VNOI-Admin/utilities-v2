@@ -4,6 +4,7 @@ import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
 import { VNOJApiModule } from '@libs/api/vnoj-api.module';
+import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -17,6 +18,7 @@ import { SchedulerService } from './scheduler.service';
 
 @Module({
   imports: [
+    HttpModule,
     BullModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         connection: {
