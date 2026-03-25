@@ -1,9 +1,25 @@
+import {
+  buildReactionParamsPartial,
+  ReactionLogoError,
+  ReactionRenderConfigError,
+  type ReactionRenderEnvLoaded,
+  readReactionRenderEnv,
+  renderReactionWebmFromSlicePaths,
+  resolveUniversityLogoAbsolutePath,
+} from '@libs/common/helper/reaction-render';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { HttpService } from '@nestjs/axios';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Job } from 'bullmq';
 import { Model } from 'mongoose';
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { firstValueFrom } from 'rxjs';
 
 import { QUEUE_NAMES } from '../constants';
 
@@ -11,28 +27,42 @@ import { QUEUE_NAMES } from '../constants';
 export class ProcessReactionsProcessor extends WorkerHost {
   private readonly logger = new Logger(ProcessReactionsProcessor.name);
 
-  constructor(@InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>) {
+  constructor(
+    @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
+  ) {
     super();
   }
 
   async process(job: Job): Promise<void> {
     this.logger.log(`Processing job ${job.id} - ${job.name}`);
 
+    let envLoaded: ReactionRenderEnvLoaded;
     try {
-      // Find AC submissions without reactions
+      envLoaded = readReactionRenderEnv((key) => this.configService.get<string>(key));
+    } catch (error) {
+      if (error instanceof ReactionRenderConfigError) {
+        this.logger.error(error.message);
+        return;
+      }
+      throw error;
+    }
+
+    try {
       const submissions = await this.submissionModel
         .find({
           submissionStatus: SubmissionStatus.AC,
-          'data.reaction': { $exists: false },
+          $or: [{ 'data.reaction': { $exists: false } }, { 'data.reaction': null }],
         })
-        .limit(10) // Process 10 at a time to avoid overloading
+        .limit(10)
         .exec();
 
       this.logger.log(`Found ${submissions.length} AC submissions without reactions`);
 
-      // Process each submission
       for (const submission of submissions) {
-        await this.generateReaction(submission);
+        await this.generateReaction(submission, envLoaded);
       }
 
       this.logger.log('Process reactions completed');
@@ -42,26 +72,92 @@ export class ProcessReactionsProcessor extends WorkerHost {
     }
   }
 
-  private async generateReaction(submission: SubmissionDocument): Promise<void> {
+  private async generateReaction(
+    submission: SubmissionDocument,
+    envLoaded: ReactionRenderEnvLoaded,
+  ): Promise<void> {
     try {
-      // TODO: Implement actual video generation and upload to S3
-      // For now, this is a placeholder that will be implemented later
-      // Steps to implement:
-      // 1. Fetch webcam footage for the user at the submission time
-      // 2. Trim video to show reaction (e.g., 5 seconds before and 10 seconds after AC)
-      // 3. Add overlay with submission info (problem name, rank change, etc.)
-      // 4. Upload video to S3 bucket
-      // 5. Get the public URL from S3
-      // 6. Update submission.data.reaction with the URL
+      const user = await this.userModel.findOne({ username: submission.author }).exec();
+      if (!user) {
+        this.logger.warn(`No user for author=${submission.author}, skip reaction`);
+        return;
+      }
+      if (!user.vpnIpAddress?.trim()) {
+        this.logger.warn(`No vpnIpAddress for user=${submission.author}, skip reaction`);
+        return;
+      }
 
-      // Placeholder: Mark as processed with null to indicate processing attempted
-      // In production, this would be the S3 URL
-      submission.data.reaction = null as any; // Mark as processed but no video available yet
+      const anchor = submission.judgedAt ?? submission.submittedAt;
+      const anchorSec = anchor.getTime() / 1000;
+      const beforeSec = Number(this.configService.get('REACTION_BEFORE_SECONDS') ?? 5);
+      const afterSec = Number(this.configService.get('REACTION_AFTER_SECONDS') ?? 10);
+      const startUnix = anchorSec - beforeSec;
+      const endUnix = anchorSec + afterSec;
 
-      await submission.save();
+      let universityLogoSrc: string;
+      try {
+        universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) =>
+          this.logger.warn(msg),
+        );
+      } catch (error) {
+        if (error instanceof ReactionLogoError) {
+          this.logger.error(`${error.message} (submission ${String(submission._id)})`);
+          return;
+        }
+        throw error;
+      }
+
+      const paramsPartial = buildReactionParamsPartial(
+        submission,
+        user,
+        universityLogoSrc,
+        envLoaded.defaultUniversityName,
+      );
+
+      const port = this.configService.get<string>('REMOTE_CONTROL_AGENT_PORT')?.trim() || '9010';
+      const base = `http://${user.vpnIpAddress}:${port}`;
+
+      const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reaction-slices-'));
+      const webcamPath = path.join(workDir, 'webcam.mkv');
+      const screenPath = path.join(workDir, 'screen.mkv');
+
+      try {
+        await this.downloadSlice(`${base}/records/slice/webcam`, startUnix, endUnix, webcamPath);
+        await this.downloadSlice(`${base}/records/slice/screen`, startUnix, endUnix, screenPath);
+
+        const webm = await renderReactionWebmFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
+        this.logger.log(
+          `Rendered reaction WebM (${webm.length} bytes) for submission ${String(submission._id)} — upload not configured`,
+        );
+      } finally {
+        await fs.rm(workDir, { recursive: true, force: true });
+      }
     } catch (error) {
       this.logger.error(`Error generating reaction for submission ${submission._id}:`, error);
-      // Don't throw - continue processing other submissions
     }
+  }
+
+  private async downloadSlice(
+    url: string,
+    startUnix: number,
+    endUnix: number,
+    destPath: string,
+  ): Promise<void> {
+    const response = await firstValueFrom(
+      this.httpService.post<ArrayBuffer>(
+        url,
+        { startUnix, endUnix },
+        {
+          responseType: 'arraybuffer',
+          timeout: 300_000,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          validateStatus: (status) => status >= 200 && status < 300,
+        },
+      ),
+    );
+    const body = response.data;
+    const buf = Buffer.isBuffer(body) ? body : Buffer.from(body as ArrayBuffer);
+    await fs.writeFile(destPath, buf);
   }
 }

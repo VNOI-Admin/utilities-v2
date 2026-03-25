@@ -105,9 +105,28 @@ function composeFilters(filters: ArrayLike<string>, prefix: string): string {
   return `${out}; [${prefix}${cnt}]${filters[filters.length - 1]}[outv]`;
 }
 
+export type RenderOptions = {
+  webcamHasAudio?: boolean;
+  screenHasAudio?: boolean;
+};
+
+function buildAudioFilter(webcamHasAudio: boolean, screenHasAudio: boolean): string {
+  if (webcamHasAudio && screenHasAudio) {
+    return '[0:a][1:a]amix=inputs=2:normalize=0[outa]';
+  }
+  if (webcamHasAudio) {
+    return '[0:a]anull[outa]';
+  }
+  if (screenHasAudio) {
+    return '[1:a]anull[outa]';
+  }
+  return 'anullsrc=channel_layout=stereo:sample_rate=48000[outa]';
+}
+
 export async function render(
   config: Configuration,
   params: Params,
+  options?: RenderOptions,
 ): Promise<Buffer> {
   const smallW = config.width - 2 * config.padding;
   const smallH = Math.floor((smallW * 9) / 16);
@@ -148,8 +167,7 @@ export async function render(
     // uni logo
     `[4:v]scale=${uniLogoSize}:${uniLogoSize}:force_original_aspect_ratio=decrease,setsar=1[uni-logo]`,
 
-    // Audio
-    '[0:a][1:a]amix=inputs=2:normalize=0[outa]',
+    buildAudioFilter(options?.webcamHasAudio ?? true, options?.screenHasAudio ?? true),
 
     composeFilters(
       [
@@ -243,6 +261,13 @@ export async function render(
     'webm',
     '-',
   ];
+
+  const webcamAudio = options?.webcamHasAudio ?? true;
+  const screenAudio = options?.screenHasAudio ?? true;
+  if (!webcamAudio && !screenAudio) {
+    // anullsrc generates infinite audio; cap output at video length
+    args.splice(args.indexOf('-f'), 0, '-shortest');
+  }
 
   const buffer = await runCommand('ffmpeg', args);
   return buffer;

@@ -28,7 +28,7 @@ function runCommand(cmd: string, args: readonly string[]): Promise<Buffer> {
   });
 }
 
-async function probeHasAudio(videoPath: string): Promise<boolean> {
+export async function probeHasAudio(videoPath: string): Promise<boolean> {
   const out = await runCommand('ffprobe', [
     '-v',
     'error',
