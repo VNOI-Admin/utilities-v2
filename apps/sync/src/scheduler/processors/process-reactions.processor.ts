@@ -7,6 +7,13 @@ import {
   renderReactionWebmFromSlicePaths,
   resolveUniversityLogoAbsolutePath,
 } from '@libs/common/helper/reaction-render';
+import {
+  type ReactionS3Config,
+  ReactionS3ConfigError,
+  createReactionS3Client,
+  putReactionWebm,
+  readReactionS3Env,
+} from '@libs/common/helper/reaction-s3';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { HttpService } from '@nestjs/axios';
@@ -14,6 +21,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
+import type { S3Client } from '@aws-sdk/client-s3';
 import { Job } from 'bullmq';
 import { Model } from 'mongoose';
 import * as fs from 'node:fs/promises';
@@ -50,6 +58,19 @@ export class ProcessReactionsProcessor extends WorkerHost {
       throw error;
     }
 
+    let s3Config: ReactionS3Config;
+    let s3Client: S3Client;
+    try {
+      s3Config = readReactionS3Env((key) => this.configService.get<string>(key));
+      s3Client = createReactionS3Client(s3Config);
+    } catch (error) {
+      if (error instanceof ReactionS3ConfigError) {
+        this.logger.error(error.message);
+        return;
+      }
+      throw error;
+    }
+
     try {
       const submissions = await this.submissionModel
         .find({
@@ -62,7 +83,7 @@ export class ProcessReactionsProcessor extends WorkerHost {
       this.logger.log(`Found ${submissions.length} AC submissions without reactions`);
 
       for (const submission of submissions) {
-        await this.generateReaction(submission, envLoaded);
+        await this.generateReaction(submission, envLoaded, s3Client, s3Config);
       }
 
       this.logger.log('Process reactions completed');
@@ -75,7 +96,10 @@ export class ProcessReactionsProcessor extends WorkerHost {
   private async generateReaction(
     submission: SubmissionDocument,
     envLoaded: ReactionRenderEnvLoaded,
+    s3Client: S3Client,
+    s3Config: ReactionS3Config,
   ): Promise<void> {
+    const submissionId = String(submission._id);
     try {
       const user = await this.userModel.findOne({ username: submission.author }).exec();
       if (!user) {
@@ -101,7 +125,7 @@ export class ProcessReactionsProcessor extends WorkerHost {
         );
       } catch (error) {
         if (error instanceof ReactionLogoError) {
-          this.logger.error(`${error.message} (submission ${String(submission._id)})`);
+          this.logger.error(`${error.message} (submission ${submissionId})`);
           return;
         }
         throw error;
@@ -126,14 +150,21 @@ export class ProcessReactionsProcessor extends WorkerHost {
         await this.downloadSlice(`${base}/records/slice/screen`, startUnix, endUnix, screenPath);
 
         const webm = await renderReactionWebmFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
-        this.logger.log(
-          `Rendered reaction WebM (${webm.length} bytes) for submission ${String(submission._id)} — upload not configured`,
+        this.logger.log(`Rendered reaction WebM (${webm.length} bytes) for submission ${submissionId}`);
+
+        const s3Key = `${submissionId}.webm`;
+        const publicUrl = await putReactionWebm(s3Client, s3Config, s3Key, webm);
+
+        await this.submissionModel.updateOne(
+          { _id: submission._id },
+          { $set: { 'data.reaction': publicUrl } },
         );
+        this.logger.log(`Uploaded reaction to ${publicUrl} for submission ${submissionId}`);
       } finally {
         await fs.rm(workDir, { recursive: true, force: true });
       }
     } catch (error) {
-      this.logger.error(`Error generating reaction for submission ${submission._id}:`, error);
+      this.logger.error(`Error generating reaction for submission ${submissionId}:`, error);
     }
   }
 
