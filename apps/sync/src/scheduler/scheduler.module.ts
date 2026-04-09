@@ -14,6 +14,7 @@ import { QUEUE_NAMES } from './constants';
 import { PingUsersProcessor } from './processors/ping-users.processor';
 import { SyncSubmissionsProcessor } from './processors/sync-submissions.processor';
 import { ProcessReactionsProcessor } from './processors/process-reactions.processor';
+import { ReactionRenderProcessor } from './processors/reaction-render.processor';
 import { SchedulerService } from './scheduler.service';
 
 @Module({
@@ -39,6 +40,9 @@ import { SchedulerService } from './scheduler.service';
       {
         name: QUEUE_NAMES.PROCESS_REACTIONS,
       },
+      {
+        name: QUEUE_NAMES.REACTION_RENDER,
+      },
     ),
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
@@ -49,6 +53,12 @@ import { SchedulerService } from './scheduler.service';
     ]),
     VNOJApiModule.forRootAsync(),
   ],
-  providers: [SchedulerService, PingUsersProcessor, SyncSubmissionsProcessor, ProcessReactionsProcessor],
+  providers: [
+    SchedulerService,
+    PingUsersProcessor,
+    SyncSubmissionsProcessor,
+    ProcessReactionsProcessor,
+    ReactionRenderProcessor,
+  ],
 })
 export class SchedulerModule {}
