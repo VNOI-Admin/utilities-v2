@@ -73,6 +73,12 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] },
     },
     {
+      path: '/reactions',
+      name: 'Reactions',
+      component: () => import('~/views/Reactions.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
       path: '/remote-control/scripts',
       name: 'RemoteControlScripts',
       component: () => import('~/views/RemoteControlScripts.vue'),

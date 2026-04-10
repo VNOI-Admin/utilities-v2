@@ -1,4 +1,4 @@
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 export class ReactionS3ConfigError extends Error {
   override readonly name = 'ReactionS3ConfigError';
@@ -49,6 +49,63 @@ export function createReactionS3Client(config: ReactionS3Config): S3Client {
   });
 }
 
+/** S3 prefix for listing objects under the same path as uploads (`{keyPrefix}/` or `''`). */
+export function reactionS3ListPrefix(config: ReactionS3Config): string {
+  return config.keyPrefix ? `${config.keyPrefix}/` : '';
+}
+
+/** Public URL for an object key exactly as returned by S3 (e.g. `reactions/id.webm`). */
+export function reactionObjectPublicUrl(config: ReactionS3Config, fullKey: string): string {
+  const baseUrl = config.publicBaseUrl.replace(/\/+$/, '');
+  return `${baseUrl}/${fullKey}`;
+}
+
+export type ReactionWebmListItem = {
+  key: string;
+  url: string;
+  lastModified?: Date;
+  size?: number;
+};
+
+/**
+ * Lists `.webm` objects under the reaction prefix, paged until complete.
+ */
+export async function listReactionWebmObjects(
+  client: S3Client,
+  config: ReactionS3Config,
+): Promise<ReactionWebmListItem[]> {
+  const prefix = reactionS3ListPrefix(config);
+  const out: ReactionWebmListItem[] = [];
+  let continuationToken: string | undefined;
+
+  do {
+    const response = await client.send(
+      new ListObjectsV2Command({
+        Bucket: config.bucket,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    for (const obj of response.Contents ?? []) {
+      const key = obj.Key;
+      if (!key || !key.toLowerCase().endsWith('.webm')) {
+        continue;
+      }
+      out.push({
+        key,
+        url: reactionObjectPublicUrl(config, key),
+        lastModified: obj.LastModified,
+        size: obj.Size,
+      });
+    }
+
+    continuationToken = response.IsTruncated ? response.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return out;
+}
+
 /**
  * Uploads a WebM buffer to S3 under `{keyPrefix}/{key}` and returns
  * the public URL built from REACTION_S3_PUBLIC_BASE_URL.
@@ -70,6 +127,5 @@ export async function putReactionWebm(
     }),
   );
 
-  const baseUrl = config.publicBaseUrl.replace(/\/+$/, '');
-  return `${baseUrl}/${fullKey}`;
+  return reactionObjectPublicUrl(config, fullKey);
 }
