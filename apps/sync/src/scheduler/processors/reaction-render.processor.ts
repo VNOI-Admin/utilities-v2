@@ -14,6 +14,7 @@ import {
   putReactionWebm,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
+import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { HttpService } from '@nestjs/axios';
@@ -37,6 +38,7 @@ export class ReactionRenderProcessor extends WorkerHost {
 
   constructor(
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
+    @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
@@ -100,13 +102,22 @@ export class ReactionRenderProcessor extends WorkerHost {
   ): Promise<void> {
     const submissionId = String(submission._id);
     try {
-      const user = await this.userModel.findOne({ username: submission.author }).exec();
+      const mappedUsername = (
+        await this.participantModel
+          .findOne({ username: submission.author, contest: submission.contest_code })
+          .select('mapToUser')
+          .lean()
+      )?.mapToUser?.trim();
+
+      const user = mappedUsername ? await this.userModel.findOne({ username: mappedUsername }).exec() : null;
       if (!user) {
-        this.logger.warn(`No user for author=${submission.author}, skip reaction`);
+        this.logger.warn(
+          `No mapped user for author=${submission.author}, contest=${submission.contest_code}, skip reaction`,
+        );
         return;
       }
       if (!user.vpnIpAddress?.trim()) {
-        this.logger.warn(`No vpnIpAddress for user=${submission.author}, skip reaction`);
+        this.logger.warn(`No vpnIpAddress for user=${mappedUsername}, skip reaction`);
         return;
       }
 
