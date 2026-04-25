@@ -26,6 +26,7 @@ RUN yarn turbo run build --filter=sync...
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /app
+RUN apk add --no-cache ffmpeg
 
 COPY --from=installer /app .
 
