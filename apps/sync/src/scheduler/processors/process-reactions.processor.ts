@@ -38,7 +38,7 @@ export class ProcessReactionsProcessor extends WorkerHost {
           REACTION_RENDER_JOB_NAME,
           { submissionId },
           {
-            jobId: `reaction:${submissionId}`,
+            jobId: `reaction-${submissionId}`,
             removeOnComplete: true,
             removeOnFail: true,
           },
