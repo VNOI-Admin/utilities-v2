@@ -153,10 +153,10 @@ export async function render(
 
   const filter = [
     // top video
-    `[0:v]scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[top-video]`,
+    `[0:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[top-video]`,
 
     // bottom video
-    `[1:v]scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[bottom-video]`,
+    `[1:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[bottom-video]`,
 
     // background: cover (scale increase) then center crop to OUT_WxOUT_H
     `[2:v]scale=${config.width}:${config.height}:force_original_aspect_ratio=increase,crop=${config.width}:${config.height}:(in_w-${config.width})/2:(in_h-${config.height})/2,setsar=1[${prefix}]`,
