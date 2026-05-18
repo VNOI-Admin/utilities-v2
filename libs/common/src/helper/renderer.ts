@@ -140,7 +140,7 @@ export async function render(
 
   const prefix = 'bg';
 
-  const bannerY = y1 + smallH + config.padding * 2;
+  const bannerY = y1 + smallH + config.padding;
   const bannerH = y2 - config.padding - bannerY;
 
   const uniLogoSize = bannerH - config.padding * 2;
@@ -213,52 +213,34 @@ export async function render(
   ].join('; ');
 
   const args = [
-    '-i',
-    params.webcamSrc,
-    '-i',
-    params.screenSrc,
-    '-i',
-    config.backgroundSrc,
-    '-i',
-    config.logoSrc,
-    '-i',
-    params.university.logoSrc,
+    '-i', params.webcamSrc,
+    '-i', params.screenSrc,
+    '-i', config.backgroundSrc,
+    '-i', config.logoSrc,
+    '-i', params.university.logoSrc,
 
     // Apply the filters
-    '-filter_complex',
-    filter,
-    '-map',
-    '[outv]',
-    '-map',
-    '[outa]',
+    '-filter_complex', filter,
+    '-filter_threads', '1',
+    '-map', '[outv]',
+    '-map', '[outa]',
 
     // VP9 video encoding
-    '-c:v',
-    'libvpx-vp9',
-    '-b:v',
-    '0',
-    '-crf',
-    '30',
+    '-c:v', 'libx264',
+    '-crf', '23',
 
     // Video encoding speed control
-    '-deadline',
-    'realtime',
-    '-cpu-used',
-    '8',
-    '-threads',
-    '0',
+    '-preset', 'veryfast',
+    '-threads', '1',
 
     // OPUS audio encoding
-    '-c:a',
-    'libopus',
-    '-b:a',
-    '128k',
+    '-c:a', 'libopus',
+    '-b:a', '128k',
 
     // Write to stdout
     '-movflags',
     '+faststart',
-    '-f',
-    'webm',
+    '-f', 'webm',
     '-',
   ];
 
