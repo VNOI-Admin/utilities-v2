@@ -101,6 +101,10 @@ export class ReactionRenderProcessor extends WorkerHost {
     s3Config: ReactionS3Config,
   ): Promise<void> {
     const submissionId = String(submission._id);
+    await this.submissionModel.updateOne(
+      { _id: submission._id },
+      { $inc: { 'data.renderRetries': 1 } },
+    );
     try {
       const mappedUsername = (
         await this.participantModel

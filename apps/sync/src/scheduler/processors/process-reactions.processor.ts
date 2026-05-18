@@ -1,6 +1,7 @@
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Job, Queue } from 'bullmq';
 import { Model } from 'mongoose';
@@ -14,6 +15,7 @@ export class ProcessReactionsProcessor extends WorkerHost {
   constructor(
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectQueue(QUEUE_NAMES.REACTION_RENDER) private reactionRenderQueue: Queue<ReactionRenderJobData>,
+    private readonly configService: ConfigService,
   ) {
     super();
   }
@@ -22,10 +24,13 @@ export class ProcessReactionsProcessor extends WorkerHost {
     this.logger.log(`Processing job ${job.id} - ${job.name}`);
 
     try {
+      const maxRetries = Number(this.configService.get('REACTION_RENDER_MAX_RETRIES') ?? 5);
+
       const submissions = await this.submissionModel
         .find({
           submissionStatus: SubmissionStatus.AC,
           $or: [{ 'data.reaction': { $exists: false } }, { 'data.reaction': null }],
+          'data.renderRetries': { $lt: maxRetries },
         })
         .limit(10)
         .exec();

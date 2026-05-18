@@ -34,6 +34,9 @@ export class SubmissionData {
 
   @Prop({ required: false })
   reaction?: string;
+
+  @Prop({ required: false, default: 0 })
+  renderRetries?: number;
 }
 
 @Schema()
@@ -71,7 +74,7 @@ export const SubmissionSchema = SchemaFactory.createForClass(Submission);
 // Create indexes for efficient queries
 SubmissionSchema.index({ contest_code: 1, submittedAt: -1 });
 SubmissionSchema.index({ author: 1, contest_code: 1 });
-SubmissionSchema.index({ submissionStatus: 1, 'data.reaction': 1 });
+SubmissionSchema.index({ submissionStatus: 1, 'data.reaction': 1, 'data.renderRetries': 1 });
 
 // Unique index on external_id to prevent duplicate submissions
 SubmissionSchema.index({ external_id: 1 }, { unique: true, sparse: true });
