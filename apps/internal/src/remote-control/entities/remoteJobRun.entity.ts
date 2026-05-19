@@ -2,6 +2,7 @@ import { RemoteJobRunStatus } from '@libs/common-db/schemas/remoteJobRun.schema'
 import { ConstructorType } from '@libs/common/serializers/type';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { RemoteControlFileEntity } from './remoteControlFile.entity';
 
 export class RemoteJobRunEntity {
   @Expose()
@@ -29,6 +30,10 @@ export class RemoteJobRunEntity {
   log: string | null;
 
   @Expose()
+  @ApiProperty({ type: [RemoteControlFileEntity] })
+  outputFiles: RemoteControlFileEntity[];
+
+  @Expose()
   @ApiProperty()
   updatedAt: Date;
 
@@ -39,6 +44,7 @@ export class RemoteJobRunEntity {
     this.status = data.status;
     this.exitCode = data.exitCode ?? null;
     this.log = data.log ?? null;
+    this.outputFiles = (data.outputFiles ?? []).map((file) => new RemoteControlFileEntity(file));
     this.updatedAt = data.updatedAt;
   }
 }

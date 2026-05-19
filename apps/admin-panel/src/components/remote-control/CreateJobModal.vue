@@ -34,7 +34,7 @@
         class="w-full px-4 py-2 border border-white/20 text-gray-300 hover:border-mission-accent hover:text-mission-accent transition-all duration-300 font-mono text-xs uppercase tracking-wider flex items-center justify-between"
         @click="showAdvanced = !showAdvanced"
       >
-        <span>Advanced Parameters (args/env)</span>
+        <span>Advanced Parameters (args/env/files)</span>
         <ChevronDown
           :size="16"
           :stroke-width="2"
@@ -95,6 +95,50 @@
             </div>
           </div>
         </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="tech-label">INPUT FILES</label>
+            <button
+              type="button"
+              class="text-xs font-mono text-mission-accent hover:text-white transition-colors inline-flex items-center gap-1"
+              @click="triggerFileInput"
+            >
+              <Upload :size="14" :stroke-width="2" />
+              <span>ADD FILES</span>
+            </button>
+          </div>
+
+          <input
+            ref="fileInputRef"
+            type="file"
+            multiple
+            class="hidden"
+            @change="handleFileSelect"
+          />
+
+          <div v-if="selectedFiles.length > 0" class="space-y-2">
+            <div
+              v-for="(file, index) in selectedFiles"
+              :key="`${file.name}-${file.size}-${index}`"
+              class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 items-center px-3 py-2 border border-white/10 bg-black/20"
+            >
+              <span class="font-mono text-xs text-white truncate">{{ file.name }}</span>
+              <span class="font-mono text-xs text-gray-500">{{ formatFileSize(file.size) }}</span>
+              <button
+                type="button"
+                class="px-2 py-1 border border-white/20 text-gray-400 hover:text-mission-red hover:border-mission-red/50 transition-all"
+                @click="removeFile(index)"
+              >
+                <Trash2 :size="14" :stroke-width="2" />
+              </button>
+            </div>
+          </div>
+
+          <div v-else class="px-3 py-2 border border-white/10 bg-black/20 text-xs font-mono text-gray-500">
+            No files selected
+          </div>
+        </div>
       </div>
 
       <div v-if="loadingOptions" class="p-3 border border-white/10 bg-white/5 text-sm font-mono text-gray-400">
@@ -136,7 +180,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ChevronDown, Play, RotateCw, Trash2 } from 'lucide-vue-next';
+import { ChevronDown, Play, RotateCw, Trash2, Upload } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import MissionModal from '~/components/MissionModal.vue';
 import MissionSelect from '~/components/MissionSelect.vue';
@@ -176,6 +220,8 @@ const targetOptions = ref<RemoteControlTargetOption[]>([]);
 const argsText = ref('');
 const showAdvanced = ref(false);
 const envRows = ref<EnvRow[]>([{ id: 1, key: '', value: '' }]);
+const selectedFiles = ref<File[]>([]);
+const fileInputRef = ref<HTMLInputElement>();
 
 const loadingOptions = ref(false);
 const submitting = ref(false);
@@ -210,6 +256,10 @@ function applyPrefill() {
   selectedTargets.value = [...new Set(initialTargets)];
   argsText.value = initialArgs.join('\n');
   showAdvanced.value = hasAdvancedValues;
+  selectedFiles.value = [];
+  if (fileInputRef.value) {
+    fileInputRef.value.value = '';
+  }
 
   envRows.value = buildEnvRows(initialEnv);
   envRowCounter = envRows.value.length + 1;
@@ -244,6 +294,29 @@ function parseEnv(): Record<string, string> {
     result[key] = row.value;
     return result;
   }, {});
+}
+
+function triggerFileInput() {
+  fileInputRef.value?.click();
+}
+
+function handleFileSelect(event: Event) {
+  const input = event.target as HTMLInputElement;
+  selectedFiles.value = [
+    ...selectedFiles.value,
+    ...Array.from(input.files || []),
+  ];
+  input.value = '';
+}
+
+function removeFile(index: number) {
+  selectedFiles.value.splice(index, 1);
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 async function fetchTargetOptions() {
@@ -311,6 +384,7 @@ async function handleSubmit() {
       targets: [...new Set(selectedTargets.value)],
       ...(args.length > 0 ? { args } : {}),
       ...(Object.keys(env).length > 0 ? { env } : {}),
+      ...(selectedFiles.value.length > 0 ? { files: selectedFiles.value } : {}),
     };
 
     const job = await remoteControlStore.createJob(payload);

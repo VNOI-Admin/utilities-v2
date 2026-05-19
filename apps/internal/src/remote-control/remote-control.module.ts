@@ -22,5 +22,6 @@ import { RemoteControlService } from './remote-control.service';
   ],
   controllers: [RemoteControlController],
   providers: [RemoteControlService],
+  exports: [RemoteControlService],
 })
 export class RemoteControlModule {}

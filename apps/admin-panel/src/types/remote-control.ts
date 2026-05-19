@@ -18,6 +18,13 @@ export interface RemoteControlScript extends RemoteControlScriptSummary {
   content: string;
 }
 
+export interface RemoteControlFileMetadata {
+  key: string;
+  filename: string;
+  size: number;
+  hash: string;
+}
+
 export interface RemoteJob {
   jobId: string;
   scriptName: string;
@@ -25,6 +32,7 @@ export interface RemoteJob {
   statusCounts?: RemoteJobStatusCounts;
   args?: string[];
   env?: Record<string, string>;
+  inputFiles?: RemoteControlFileMetadata[];
   createdBy: string;
   createdAt: string;
   targets?: string[];
@@ -37,6 +45,7 @@ export interface RemoteJobRun {
   status: RemoteJobRunStatus;
   exitCode: number | null;
   log: string | null;
+  outputFiles?: RemoteControlFileMetadata[];
   updatedAt: string;
 }
 
@@ -44,6 +53,7 @@ export interface CreateRemoteJobPayload {
   scriptName: string;
   args?: string[];
   env?: Record<string, string>;
+  files?: File[];
   targets: string[];
 }
 
@@ -79,6 +89,7 @@ export interface JobRunUpdatedEvent {
   status: RemoteJobRunStatus;
   exitCode: number | null;
   log?: string;
+  outputFiles?: RemoteControlFileMetadata[];
   updatedAt: string;
 }
 

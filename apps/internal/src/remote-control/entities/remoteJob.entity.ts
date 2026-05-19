@@ -1,6 +1,7 @@
 import { ConstructorType } from '@libs/common/serializers/type';
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
+import { RemoteControlFileEntity } from './remoteControlFile.entity';
 
 export class RemoteJobEntity {
   @Expose()
@@ -22,6 +23,10 @@ export class RemoteJobEntity {
   @Expose()
   @ApiProperty({ type: Object })
   env: Record<string, string>;
+
+  @Expose()
+  @ApiProperty({ type: [RemoteControlFileEntity] })
+  inputFiles: RemoteControlFileEntity[];
 
   @Expose()
   @ApiProperty()
@@ -58,6 +63,7 @@ export class RemoteJobEntity {
     this.scriptHash = data.scriptHash;
     this.args = data.args;
     this.env = data.env;
+    this.inputFiles = (data.inputFiles ?? []).map((file) => new RemoteControlFileEntity(file));
     this.createdBy = data.createdBy;
     this.createdAt = data.createdAt;
     this.targets = data.targets;
