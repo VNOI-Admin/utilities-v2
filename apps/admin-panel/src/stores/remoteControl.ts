@@ -271,10 +271,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
         ...(payload.args?.length ? { args: payload.args } : {}),
         ...(payload.env && Object.keys(payload.env).length > 0 ? { env: payload.env } : {}),
       };
-      const response =
-        files.length > 0
-          ? await createJobWithFiles(body, files)
-          : await internalClient.post<RemoteJob>('/remote-control/jobs', body);
+      const response = await createJobWithFiles(body, files);
       const normalizedJob = normalizeJob(response.data);
       upsertJob(normalizedJob);
       return normalizedJob;
@@ -291,7 +288,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     formData.append('payload', JSON.stringify(payload));
     files.forEach((file) => formData.append('files', file, file.name));
 
-    return internalClient.post<RemoteJob>('/remote-control/jobs/with-files', formData, {
+    return internalClient.post<RemoteJob>('/remote-control/jobs', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

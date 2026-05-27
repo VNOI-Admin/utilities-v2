@@ -140,17 +140,6 @@ export class RemoteControlController {
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Create job' })
-  @ApiResponse({ status: 200, type: RemoteJobEntity })
-  @Post('/jobs')
-  async createJob(@Request() req: any, @Body() dto: CreateRemoteControlJobDto) {
-    const job = await this.service.createJob(req.user?.sub, dto);
-    return new RemoteJobEntity(job as any);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Create job with input files' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -170,8 +159,8 @@ export class RemoteControlController {
   })
   @ApiResponse({ status: 200, type: RemoteJobEntity })
   @UseInterceptors(AnyFilesInterceptor())
-  @Post('/jobs/with-files')
-  async createJobWithFiles(
+  @Post('/jobs')
+  async createJob(
     @Request() req: any,
     @Body('payload') payload: string,
     @UploadedFiles() files: Express.Multer.File[] = [],
