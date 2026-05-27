@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type Document } from 'mongoose';
+import type { RemoteJobFileMetadata } from './remoteJob.schema';
 
 export enum RemoteJobRunStatus {
   PENDING = 'pending',
@@ -26,6 +27,9 @@ export class RemoteJobRun {
 
   @Prop({ required: false, default: null, type: String })
   log?: string | null;
+
+  @Prop({ type: [Object], default: [] })
+  outputFiles!: RemoteJobFileMetadata[];
 
   @Prop({ required: false, default: () => new Date() })
   updatedAt?: Date;

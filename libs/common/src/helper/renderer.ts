@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 // TODO: Add more colors here
 const statusColor = {
   WA: '#eab308',
+  AC: '#22c55e',
 } as const;
 
 export type Params = {
@@ -104,9 +105,28 @@ function composeFilters(filters: ArrayLike<string>, prefix: string): string {
   return `${out}; [${prefix}${cnt}]${filters[filters.length - 1]}[outv]`;
 }
 
+export type RenderOptions = {
+  webcamHasAudio?: boolean;
+  screenHasAudio?: boolean;
+};
+
+function buildAudioFilter(webcamHasAudio: boolean, screenHasAudio: boolean): string {
+  if (webcamHasAudio && screenHasAudio) {
+    return '[0:a][1:a]amix=inputs=2:normalize=0[outa]';
+  }
+  if (webcamHasAudio) {
+    return '[0:a]anull[outa]';
+  }
+  if (screenHasAudio) {
+    return '[1:a]anull[outa]';
+  }
+  return 'anullsrc=channel_layout=stereo:sample_rate=48000[outa]';
+}
+
 export async function render(
   config: Configuration,
   params: Params,
+  options?: RenderOptions,
 ): Promise<Buffer> {
   const smallW = config.width - 2 * config.padding;
   const smallH = Math.floor((smallW * 9) / 16);
@@ -120,7 +140,7 @@ export async function render(
 
   const prefix = 'bg';
 
-  const bannerY = y1 + smallH + config.padding * 2;
+  const bannerY = y1 + smallH + config.padding;
   const bannerH = y2 - config.padding - bannerY;
 
   const uniLogoSize = bannerH - config.padding * 2;
@@ -133,10 +153,10 @@ export async function render(
 
   const filter = [
     // top video
-    `[0:v]scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[top-video]`,
+    `[0:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[top-video]`,
 
     // bottom video
-    `[1:v]scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[bottom-video]`,
+    `[1:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[bottom-video]`,
 
     // background: cover (scale increase) then center crop to OUT_WxOUT_H
     `[2:v]scale=${config.width}:${config.height}:force_original_aspect_ratio=increase,crop=${config.width}:${config.height}:(in_w-${config.width})/2:(in_h-${config.height})/2,setsar=1[${prefix}]`,
@@ -147,8 +167,7 @@ export async function render(
     // uni logo
     `[4:v]scale=${uniLogoSize}:${uniLogoSize}:force_original_aspect_ratio=decrease,setsar=1[uni-logo]`,
 
-    // Audio
-    '[0:a][1:a]amix=inputs=2:normalize=0[outa]',
+    buildAudioFilter(options?.webcamHasAudio ?? true, options?.screenHasAudio ?? true),
 
     composeFilters(
       [
@@ -194,54 +213,43 @@ export async function render(
   ].join('; ');
 
   const args = [
-    '-i',
-    params.webcamSrc,
-    '-i',
-    params.screenSrc,
-    '-i',
-    config.backgroundSrc,
-    '-i',
-    config.logoSrc,
-    '-i',
-    params.university.logoSrc,
+    '-i', params.webcamSrc,
+    '-i', params.screenSrc,
+    '-i', config.backgroundSrc,
+    '-i', config.logoSrc,
+    '-i', params.university.logoSrc,
 
     // Apply the filters
-    '-filter_complex',
-    filter,
-    '-map',
-    '[outv]',
-    '-map',
-    '[outa]',
+    '-filter_complex', filter,
+    '-filter_threads', '1',
+    '-map', '[outv]',
+    '-map', '[outa]',
 
     // VP9 video encoding
-    '-c:v',
-    'libvpx-vp9',
-    '-b:v',
-    '0',
-    '-crf',
-    '30',
+    '-c:v', 'libx264',
+    '-crf', '23',
 
     // Video encoding speed control
-    '-deadline',
-    'realtime',
-    '-cpu-used',
-    '8',
-    '-threads',
-    '0',
+    '-preset', 'veryfast',
+    '-threads', '1',
 
     // OPUS audio encoding
-    '-c:a',
-    'libopus',
-    '-b:a',
-    '128k',
+    '-c:a', 'libopus',
+    '-b:a', '128k',
 
     // Write to stdout
     '-movflags',
     '+faststart',
-    '-f',
-    'webm',
+    '-f', 'webm',
     '-',
   ];
+
+  const webcamAudio = options?.webcamHasAudio ?? true;
+  const screenAudio = options?.screenHasAudio ?? true;
+  if (!webcamAudio && !screenAudio) {
+    // anullsrc generates infinite audio; cap output at video length
+    args.splice(args.indexOf('-f'), 0, '-shortest');
+  }
 
   const buffer = await runCommand('ffmpeg', args);
   return buffer;

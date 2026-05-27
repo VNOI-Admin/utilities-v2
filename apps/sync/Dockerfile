@@ -14,6 +14,7 @@ COPY --from=builder /app/out/yarn.lock ./yarn.lock
 
 COPY --from=builder /app/out/full/ .
 COPY --from=builder /app/libs ./libs
+COPY --from=builder /app/scripts/remote ./scripts/remote
 COPY --from=builder /app/nest-cli.json nest-cli.json
 COPY --from=builder /app/turbo.json turbo.json
 COPY --from=builder /app/tsconfig.json tsconfig.json
@@ -26,6 +27,7 @@ RUN yarn turbo run build --filter=sync...
 FROM node:20-alpine AS runner
 ENV NODE_ENV=production
 WORKDIR /app
+RUN apk add --no-cache ffmpeg
 
 COPY --from=installer /app .
 
