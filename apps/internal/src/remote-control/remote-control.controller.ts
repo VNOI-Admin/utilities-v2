@@ -263,19 +263,6 @@ export class RemoteControlController {
   @UseGuards(IPAddressGuard)
   @RequiredRoles(Role.CONTESTANT)
   @ApiOperation({ summary: 'Post job updates (status/log)' })
-  @ApiResponse({
-    status: 200,
-    schema: { properties: { success: { type: 'boolean' } } },
-  })
-  @Post('/agent/jobs/:jobId/updates')
-  async agentUpdate(@Request() req: any, @Param('jobId') jobId: string, @Body() dto: AgentJobUpdateDto) {
-    await this.service.applyAgentUpdate(jobId, req.user, dto, undefined, false);
-    return { success: true };
-  }
-
-  @UseGuards(IPAddressGuard)
-  @RequiredRoles(Role.CONTESTANT)
-  @ApiOperation({ summary: 'Post final job completion with returned files' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -298,8 +285,8 @@ export class RemoteControlController {
     schema: { properties: { success: { type: 'boolean' } } },
   })
   @UseInterceptors(AnyFilesInterceptor())
-  @Post('/agent/jobs/:jobId/completion')
-  async agentCompletion(
+  @Post('/agent/jobs/:jobId/updates')
+  async agentUpdate(
     @Request() req: any,
     @Param('jobId') jobId: string,
     @Body() body: any,
