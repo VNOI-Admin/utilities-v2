@@ -190,7 +190,13 @@ export class ReactionRenderProcessor extends WorkerHost {
       createdBy: 'reaction-render',
       saveRunFiles: false,
     });
-    const [result] = await this.withTimeout(handle.done, EXTRACT_STREAM_SLICES_TIMEOUT_MS);
+    let result;
+    try {
+      [result] = await this.withTimeout(handle.done, EXTRACT_STREAM_SLICES_TIMEOUT_MS);
+    } catch (error) {
+      this.remoteControlService.releaseRemoteScriptResult(handle.jobId);
+      throw error;
+    }
 
     if (result.status !== RemoteJobRunStatus.SUCCESS) {
       throw new Error(`Slice extraction failed for ${username}: ${result.log ?? result.status}`);
@@ -207,11 +213,13 @@ export class ReactionRenderProcessor extends WorkerHost {
   }
 
   private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        setTimeout(() => reject(new Error('Slice extraction timed out')), timeoutMs);
-      }),
-    ]);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeout = setTimeout(() => reject(new Error('Slice extraction timed out')), timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => {
+      if (timeout) clearTimeout(timeout);
+    });
   }
 }

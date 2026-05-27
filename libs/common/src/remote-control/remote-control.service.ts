@@ -187,6 +187,10 @@ export class RemoteControlService {
     return { jobId: job.jobId, done };
   }
 
+  releaseRemoteScriptResult(jobId: string) {
+    this.resultCollectors.delete(jobId);
+  }
+
   async listJobs(query: GetRemoteControlJobsDto): Promise<RemoteJob[]> {
     const filter: Record<string, any> = {};
 
@@ -241,6 +245,7 @@ export class RemoteControlService {
     dto: AgentJobUpdateDto,
     outputFiles: RemoteControlFileInput[] = [],
   ): Promise<void> {
+    await this.getRun(jobId, target);
     const collector = this.resultCollectors.get(jobId);
     const files = await this.prepareRunFiles(jobId, target, outputFiles, collector?.saveRunFiles ?? true);
     const run = await this.updateRun(jobId, target, {
@@ -486,7 +491,9 @@ export class RemoteControlService {
     form.append('payload', JSON.stringify(payload));
 
     for (const file of files) {
-      const blob = new Blob([file.buffer], {
+      const bytes = new Uint8Array(file.buffer.length);
+      bytes.set(file.buffer);
+      const blob = new Blob([bytes], {
         type: file.contentType ?? undefined,
       });
       form.append('files', blob, file.filename);
