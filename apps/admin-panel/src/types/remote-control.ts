@@ -50,11 +50,16 @@ export interface RemoteJobRun {
   updatedAt: string;
 }
 
+export interface CreateRemoteJobFile {
+  key: string;
+  file: File;
+}
+
 export interface CreateRemoteJobPayload {
   scriptName: string;
   args?: string[];
   env?: Record<string, string>;
-  files?: File[];
+  files?: CreateRemoteJobFile[];
   targets: string[];
 }
 

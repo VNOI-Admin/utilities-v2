@@ -101,42 +101,47 @@
             <label class="tech-label">INPUT FILES</label>
             <button
               type="button"
-              class="text-xs font-mono text-mission-accent hover:text-white transition-colors inline-flex items-center gap-1"
-              @click="triggerFileInput"
+              class="text-xs font-mono text-mission-accent hover:text-white transition-colors"
+              @click="addFileRow"
             >
-              <Upload :size="14" :stroke-width="2" />
-              <span>ADD FILES</span>
+              + ADD FILE
             </button>
           </div>
 
-          <input
-            ref="fileInputRef"
-            type="file"
-            multiple
-            class="hidden"
-            @change="handleFileSelect"
-          />
-
-          <div v-if="selectedFiles.length > 0" class="space-y-2">
+          <div class="space-y-2">
             <div
-              v-for="(file, index) in selectedFiles"
-              :key="`${file.name}-${file.size}-${index}`"
-              class="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 items-center px-3 py-2 border border-white/10 bg-black/20"
+              v-for="(row, index) in fileRows"
+              :key="row.id"
+              class="grid grid-cols-[minmax(120px,0.4fr)_minmax(0,1fr)_auto] gap-2 items-center"
             >
-              <span class="font-mono text-xs text-white truncate">{{ file.name }}</span>
-              <span class="font-mono text-xs text-gray-500">{{ formatFileSize(file.size) }}</span>
+              <input
+                v-model="row.key"
+                type="text"
+                class="input-mission"
+                placeholder="KEY"
+              />
+              <label
+                class="min-h-[40px] px-3 py-2 border border-white/20 bg-black/20 text-xs font-mono text-gray-400 hover:border-mission-accent hover:text-white transition-all cursor-pointer flex items-center justify-between gap-3"
+              >
+                <span class="truncate">
+                  {{ row.file ? `${row.file.name} (${formatFileSize(row.file.size)})` : 'Choose file...' }}
+                </span>
+                <Upload :size="14" :stroke-width="2" class="shrink-0" />
+                <input
+                  type="file"
+                  class="hidden"
+                  @change="handleFileSelect(index, $event)"
+                />
+              </label>
               <button
                 type="button"
-                class="px-2 py-1 border border-white/20 text-gray-400 hover:text-mission-red hover:border-mission-red/50 transition-all"
-                @click="removeFile(index)"
+                class="px-3 h-10 border border-white/20 text-gray-400 hover:text-mission-red hover:border-mission-red/50 transition-all"
+                :disabled="fileRows.length === 1"
+                @click="removeFileRow(index)"
               >
-                <Trash2 :size="14" :stroke-width="2" />
+                <Trash2 :size="16" :stroke-width="2" />
               </button>
             </div>
-          </div>
-
-          <div v-else class="px-3 py-2 border border-white/10 bg-black/20 text-xs font-mono text-gray-500">
-            No files selected
           </div>
         </div>
       </div>
@@ -186,13 +191,19 @@ import MissionModal from '~/components/MissionModal.vue';
 import MissionSelect from '~/components/MissionSelect.vue';
 import { internalApi } from '~/services/api';
 import { useRemoteControlStore } from '~/stores/remoteControl';
-import type { CreateRemoteJobPayload, RemoteControlTargetOption } from '~/types/remote-control';
+import type { CreateRemoteJobFile, CreateRemoteJobPayload, RemoteControlTargetOption } from '~/types/remote-control';
 import TargetMultiSelect from './TargetMultiSelect.vue';
 
 interface EnvRow {
   id: number;
   key: string;
   value: string;
+}
+
+interface FileRow {
+  id: number;
+  key: string;
+  file: File | null;
 }
 
 interface Props {
@@ -220,14 +231,14 @@ const targetOptions = ref<RemoteControlTargetOption[]>([]);
 const argsText = ref('');
 const showAdvanced = ref(false);
 const envRows = ref<EnvRow[]>([{ id: 1, key: '', value: '' }]);
-const selectedFiles = ref<File[]>([]);
-const fileInputRef = ref<HTMLInputElement>();
+const fileRows = ref<FileRow[]>([{ id: 1, key: '', file: null }]);
 
 const loadingOptions = ref(false);
 const submitting = ref(false);
 const errorText = ref('');
 
 let envRowCounter = 2;
+let fileRowCounter = 2;
 
 const scripts = computed(() => remoteControlStore.scripts);
 
@@ -256,10 +267,8 @@ function applyPrefill() {
   selectedTargets.value = [...new Set(initialTargets)];
   argsText.value = initialArgs.join('\n');
   showAdvanced.value = hasAdvancedValues;
-  selectedFiles.value = [];
-  if (fileInputRef.value) {
-    fileInputRef.value.value = '';
-  }
+  fileRows.value = [{ id: 1, key: '', file: null }];
+  fileRowCounter = 2;
 
   envRows.value = buildEnvRows(initialEnv);
   envRowCounter = envRows.value.length + 1;
@@ -279,6 +288,15 @@ function removeEnvRow(index: number) {
   envRows.value.splice(index, 1);
 }
 
+function addFileRow() {
+  fileRows.value.push({ id: fileRowCounter++, key: '', file: null });
+}
+
+function removeFileRow(index: number) {
+  if (fileRows.value.length === 1) return;
+  fileRows.value.splice(index, 1);
+}
+
 function parseArgs(): string[] {
   return argsText.value
     .split('\n')
@@ -296,21 +314,26 @@ function parseEnv(): Record<string, string> {
   }, {});
 }
 
-function triggerFileInput() {
-  fileInputRef.value?.click();
-}
-
-function handleFileSelect(event: Event) {
+function handleFileSelect(index: number, event: Event) {
   const input = event.target as HTMLInputElement;
-  selectedFiles.value = [
-    ...selectedFiles.value,
-    ...Array.from(input.files || []),
-  ];
+  fileRows.value[index].file = input.files?.[0] || null;
   input.value = '';
 }
 
-function removeFile(index: number) {
-  selectedFiles.value.splice(index, 1);
+function parseFiles(): CreateRemoteJobFile[] {
+  const rows = fileRows.value.filter((row) => row.key.trim() || row.file);
+  const seen = new Set<string>();
+
+  return rows.map((row) => {
+    const key = row.key.trim();
+    const file = row.file;
+    if (!key) throw new Error('File key is required');
+    if (!file) throw new Error(`File is required for ${key}`);
+    if (seen.has(key)) throw new Error(`Duplicate file key: ${key}`);
+    seen.add(key);
+
+    return { key, file };
+  });
 }
 
 function formatFileSize(bytes: number): string {
@@ -378,13 +401,14 @@ async function handleSubmit() {
   try {
     const args = parseArgs();
     const env = parseEnv();
+    const files = parseFiles();
 
     const payload: CreateRemoteJobPayload = {
       scriptName: selectedScriptName.value,
       targets: [...new Set(selectedTargets.value)],
       ...(args.length > 0 ? { args } : {}),
       ...(Object.keys(env).length > 0 ? { env } : {}),
-      ...(selectedFiles.value.length > 0 ? { files: selectedFiles.value } : {}),
+      ...(files.length > 0 ? { files } : {}),
     };
 
     const job = await remoteControlStore.createJob(payload);

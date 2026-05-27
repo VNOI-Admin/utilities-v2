@@ -280,10 +280,10 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     }
   }
 
-  async function createJobWithFiles(payload: Omit<CreateRemoteJobPayload, 'files'>, files: File[]) {
+  async function createJobWithFiles(payload: Omit<CreateRemoteJobPayload, 'files'>, files: CreateRemoteJobPayload['files']) {
     const formData = new FormData();
     formData.append('payload', JSON.stringify(payload));
-    files.forEach((file) => formData.append('files', file, file.name));
+    files?.forEach(({ key, file }) => formData.append(`file:${key}`, file, file.name));
 
     return internalClient.post<RemoteJob>('/remote-control/jobs', formData, {
       headers: {
