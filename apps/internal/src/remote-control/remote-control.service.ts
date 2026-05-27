@@ -169,14 +169,9 @@ export class RemoteControlService {
     return job;
   }
 
-  async startScript(input: RunRemoteControlScriptInput): Promise<RemoteControlScriptRunHandle> {
+  async runRemoteScript(input: RunRemoteControlScriptInput): Promise<RemoteControlScriptRunHandle> {
     const { job, done } = await this.createAndDispatch(input, true);
     return { jobId: job.jobId, done };
-  }
-
-  async runScript(input: RunRemoteControlScriptInput): Promise<RemoteControlScriptRunResult[]> {
-    const handle = await this.startScript(input);
-    return handle.done;
   }
 
   async listJobs(query: GetRemoteControlJobsDto): Promise<RemoteJob[]> {
