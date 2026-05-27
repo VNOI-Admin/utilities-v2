@@ -29,20 +29,20 @@ import { type ClassConstructor, plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import type { Response } from 'express';
 import type { Observable } from 'rxjs';
-import { AgentJobUpdateDto } from './dtos/agentJobUpdate.dto';
-import { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
-import { CreateRemoteControlJobDto } from './dtos/createJob.dto';
+import { AgentJobUpdateDto } from '@libs/common/remote-control/dtos/agentJobUpdate.dto';
+import { CancelRemoteControlJobDto } from '@libs/common/remote-control/dtos/cancelJob.dto';
+import { CreateRemoteControlJobDto } from '@libs/common/remote-control/dtos/createJob.dto';
+import { GetRemoteControlJobRunsDto } from '@libs/common/remote-control/dtos/getJobRuns.dto';
+import { GetRemoteControlJobsDto } from '@libs/common/remote-control/dtos/getJobs.dto';
+import { RefreshRemoteControlJobDto } from '@libs/common/remote-control/dtos/refreshJob.dto';
+import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
 import { CreateRemoteControlScriptDto } from './dtos/createScript.dto';
-import { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
-import { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
-import { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
 import { UpdateRemoteControlScriptDto } from './dtos/updateScript.dto';
 import { RemoteControlScriptEntity, RemoteControlScriptSummaryEntity } from './entities/remoteControlScript.entity';
 import { RemoteJobEntity } from './entities/remoteJob.entity';
 import { RemoteJobCancelResponseEntity } from './entities/remoteJobCancel.entity';
 import { RemoteJobRefreshSyncResponseEntity } from './entities/remoteJobRefresh.entity';
 import { RemoteJobRunEntity } from './entities/remoteJobRun.entity';
-import { RemoteControlService } from './remote-control.service';
 
 @ApiTags('Remote Control')
 @Controller('remote-control')
