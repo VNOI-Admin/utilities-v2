@@ -32,7 +32,7 @@ export interface RemoteJob {
   statusCounts?: RemoteJobStatusCounts;
   args?: string[];
   env?: Record<string, string>;
-  inputFiles?: RemoteControlFileMetadata[];
+  inputFiles: RemoteControlFileMetadata[];
   createdBy: string;
   createdAt: string;
   targets?: string[];
@@ -45,7 +45,7 @@ export interface RemoteJobRun {
   status: RemoteJobRunStatus;
   exitCode: number | null;
   log: string | null;
-  outputFiles?: RemoteControlFileMetadata[];
+  outputFiles: RemoteControlFileMetadata[];
   updatedAt: string;
 }
 
@@ -89,7 +89,7 @@ export interface JobRunUpdatedEvent {
   status: RemoteJobRunStatus;
   exitCode: number | null;
   log?: string;
-  outputFiles?: RemoteControlFileMetadata[];
+  outputFiles: RemoteControlFileMetadata[];
   updatedAt: string;
 }
 

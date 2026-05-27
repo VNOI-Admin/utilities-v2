@@ -48,7 +48,6 @@ interface RunUpdateInput {
   exitCode?: number | null;
   log?: string;
   outputFiles?: RemoteControlRuntimeFile[];
-  collectResult?: boolean;
 }
 
 interface JobStream {
@@ -227,16 +226,14 @@ export class RemoteControlService {
     jobId: string,
     target: string,
     dto: AgentJobUpdateDto,
-    outputFiles?: RemoteControlFileInput[],
-    collectResult = true,
+    outputFiles: RemoteControlFileInput[] = [],
   ): Promise<void> {
-    const files = outputFiles ? this.normalizeFiles(outputFiles) : undefined;
+    const files = this.normalizeFiles(outputFiles);
     const run = await this.updateRun(jobId, target, {
       log: dto.log,
       exitCode: dto.exitCode,
       status: dto.status,
       outputFiles: files,
-      collectResult,
     });
     if (!run) throw new NotFoundException('Job run not found');
   }
@@ -458,10 +455,6 @@ export class RemoteControlService {
   }
 
   private postRunToAgent(ip: string, jobId: string, payload: AgentJobPayload, files: RemoteControlRuntimeFile[]) {
-    if (files.length === 0) {
-      return this.agentPost(ip, `/jobs/${jobId}/run`, payload);
-    }
-
     const form = new FormData();
     form.append('payload', JSON.stringify(payload));
 
@@ -561,7 +554,6 @@ export class RemoteControlService {
         exitCode: agent.exitCode ?? undefined,
         status: agent.status as RemoteJobRunStatus,
         log: includeLog ? agent.log : undefined,
-        collectResult: false,
       });
     } catch (error) {
       console.warn(
@@ -592,7 +584,7 @@ export class RemoteControlService {
       if (!updatedRunDoc) return null;
       const updatedRun = updatedRunDoc.toObject();
       this.emitRunUpdate(jobId, updatedRun);
-      if (input.collectResult !== false) this.collectRunResult(jobId, updatedRun, input.outputFiles);
+      this.collectRunResult(jobId, updatedRun, input.outputFiles);
       return updatedRun;
     }
 
@@ -613,7 +605,7 @@ export class RemoteControlService {
 
       const updatedRun = updatedRunDoc.toObject();
       this.emitRunUpdate(jobId, updatedRun);
-      if (input.collectResult !== false) this.collectRunResult(jobId, updatedRun, input.outputFiles);
+      this.collectRunResult(jobId, updatedRun, input.outputFiles);
       return updatedRun;
     }
 
@@ -684,7 +676,7 @@ export class RemoteControlService {
         status: run.status,
         exitCode: run.exitCode ?? null,
         log: run.log ?? undefined,
-        outputFiles: run.outputFiles ?? [],
+        outputFiles: run.outputFiles,
         updatedAt: new Date(run.updatedAt!).toISOString(),
       },
     });

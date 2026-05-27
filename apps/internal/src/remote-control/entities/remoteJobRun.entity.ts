@@ -44,7 +44,7 @@ export class RemoteJobRunEntity {
     this.status = data.status;
     this.exitCode = data.exitCode ?? null;
     this.log = data.log ?? null;
-    this.outputFiles = (data.outputFiles ?? []).map((file) => new RemoteControlFileEntity(file));
+    this.outputFiles = data.outputFiles.map((file) => new RemoteControlFileEntity(file));
     this.updatedAt = data.updatedAt;
   }
 }

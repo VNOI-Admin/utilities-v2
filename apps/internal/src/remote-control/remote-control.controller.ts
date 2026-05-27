@@ -48,25 +48,12 @@ import { RemoteControlService } from './remote-control.service';
 export class RemoteControlController {
   constructor(private readonly service: RemoteControlService) {}
 
-  private parsePayload<T extends object>(payload: unknown, name: string, dtoClass: ClassConstructor<T>): T {
+  private parsePayload<T extends object>(payload: string, name: string, dtoClass: ClassConstructor<T>): T {
     let parsed: unknown;
-
-    if (typeof payload === 'string') {
-      try {
-        parsed = JSON.parse(payload);
-      } catch {
-        throw new BadRequestException(`Invalid ${name}`);
-      }
-    } else {
-      if (payload && typeof payload === 'object') {
-        parsed = payload;
-      } else {
-        throw new BadRequestException(`${name} is required`);
-      }
-    }
-
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new BadRequestException(`${name} is required`);
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      throw new BadRequestException(`Invalid ${name}`);
     }
 
     const dto = plainToInstance(dtoClass, parsed);
@@ -289,10 +276,10 @@ export class RemoteControlController {
   async agentUpdate(
     @Request() req: any,
     @Param('jobId') jobId: string,
-    @Body() body: any,
+    @Body('payload') payload: string,
     @UploadedFiles() files: Express.Multer.File[] = [],
   ) {
-    const dto = this.parsePayload(body.payload ?? body, 'payload', AgentJobUpdateDto);
+    const dto = this.parsePayload(payload, 'payload', AgentJobUpdateDto);
     await this.service.applyAgentUpdate(jobId, req.user, dto, this.service.mapUploadedFiles(files));
     return { success: true };
   }

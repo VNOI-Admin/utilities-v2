@@ -32,7 +32,6 @@ function normalizeJob(job: RemoteJob): RemoteJob {
     ...job,
     args: job.args ?? [],
     env: job.env ?? {},
-    inputFiles: job.inputFiles ?? [],
     targets,
     statusCounts: job.statusCounts ?? {
       pending: targets.length,
@@ -52,9 +51,7 @@ function sortJobsByCreatedAt(items: RemoteJob[]): RemoteJob[] {
 }
 
 function sortRunsByTarget(items: RemoteJobRun[]): RemoteJobRun[] {
-  return items
-    .map((item) => ({ ...item, outputFiles: item.outputFiles ?? [] }))
-    .sort((a, b) => a.target.localeCompare(b.target));
+  return [...items].sort((a, b) => a.target.localeCompare(b.target));
 }
 
 export const useRemoteControlStore = defineStore('remoteControl', () => {
@@ -114,7 +111,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
         status: updates.status ?? 'pending',
         exitCode: updates.exitCode ?? null,
         log: updates.log ?? null,
-        outputFiles: updates.outputFiles ?? [],
+        outputFiles: updates.outputFiles!,
         updatedAt: updates.updatedAt ?? new Date().toISOString(),
       };
 
@@ -348,7 +345,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
       }
 
       if (Object.prototype.hasOwnProperty.call(parsed, 'outputFiles')) {
-        updates.outputFiles = parsed.outputFiles ?? [];
+        updates.outputFiles = parsed.outputFiles;
       }
 
       patchJobRun(parsed.jobId, parsed.target, updates);

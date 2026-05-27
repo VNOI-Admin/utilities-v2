@@ -63,7 +63,7 @@ export class RemoteJobEntity {
     this.scriptHash = data.scriptHash;
     this.args = data.args;
     this.env = data.env;
-    this.inputFiles = (data.inputFiles ?? []).map((file) => new RemoteControlFileEntity(file));
+    this.inputFiles = data.inputFiles.map((file) => new RemoteControlFileEntity(file));
     this.createdBy = data.createdBy;
     this.createdAt = data.createdAt;
     this.targets = data.targets;
