@@ -34,7 +34,7 @@
         class="w-full px-4 py-2 border border-white/20 text-gray-300 hover:border-mission-accent hover:text-mission-accent transition-all duration-300 font-mono text-xs uppercase tracking-wider flex items-center justify-between"
         @click="showAdvanced = !showAdvanced"
       >
-        <span>Advanced Parameters (args/env)</span>
+        <span>Advanced Parameters (args/env/files)</span>
         <ChevronDown
           :size="16"
           :stroke-width="2"
@@ -95,6 +95,55 @@
             </div>
           </div>
         </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="tech-label">INPUT FILES</label>
+            <button
+              type="button"
+              class="text-xs font-mono text-mission-accent hover:text-white transition-colors"
+              @click="addFileRow"
+            >
+              + ADD FILE
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <div
+              v-for="(row, index) in fileRows"
+              :key="row.id"
+              class="grid grid-cols-[minmax(120px,0.4fr)_minmax(0,1fr)_auto] gap-2 items-center"
+            >
+              <input
+                v-model="row.key"
+                type="text"
+                class="input-mission"
+                placeholder="KEY"
+              />
+              <label
+                class="min-h-[40px] px-3 py-2 border border-white/20 bg-black/20 text-xs font-mono text-gray-400 hover:border-mission-accent hover:text-white transition-all cursor-pointer flex items-center justify-between gap-3"
+              >
+                <span class="truncate">
+                  {{ row.file ? `${row.file.name} (${formatFileSize(row.file.size)})` : 'Choose file...' }}
+                </span>
+                <Upload :size="14" :stroke-width="2" class="shrink-0" />
+                <input
+                  type="file"
+                  class="hidden"
+                  @change="handleFileSelect(index, $event)"
+                />
+              </label>
+              <button
+                type="button"
+                class="px-3 h-10 border border-white/20 text-gray-400 hover:text-mission-red hover:border-mission-red/50 transition-all"
+                :disabled="fileRows.length === 1"
+                @click="removeFileRow(index)"
+              >
+                <Trash2 :size="16" :stroke-width="2" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-if="loadingOptions" class="p-3 border border-white/10 bg-white/5 text-sm font-mono text-gray-400">
@@ -136,19 +185,25 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { ChevronDown, Play, RotateCw, Trash2 } from 'lucide-vue-next';
+import { ChevronDown, Play, RotateCw, Trash2, Upload } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import MissionModal from '~/components/MissionModal.vue';
 import MissionSelect from '~/components/MissionSelect.vue';
 import { internalApi } from '~/services/api';
 import { useRemoteControlStore } from '~/stores/remoteControl';
-import type { CreateRemoteJobPayload, RemoteControlTargetOption } from '~/types/remote-control';
+import type { CreateRemoteJobFile, CreateRemoteJobPayload, RemoteControlTargetOption } from '~/types/remote-control';
 import TargetMultiSelect from './TargetMultiSelect.vue';
 
 interface EnvRow {
   id: number;
   key: string;
   value: string;
+}
+
+interface FileRow {
+  id: number;
+  key: string;
+  file: File | null;
 }
 
 interface Props {
@@ -176,12 +231,14 @@ const targetOptions = ref<RemoteControlTargetOption[]>([]);
 const argsText = ref('');
 const showAdvanced = ref(false);
 const envRows = ref<EnvRow[]>([{ id: 1, key: '', value: '' }]);
+const fileRows = ref<FileRow[]>([{ id: 1, key: '', file: null }]);
 
 const loadingOptions = ref(false);
 const submitting = ref(false);
 const errorText = ref('');
 
 let envRowCounter = 2;
+let fileRowCounter = 2;
 
 const scripts = computed(() => remoteControlStore.scripts);
 
@@ -210,6 +267,8 @@ function applyPrefill() {
   selectedTargets.value = [...new Set(initialTargets)];
   argsText.value = initialArgs.join('\n');
   showAdvanced.value = hasAdvancedValues;
+  fileRows.value = [{ id: 1, key: '', file: null }];
+  fileRowCounter = 2;
 
   envRows.value = buildEnvRows(initialEnv);
   envRowCounter = envRows.value.length + 1;
@@ -229,6 +288,15 @@ function removeEnvRow(index: number) {
   envRows.value.splice(index, 1);
 }
 
+function addFileRow() {
+  fileRows.value.push({ id: fileRowCounter++, key: '', file: null });
+}
+
+function removeFileRow(index: number) {
+  if (fileRows.value.length === 1) return;
+  fileRows.value.splice(index, 1);
+}
+
 function parseArgs(): string[] {
   return argsText.value
     .split('\n')
@@ -244,6 +312,34 @@ function parseEnv(): Record<string, string> {
     result[key] = row.value;
     return result;
   }, {});
+}
+
+function handleFileSelect(index: number, event: Event) {
+  const input = event.target as HTMLInputElement;
+  fileRows.value[index].file = input.files?.[0] || null;
+  input.value = '';
+}
+
+function parseFiles(): CreateRemoteJobFile[] {
+  const rows = fileRows.value.filter((row) => row.key.trim() || row.file);
+  const seen = new Set<string>();
+
+  return rows.map((row) => {
+    const key = row.key.trim();
+    const file = row.file;
+    if (!key) throw new Error('File key is required');
+    if (!file) throw new Error(`File is required for ${key}`);
+    if (seen.has(key)) throw new Error(`Duplicate file key: ${key}`);
+    seen.add(key);
+
+    return { key, file };
+  });
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 async function fetchTargetOptions() {
@@ -305,12 +401,14 @@ async function handleSubmit() {
   try {
     const args = parseArgs();
     const env = parseEnv();
+    const files = parseFiles();
 
     const payload: CreateRemoteJobPayload = {
       scriptName: selectedScriptName.value,
       targets: [...new Set(selectedTargets.value)],
       ...(args.length > 0 ? { args } : {}),
       ...(Object.keys(env).length > 0 ? { env } : {}),
+      ...(files.length > 0 ? { files } : {}),
     };
 
     const job = await remoteControlStore.createJob(payload);

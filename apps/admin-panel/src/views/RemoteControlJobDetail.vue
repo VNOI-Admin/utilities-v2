@@ -101,6 +101,23 @@
           </div>
         </div>
 
+        <div v-if="jobInputFiles.length > 0">
+          <p class="tech-label mb-2">INPUT FILES</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div
+              v-for="file in jobInputFiles"
+              :key="file.key"
+              class="px-3 py-2 border border-white/10 bg-black/20 font-mono text-xs"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-white truncate">{{ file.filename }}</span>
+                <span class="text-gray-500 shrink-0">{{ formatFileSize(file.size) }}</span>
+              </div>
+              <p class="text-gray-600 truncate mt-1">{{ file.hash }}</p>
+            </div>
+          </div>
+        </div>
+
         <div>
           <p class="tech-label mb-2">TARGETS ({{ jobTargets.length }})</p>
           <div class="flex flex-wrap gap-2">
@@ -181,6 +198,38 @@
                 v-if="isRunExpanded(run.target)"
                 class="px-4 md:px-6 pb-4"
               >
+                <div
+                  v-if="run.outputFiles.length > 0"
+                  class="mb-3 border border-white/10 bg-black/30"
+                >
+                  <div class="px-3 py-2 border-b border-white/10 bg-mission-gray/60">
+                    <p class="tech-label">RETURNED FILES</p>
+                  </div>
+                  <div class="divide-y divide-white/5">
+                    <div
+                      v-for="file in run.outputFiles"
+                      :key="file.key"
+                      class="px-3 py-2 font-mono text-xs"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-white truncate">{{ file.filename }}</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                          <span class="text-gray-500">{{ formatFileSize(file.size) }}</span>
+                          <button
+                            v-if="file.path"
+                            type="button"
+                            class="px-2 py-1 border border-white/20 text-gray-300 hover:text-mission-accent hover:border-mission-accent transition-all"
+                            @click.stop="downloadOutputFile(run, file)"
+                          >
+                            <Download :size="14" :stroke-width="2" />
+                          </button>
+                        </div>
+                      </div>
+                      <p class="text-gray-600 truncate mt-1">{{ file.hash }}</p>
+                    </div>
+                  </div>
+                </div>
+
                   <div class="border border-white/10 bg-black/30">
                   <div class="px-3 py-2 border-b border-white/10 bg-mission-gray/60 flex items-center justify-between gap-2">
                     <p class="tech-label">LOG OUTPUT</p>
@@ -242,14 +291,14 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Check, ChevronDown, Copy, RotateCw } from 'lucide-vue-next';
+import { Check, ChevronDown, Copy, Download, RotateCw } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import BackButton from '~/components/BackButton.vue';
 import PageHeader from '~/components/PageHeader.vue';
 import StatusBadge from '~/components/StatusBadge.vue';
 import CreateJobModal from '~/components/remote-control/CreateJobModal.vue';
 import { useRemoteControlStore } from '~/stores/remoteControl';
-import type { CreateRemoteJobPayload } from '~/types/remote-control';
+import type { CreateRemoteJobPayload, RemoteControlFileMetadata } from '~/types/remote-control';
 import type { RemoteJobRun, RemoteJobRunStatus } from '~/types/remote-control';
 
 const route = useRoute();
@@ -268,6 +317,7 @@ const job = computed(() => remoteControlStore.jobDetail);
 const runs = computed(() => remoteControlStore.jobRuns);
 const jobArgs = computed(() => job.value?.args || []);
 const jobEnvEntries = computed(() => Object.entries(job.value?.env || {}));
+const jobInputFiles = computed(() => job.value?.inputFiles || []);
 const jobTargets = computed(() => job.value?.targets || []);
 const rerunPrefill = computed<Partial<CreateRemoteJobPayload> | null>(() => {
   if (!job.value) return null;
@@ -319,6 +369,12 @@ function formatDateTime(value?: string) {
   });
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function toggleRunLog(target: string) {
   expandedLogs.value = {
     ...expandedLogs.value,
@@ -367,6 +423,14 @@ async function copyRunLog(run: RemoteJobRun) {
 
 function isLogCopied(target: string) {
   return copiedLogTarget.value === target;
+}
+
+async function downloadOutputFile(run: RemoteJobRun, file: RemoteControlFileMetadata) {
+  try {
+    await remoteControlStore.downloadOutputFile(run, file.key, file.filename);
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || error.message || 'Failed to download file');
+  }
 }
 
 function openScriptManager(scriptName: string) {

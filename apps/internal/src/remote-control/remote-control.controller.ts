@@ -3,6 +3,7 @@ import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
 import {
+  BadRequestException,
   Body,
   ClassSerializerInterceptor,
   Controller,
@@ -14,27 +15,34 @@ import {
   Post,
   Query,
   Request,
+  Res,
   SerializeOptions,
   Sse,
+  StreamableFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { type ClassConstructor, plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+import type { Response } from 'express';
 import type { Observable } from 'rxjs';
-import { AgentJobUpdateDto } from './dtos/agentJobUpdate.dto';
-import { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
-import { CreateRemoteControlJobDto } from './dtos/createJob.dto';
+import { AgentJobUpdateDto } from '@libs/common/remote-control/dtos/agentJobUpdate.dto';
+import { CancelRemoteControlJobDto } from '@libs/common/remote-control/dtos/cancelJob.dto';
+import { CreateRemoteControlJobDto } from '@libs/common/remote-control/dtos/createJob.dto';
+import { GetRemoteControlJobRunsDto } from '@libs/common/remote-control/dtos/getJobRuns.dto';
+import { GetRemoteControlJobsDto } from '@libs/common/remote-control/dtos/getJobs.dto';
+import { RefreshRemoteControlJobDto } from '@libs/common/remote-control/dtos/refreshJob.dto';
+import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
 import { CreateRemoteControlScriptDto } from './dtos/createScript.dto';
-import { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
-import { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
-import { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
 import { UpdateRemoteControlScriptDto } from './dtos/updateScript.dto';
 import { RemoteControlScriptEntity, RemoteControlScriptSummaryEntity } from './entities/remoteControlScript.entity';
 import { RemoteJobEntity } from './entities/remoteJob.entity';
 import { RemoteJobCancelResponseEntity } from './entities/remoteJobCancel.entity';
 import { RemoteJobRefreshSyncResponseEntity } from './entities/remoteJobRefresh.entity';
 import { RemoteJobRunEntity } from './entities/remoteJobRun.entity';
-import { RemoteControlService } from './remote-control.service';
 
 @ApiTags('Remote Control')
 @Controller('remote-control')
@@ -42,6 +50,23 @@ import { RemoteControlService } from './remote-control.service';
 @SerializeOptions({ excludeExtraneousValues: true })
 export class RemoteControlController {
   constructor(private readonly service: RemoteControlService) {}
+
+  private parsePayload<T extends object>(payload: string, name: string, dtoClass: ClassConstructor<T>): T {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(payload);
+    } catch {
+      throw new BadRequestException(`Invalid ${name}`);
+    }
+
+    const dto = plainToInstance(dtoClass, parsed);
+    const errors = validateSync(dto);
+    if (errors.length) {
+      throw new BadRequestException(`Invalid ${name}`);
+    }
+
+    return dto;
+  }
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
@@ -105,10 +130,33 @@ export class RemoteControlController {
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Create job' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        payload: {
+          type: 'string',
+          description: 'JSON CreateRemoteControlJobDto',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+      required: ['payload'],
+    },
+  })
   @ApiResponse({ status: 200, type: RemoteJobEntity })
+  @UseInterceptors(AnyFilesInterceptor())
   @Post('/jobs')
-  async createJob(@Request() req: any, @Body() dto: CreateRemoteControlJobDto) {
-    const job = await this.service.createJob(req.user?.sub, dto);
+  async createJob(
+    @Request() req: any,
+    @Body('payload') payload: string,
+    @UploadedFiles() files: Express.Multer.File[] = [],
+  ) {
+    const dto = this.parsePayload(payload, 'payload', CreateRemoteControlJobDto);
+    const job = await this.service.createJob(req.user?.sub, dto, this.service.mapUploadedFiles(files));
     return new RemoteJobEntity(job as any);
   }
 
@@ -154,6 +202,22 @@ export class RemoteControlController {
   async getRun(@Param('jobId') jobId: string, @Param('target') target: string) {
     const run = await this.service.getRun(jobId, target);
     return new RemoteJobRunEntity(run as any);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Download a run output file' })
+  @Get('/jobs/:jobId/runs/:target/files/:key')
+  async downloadRunFile(
+    @Param('jobId') jobId: string,
+    @Param('target') target: string,
+    @Param('key') key: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.service.getRunOutputFile(jobId, target, key);
+    res.attachment(file.filename);
+    return new StreamableFile(file.stream);
   }
 
   @ApiBearerAuth()
@@ -205,13 +269,37 @@ export class RemoteControlController {
   @UseGuards(IPAddressGuard)
   @RequiredRoles(Role.CONTESTANT)
   @ApiOperation({ summary: 'Post job updates (status/log)' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        payload: {
+          type: 'string',
+          description: 'JSON AgentJobUpdateDto',
+        },
+        files: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+        },
+      },
+      required: ['payload'],
+    },
+  })
   @ApiResponse({
     status: 200,
     schema: { properties: { success: { type: 'boolean' } } },
   })
+  @UseInterceptors(AnyFilesInterceptor())
   @Post('/agent/jobs/:jobId/updates')
-  async agentUpdate(@Request() req: any, @Param('jobId') jobId: string, @Body() dto: AgentJobUpdateDto) {
-    await this.service.applyAgentUpdate(jobId, req.user, dto);
+  async agentUpdate(
+    @Request() req: any,
+    @Param('jobId') jobId: string,
+    @Body('payload') payload: string,
+    @UploadedFiles() files: Express.Multer.File[] = [],
+  ) {
+    const dto = this.parsePayload(payload, 'payload', AgentJobUpdateDto);
+    await this.service.applyAgentUpdate(jobId, req.user, dto, this.service.mapUploadedFiles(files));
     return { success: true };
   }
 }

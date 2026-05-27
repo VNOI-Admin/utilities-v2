@@ -120,6 +120,7 @@ import {
   Map,
   Menu,
   Monitor,
+  Play,
   Printer,
   UserPlus,
   Users,
@@ -203,6 +204,12 @@ const allMenuItems = [
     label: 'Print Jobs',
     path: '/printing',
     iconComponent: Printer,
+    roles: ['admin']
+  },
+  {
+    label: 'Reactions',
+    path: '/reactions',
+    iconComponent: Play,
     roles: ['admin']
   },
   {

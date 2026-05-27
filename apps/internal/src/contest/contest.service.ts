@@ -2,7 +2,7 @@ import { randomFillSync } from 'crypto';
 import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
-import { Submission, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { type VnojProblem, type VnojParticipant, type VNOJApi, VNOJ_API_CLIENT } from '@libs/api/vnoj';
@@ -827,22 +827,22 @@ export class ContestService {
     }
   }
 
-  private mapVnojResultToStatus(result: string): string {
-    const statusMap: Record<string, string> = {
-      AC: 'AC',
-      WA: 'WA',
-      RTE: 'RTE',
-      RE: 'RE',
-      IR: 'IR',
-      OLE: 'OLE',
-      MLE: 'MLE',
-      TLE: 'TLE',
-      IE: 'IE',
-      AB: 'AB',
-      CE: 'CE',
+  private mapVnojResultToStatus(result: string): SubmissionStatus {
+    const statusMap: Record<string, SubmissionStatus> = {
+      AC: SubmissionStatus.AC,
+      WA: SubmissionStatus.WA,
+      RTE: SubmissionStatus.RTE,
+      RE: SubmissionStatus.RE,
+      IR: SubmissionStatus.IR,
+      OLE: SubmissionStatus.OLE,
+      MLE: SubmissionStatus.MLE,
+      TLE: SubmissionStatus.TLE,
+      IE: SubmissionStatus.IE,
+      AB: SubmissionStatus.AB,
+      CE: SubmissionStatus.CE,
     };
 
-    return statusMap[result] || 'UNKNOWN';
+    return statusMap[result] || SubmissionStatus.UNKNOWN;
   }
 
   private async recalculateParticipantData(contest: ContestDocument): Promise<void> {

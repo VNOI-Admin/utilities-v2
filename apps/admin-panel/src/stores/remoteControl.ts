@@ -111,6 +111,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
         status: updates.status ?? 'pending',
         exitCode: updates.exitCode ?? null,
         log: updates.log ?? null,
+        outputFiles: updates.outputFiles!,
         updatedAt: updates.updatedAt ?? new Date().toISOString(),
       };
 
@@ -149,7 +150,9 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
   async function getScriptByName(name: string) {
     try {
       scriptsError.value = null;
-      const response = await internalClient.get<RemoteControlScript>(`/remote-control/scripts/${encodeURIComponent(name)}`);
+      const response = await internalClient.get<RemoteControlScript>(
+        `/remote-control/scripts/${encodeURIComponent(name)}`,
+      );
       upsertScriptSummary(response.data);
       return response.data;
     } catch (error: any) {
@@ -238,9 +241,12 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     try {
       loadingRuns.value = true;
       runsError.value = null;
-      const response = await internalClient.get<RemoteJobRun[]>(`/remote-control/jobs/${encodeURIComponent(jobId)}/runs`, {
-        params: status ? { status } : undefined,
-      });
+      const response = await internalClient.get<RemoteJobRun[]>(
+        `/remote-control/jobs/${encodeURIComponent(jobId)}/runs`,
+        {
+          params: status ? { status } : undefined,
+        },
+      );
       setRuns(response.data);
       return response.data;
     } catch (error: any) {
@@ -255,7 +261,14 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     try {
       creatingJob.value = true;
       jobsError.value = null;
-      const response = await internalClient.post<RemoteJob>('/remote-control/jobs', payload);
+      const files = payload.files ?? [];
+      const body = {
+        scriptName: payload.scriptName,
+        targets: payload.targets,
+        ...(payload.args?.length ? { args: payload.args } : {}),
+        ...(payload.env && Object.keys(payload.env).length > 0 ? { env: payload.env } : {}),
+      };
+      const response = await createJobWithFiles(body, files);
       const normalizedJob = normalizeJob(response.data);
       upsertJob(normalizedJob);
       return normalizedJob;
@@ -265,6 +278,18 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     } finally {
       creatingJob.value = false;
     }
+  }
+
+  async function createJobWithFiles(payload: Omit<CreateRemoteJobPayload, 'files'>, files: CreateRemoteJobPayload['files']) {
+    const formData = new FormData();
+    formData.append('payload', JSON.stringify(payload));
+    files?.forEach(({ key, file }) => formData.append(`file:${key}`, file, file.name));
+
+    return internalClient.post<RemoteJob>('/remote-control/jobs', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
   }
 
   async function cancelJob(jobId: string, targets: string[]) {
@@ -279,6 +304,25 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
       runsError.value = error.response?.data?.message || error.message || 'Failed to cancel targets';
       throw error;
     }
+  }
+
+  async function downloadRunFile(jobId: string, target: string, key: string, filename: string) {
+    const response = await internalClient.get(
+      `/remote-control/jobs/${encodeURIComponent(jobId)}/runs/${encodeURIComponent(target)}/files/${encodeURIComponent(key)}`,
+      { responseType: 'blob' },
+    );
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadOutputFile(run: RemoteJobRun, key: string, filename: string) {
+    return downloadRunFile(run.jobId, run.target, key, filename);
   }
 
   async function refreshJob(jobId: string, payload: RefreshRemoteJobPayload) {
@@ -317,6 +361,10 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
 
       if (Object.prototype.hasOwnProperty.call(parsed, 'log')) {
         updates.log = parsed.log ?? null;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(parsed, 'outputFiles')) {
+        updates.outputFiles = parsed.outputFiles;
       }
 
       patchJobRun(parsed.jobId, parsed.target, updates);
@@ -393,6 +441,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     fetchRuns,
     createJob,
     cancelJob,
+    downloadOutputFile,
     refreshJob,
     connectJobEvents,
     disconnectJobEvents,

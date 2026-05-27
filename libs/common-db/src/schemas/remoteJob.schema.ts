@@ -3,6 +3,14 @@ import { type Document } from 'mongoose';
 
 export type RemoteJobDocument = RemoteJob & Document;
 
+export interface RemoteJobFileMetadata {
+  key: string;
+  filename: string;
+  size: number;
+  hash: string;
+  path?: string;
+}
+
 @Schema()
 export class RemoteJob {
   @Prop({ unique: true, required: true })
@@ -19,6 +27,9 @@ export class RemoteJob {
 
   @Prop({ type: Object, default: {} })
   env!: Record<string, string>;
+
+  @Prop({ type: [Object], default: [] })
+  inputFiles!: RemoteJobFileMetadata[];
 
   @Prop({ type: [String], required: true })
   targets!: string[];

@@ -11,6 +11,7 @@ import { GroupModule } from './group/group.module';
 import { GuestModule } from './guest/guest.module';
 import { OverlayModule } from './overlay/overlay.module';
 import { PrintingModule } from './printing/printing.module';
+import { ReactionModule } from './reaction/reaction.module';
 import { RemoteControlModule } from './remote-control/remote-control.module';
 import { ScrapingModule } from './scraping/scraping.module';
 import { UserModule } from './user/user.module';
@@ -28,6 +29,7 @@ import { UserModule } from './user/user.module';
     GuardsModule,
     ContestModule,
     PrintingModule,
+    ReactionModule,
     FloorPlanModule,
     RemoteControlModule,
   ],
