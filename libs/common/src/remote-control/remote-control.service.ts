@@ -110,7 +110,7 @@ const HTTP_TIMEOUT_MS = 5000;
 const DEFAULT_AGENT_PORT = 9010;
 const DISPATCH_CONCURRENCY = 10;
 const DEFAULT_REMOTE_JOB_FILES_ROOT = 'data/remote-job-files';
-const REMOTE_JOB_SCRIPTS_DIR = 'remote-job-scripts';
+const REMOTE_JOB_SCRIPTS_DIR = 'scripts/remote';
 
 @Injectable()
 export class RemoteControlService implements OnModuleInit {

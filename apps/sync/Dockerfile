@@ -14,7 +14,7 @@ COPY --from=builder /app/out/yarn.lock ./yarn.lock
 
 COPY --from=builder /app/out/full/ .
 COPY --from=builder /app/libs ./libs
-COPY --from=builder /app/remote-job-scripts ./remote-job-scripts
+COPY --from=builder /app/scripts/remote ./scripts/remote
 COPY --from=builder /app/nest-cli.json nest-cli.json
 COPY --from=builder /app/turbo.json turbo.json
 COPY --from=builder /app/tsconfig.json tsconfig.json
