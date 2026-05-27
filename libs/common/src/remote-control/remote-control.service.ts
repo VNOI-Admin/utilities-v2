@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { createReadStream } from 'fs';
-import { mkdir, writeFile } from 'fs/promises';
+import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import * as path from 'path';
 import {
   RemoteControlScript,
@@ -19,7 +19,7 @@ import {
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { getErrorMessage } from '@libs/common/helper/error';
 import { HttpService } from '@nestjs/axios';
-import { BadRequestException, Injectable, type MessageEvent, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, type MessageEvent, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -110,9 +110,10 @@ const HTTP_TIMEOUT_MS = 5000;
 const DEFAULT_AGENT_PORT = 9010;
 const DISPATCH_CONCURRENCY = 10;
 const DEFAULT_REMOTE_JOB_FILES_ROOT = 'data/remote-job-files';
+const REMOTE_JOB_SCRIPTS_DIR = 'remote-job-scripts';
 
 @Injectable()
-export class RemoteControlService {
+export class RemoteControlService implements OnModuleInit {
   private readonly jobStreams = new Map<string, JobStream>();
   private readonly resultCollectors = new Map<string, RunResultCollector>();
   private readonly agentPort: number;
@@ -131,6 +132,10 @@ export class RemoteControlService {
     const rawPort = configService.get('REMOTE_CONTROL_AGENT_PORT');
     this.agentPort = rawPort ? Number(rawPort) : DEFAULT_AGENT_PORT;
     this.filesRoot = path.resolve(configService.get('REMOTE_JOB_FILES_ROOT') ?? DEFAULT_REMOTE_JOB_FILES_ROOT);
+  }
+
+  async onModuleInit() {
+    await this.seedPresetScripts();
   }
 
   async listScripts(): Promise<RemoteControlScript[]> {
@@ -167,6 +172,30 @@ export class RemoteControlService {
     const result = await this.scriptModel.deleteOne({ name });
     if (result.deletedCount === 0) throw new NotFoundException('Script not found');
     return { success: true };
+  }
+
+  private async seedPresetScripts() {
+    const scriptsDir = path.resolve(REMOTE_JOB_SCRIPTS_DIR);
+    const entries = await readdir(scriptsDir, { withFileTypes: true });
+
+    await Promise.all(
+      entries
+        .filter((entry) => entry.isFile())
+        .map(async (entry) => {
+          const content = await readFile(path.join(scriptsDir, entry.name), 'utf8');
+          const script = await this.scriptModel.findOne({ name: entry.name });
+          if (script) {
+            script.content = content;
+            await script.save();
+            return;
+          }
+
+          await this.scriptModel.create({
+            name: entry.name,
+            content,
+          });
+        }),
+    );
   }
 
   async createJob(
