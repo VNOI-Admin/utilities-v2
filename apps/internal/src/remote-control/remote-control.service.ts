@@ -1,4 +1,7 @@
 import { createHash } from 'crypto';
+import { createReadStream } from 'fs';
+import { mkdir, writeFile } from 'fs/promises';
+import * as path from 'path';
 import {
   RemoteControlScript,
   type RemoteControlScriptDocument,
@@ -74,6 +77,7 @@ export interface RunRemoteControlScriptInput {
   env?: Record<string, string>;
   files?: RemoteControlFileInput[];
   createdBy?: string;
+  saveRunFiles?: boolean;
 }
 
 export interface RemoteControlScriptRunResult {
@@ -89,8 +93,14 @@ export interface RemoteControlScriptRunHandle {
   done: Promise<RemoteControlScriptRunResult[]>;
 }
 
+export interface RemoteControlStoredFile {
+  stream: ReturnType<typeof createReadStream>;
+  filename: string;
+}
+
 interface RunResultCollector {
   targets: string[];
+  saveRunFiles: boolean;
   pending: Set<string>;
   results: Map<string, RemoteControlScriptRunResult>;
   resolve: (results: RemoteControlScriptRunResult[]) => void;
@@ -99,12 +109,14 @@ interface RunResultCollector {
 const HTTP_TIMEOUT_MS = 5000;
 const DEFAULT_AGENT_PORT = 9010;
 const DISPATCH_CONCURRENCY = 10;
+const DEFAULT_REMOTE_JOB_FILES_ROOT = 'data/remote-job-files';
 
 @Injectable()
 export class RemoteControlService {
   private readonly jobStreams = new Map<string, JobStream>();
   private readonly resultCollectors = new Map<string, RunResultCollector>();
   private readonly agentPort: number;
+  private readonly filesRoot: string;
 
   constructor(
     @InjectModel(RemoteControlScript.name)
@@ -118,6 +130,7 @@ export class RemoteControlService {
   ) {
     const rawPort = configService.get('REMOTE_CONTROL_AGENT_PORT');
     this.agentPort = rawPort ? Number(rawPort) : DEFAULT_AGENT_PORT;
+    this.filesRoot = path.resolve(configService.get('REMOTE_JOB_FILES_ROOT') ?? DEFAULT_REMOTE_JOB_FILES_ROOT);
   }
 
   async listScripts(): Promise<RemoteControlScript[]> {
@@ -228,7 +241,8 @@ export class RemoteControlService {
     dto: AgentJobUpdateDto,
     outputFiles: RemoteControlFileInput[] = [],
   ): Promise<void> {
-    const files = this.normalizeFiles(outputFiles);
+    const collector = this.resultCollectors.get(jobId);
+    const files = await this.prepareRunFiles(jobId, target, outputFiles, collector?.saveRunFiles ?? true);
     const run = await this.updateRun(jobId, target, {
       log: dto.log,
       exitCode: dto.exitCode,
@@ -236,6 +250,17 @@ export class RemoteControlService {
       outputFiles: files,
     });
     if (!run) throw new NotFoundException('Job run not found');
+  }
+
+  async getRunOutputFile(jobId: string, target: string, key: string): Promise<RemoteControlStoredFile> {
+    const run = await this.getRun(jobId, target);
+    const file = run.outputFiles.find((item) => item.key === key);
+    if (!file?.path) throw new NotFoundException('Output file not found');
+
+    return {
+      stream: createReadStream(this.resolveStoredFilePath(file.path)),
+      filename: file.filename,
+    };
   }
 
   async cancelJob(jobId: string, dto: CancelRemoteControlJobDto) {
@@ -388,7 +413,9 @@ export class RemoteControlService {
       throw error;
     }
 
-    const done = collectResults ? this.createResultCollector(job.jobId, targets) : undefined;
+    const done = collectResults
+      ? this.createResultCollector(job.jobId, targets, input.saveRunFiles ?? false)
+      : undefined;
 
     // Fire-and-forget dispatch
     void this.dispatchToAgents(
@@ -496,7 +523,51 @@ export class RemoteControlService {
     return files.map(({ buffer: _buffer, contentType: _contentType, ...metadata }) => metadata);
   }
 
-  private createResultCollector(jobId: string, targets: string[]): Promise<RemoteControlScriptRunResult[]> {
+  private async prepareRunFiles(
+    jobId: string,
+    target: string,
+    files: RemoteControlFileInput[],
+    saveFiles: boolean,
+  ): Promise<RemoteControlRuntimeFile[]> {
+    const normalized = this.normalizeFiles(files);
+    if (!saveFiles) return normalized;
+
+    await Promise.all(
+      normalized.map(async (file) => {
+        file.path = this.getStoredFilePath(jobId, target, file);
+        await this.writeStoredFile(file.path, file.buffer);
+      }),
+    );
+
+    return normalized;
+  }
+
+  private getStoredFilePath(jobId: string, target: string, file: RemoteControlRuntimeFile): string {
+    const filename = `${this.safePathPart(file.key)}-${this.safePathPart(file.filename)}`;
+    return path.join(this.safePathPart(jobId), this.safePathPart(target), filename);
+  }
+
+  private async writeStoredFile(relativePath: string, buffer: Buffer) {
+    const fullPath = this.resolveStoredFilePath(relativePath);
+    await mkdir(path.dirname(fullPath), { recursive: true });
+    await writeFile(fullPath, buffer);
+  }
+
+  private resolveStoredFilePath(relativePath: string) {
+    const fullPath = path.resolve(this.filesRoot, relativePath);
+    if (!fullPath.startsWith(`${this.filesRoot}${path.sep}`)) throw new BadRequestException('Invalid file path');
+    return fullPath;
+  }
+
+  private safePathPart(value: string) {
+    return value.replace(/[^a-zA-Z0-9._-]/g, '_');
+  }
+
+  private createResultCollector(
+    jobId: string,
+    targets: string[],
+    saveRunFiles: boolean,
+  ): Promise<RemoteControlScriptRunResult[]> {
     let resolve!: (results: RemoteControlScriptRunResult[]) => void;
     const done = new Promise<RemoteControlScriptRunResult[]>((res) => {
       resolve = res;
@@ -504,6 +575,7 @@ export class RemoteControlService {
 
     this.resultCollectors.set(jobId, {
       targets,
+      saveRunFiles,
       pending: new Set(targets),
       results: new Map(),
       resolve,

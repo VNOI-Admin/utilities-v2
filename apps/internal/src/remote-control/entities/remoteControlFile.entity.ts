@@ -19,10 +19,15 @@ export class RemoteControlFileEntity {
   @ApiProperty()
   hash: string;
 
+  @Expose()
+  @ApiProperty({ required: false })
+  path?: string;
+
   constructor(data: ConstructorType<RemoteControlFileEntity>) {
     this.key = data.key;
     this.filename = data.filename;
     this.size = data.size;
     this.hash = data.hash;
+    this.path = data.path;
   }
 }

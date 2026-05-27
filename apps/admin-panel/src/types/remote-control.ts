@@ -23,6 +23,7 @@ export interface RemoteControlFileMetadata {
   filename: string;
   size: number;
   hash: string;
+  path?: string;
 }
 
 export interface RemoteJob {

@@ -306,6 +306,25 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     }
   }
 
+  async function downloadRunFile(jobId: string, target: string, key: string, filename: string) {
+    const response = await internalClient.get(
+      `/remote-control/jobs/${encodeURIComponent(jobId)}/runs/${encodeURIComponent(target)}/files/${encodeURIComponent(key)}`,
+      { responseType: 'blob' },
+    );
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadOutputFile(run: RemoteJobRun, key: string, filename: string) {
+    return downloadRunFile(run.jobId, run.target, key, filename);
+  }
+
   async function refreshJob(jobId: string, payload: RefreshRemoteJobPayload) {
     try {
       runsError.value = null;
@@ -422,6 +441,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     fetchRuns,
     createJob,
     cancelJob,
+    downloadOutputFile,
     refreshJob,
     connectJobEvents,
     disconnectJobEvents,

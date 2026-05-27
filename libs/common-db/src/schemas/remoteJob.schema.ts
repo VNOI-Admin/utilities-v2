@@ -8,6 +8,7 @@ export interface RemoteJobFileMetadata {
   filename: string;
   size: number;
   hash: string;
+  path?: string;
 }
 
 @Schema()

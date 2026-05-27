@@ -15,8 +15,10 @@ import {
   Post,
   Query,
   Request,
+  Res,
   SerializeOptions,
   Sse,
+  StreamableFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -25,6 +27,7 @@ import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { type ClassConstructor, plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
+import type { Response } from 'express';
 import type { Observable } from 'rxjs';
 import { AgentJobUpdateDto } from './dtos/agentJobUpdate.dto';
 import { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
@@ -199,6 +202,22 @@ export class RemoteControlController {
   async getRun(@Param('jobId') jobId: string, @Param('target') target: string) {
     const run = await this.service.getRun(jobId, target);
     return new RemoteJobRunEntity(run as any);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Download a run output file' })
+  @Get('/jobs/:jobId/runs/:target/files/:key')
+  async downloadRunFile(
+    @Param('jobId') jobId: string,
+    @Param('target') target: string,
+    @Param('key') key: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const file = await this.service.getRunOutputFile(jobId, target, key);
+    res.attachment(file.filename);
+    return new StreamableFile(file.stream);
   }
 
   @ApiBearerAuth()
