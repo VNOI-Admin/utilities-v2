@@ -97,6 +97,12 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'] },
     },
     {
+      path: '/settings',
+      name: 'Settings',
+      component: () => import('~/views/Settings.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
       path: '/overlay',
       name: 'Overlay',
       component: () => import('~/views/Overlay.vue'),

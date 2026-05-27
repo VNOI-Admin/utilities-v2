@@ -122,6 +122,7 @@ import {
   Monitor,
   Play,
   Printer,
+  Settings,
   UserPlus,
   Users,
   UsersRound,
@@ -222,6 +223,12 @@ const allMenuItems = [
     label: 'Jobs',
     path: '/remote-control/jobs',
     iconComponent: ListChecks,
+    roles: ['admin']
+  },
+  {
+    label: 'Settings',
+    path: '/settings',
+    iconComponent: Settings,
     roles: ['admin']
   },
   {
