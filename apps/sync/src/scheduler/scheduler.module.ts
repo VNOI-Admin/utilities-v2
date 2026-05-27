@@ -3,8 +3,8 @@ import { Contest, ContestSchema } from '@libs/common-db/schemas/contest.schema';
 import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
+import { RemoteControlCoreModule } from '@libs/common/remote-control/remote-control.module';
 import { VNOJApiModule } from '@libs/api/vnoj-api.module';
-import { HttpModule } from '@nestjs/axios';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -19,7 +19,7 @@ import { SchedulerService } from './scheduler.service';
 
 @Module({
   imports: [
-    HttpModule,
+    RemoteControlCoreModule,
     BullModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         connection: {

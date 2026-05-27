@@ -17,7 +17,8 @@ import {
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
-import { HttpService } from '@nestjs/axios';
+import { RemoteJobRunStatus } from '@libs/common-db/schemas/remoteJobRun.schema';
+import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -28,9 +29,11 @@ import { Model, Types } from 'mongoose';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { firstValueFrom } from 'rxjs';
 
 import { type ReactionRenderJobData, QUEUE_NAMES } from '../constants';
+
+const EXTRACT_STREAM_SLICES_SCRIPT = 'extract-stream-slices';
+const EXTRACT_STREAM_SLICES_TIMEOUT_MS = 300_000;
 
 @Processor(QUEUE_NAMES.REACTION_RENDER, { concurrency: 1 })
 export class ReactionRenderProcessor extends WorkerHost {
@@ -40,8 +43,8 @@ export class ReactionRenderProcessor extends WorkerHost {
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private readonly httpService: HttpService,
     private readonly configService: ConfigService,
+    private readonly remoteControlService: RemoteControlService,
   ) {
     super();
   }
@@ -120,11 +123,6 @@ export class ReactionRenderProcessor extends WorkerHost {
         );
         return;
       }
-      if (!user.vpnIpAddress?.trim()) {
-        this.logger.warn(`No vpnIpAddress for user=${mappedUsername}, skip reaction`);
-        return;
-      }
-
       const anchor = submission.judgedAt ?? submission.submittedAt;
       const anchorSec = anchor.getTime() / 1000;
       const beforeSec = Number(this.configService.get('REACTION_BEFORE_SECONDS') ?? 5);
@@ -152,16 +150,12 @@ export class ReactionRenderProcessor extends WorkerHost {
         envLoaded.defaultUniversityName,
       );
 
-      const port = this.configService.get<string>('REMOTE_CONTROL_AGENT_PORT')?.trim() || '9010';
-      const base = `http://${user.vpnIpAddress}:${port}`;
-
       const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reaction-slices-'));
       const webcamPath = path.join(workDir, 'webcam.mkv');
       const screenPath = path.join(workDir, 'screen.mkv');
 
       try {
-        await this.downloadSlice(`${base}/records/slice/webcam`, startUnix, endUnix, webcamPath);
-        await this.downloadSlice(`${base}/records/slice/screen`, startUnix, endUnix, screenPath);
+        await this.extractStreamSlices(user.username, startUnix, endUnix, webcamPath, screenPath);
 
         const webm = await renderReactionWebmFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
         this.logger.log(`Rendered reaction WebM (${webm.length} bytes) for submission ${submissionId}`);
@@ -182,27 +176,42 @@ export class ReactionRenderProcessor extends WorkerHost {
     }
   }
 
-  private async downloadSlice(
-    url: string,
+  private async extractStreamSlices(
+    username: string,
     startUnix: number,
     endUnix: number,
-    destPath: string,
+    webcamPath: string,
+    screenPath: string,
   ): Promise<void> {
-    const response = await firstValueFrom(
-      this.httpService.post<ArrayBuffer>(
-        url,
-        { startUnix, endUnix },
-        {
-          responseType: 'arraybuffer',
-          timeout: 300_000,
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-          validateStatus: (status) => status >= 200 && status < 300,
-        },
-      ),
-    );
-    const body = response.data;
-    const buf = Buffer.isBuffer(body) ? body : Buffer.from(body as ArrayBuffer);
-    await fs.writeFile(destPath, buf);
+    const handle = await this.remoteControlService.runRemoteScript({
+      scriptName: EXTRACT_STREAM_SLICES_SCRIPT,
+      targets: [username],
+      args: [String(startUnix), String(endUnix)],
+      createdBy: 'reaction-render',
+      saveRunFiles: false,
+    });
+    const [result] = await this.withTimeout(handle.done, EXTRACT_STREAM_SLICES_TIMEOUT_MS);
+
+    if (result.status !== RemoteJobRunStatus.SUCCESS) {
+      throw new Error(`Slice extraction failed for ${username}: ${result.log ?? result.status}`);
+    }
+
+    const webcam = result.files.find((file) => file.key === 'webcam');
+    const screen = result.files.find((file) => file.key === 'screen');
+    if (!webcam || !screen) throw new Error(`Slice extraction did not return webcam and screen files for ${username}`);
+
+    await Promise.all([
+      fs.writeFile(webcamPath, webcam.buffer),
+      fs.writeFile(screenPath, screen.buffer),
+    ]);
+  }
+
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        setTimeout(() => reject(new Error('Slice extraction timed out')), timeoutMs);
+      }),
+    ]);
   }
 }
