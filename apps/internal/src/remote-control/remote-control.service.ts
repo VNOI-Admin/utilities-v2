@@ -99,6 +99,7 @@ interface RunResultCollector {
 
 const HTTP_TIMEOUT_MS = 5000;
 const DEFAULT_AGENT_PORT = 9010;
+const DISPATCH_CONCURRENCY = 10;
 
 @Injectable()
 export class RemoteControlService {
@@ -438,19 +439,22 @@ export class RemoteControlService {
   ) {
     const ipMap = await this.resolveVpnIps(targets);
 
-    await Promise.allSettled(
-      targets.map(async (target) => {
-        const ip = ipMap.get(target);
-        if (!ip) {
-          return this.failRun(jobId, target, 'target vpn ip not found');
-        }
-        try {
-          await this.postRunToAgent(ip, jobId, payload, files);
-        } catch (error) {
-          await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
-        }
-      }),
-    );
+    for (let index = 0; index < targets.length; index += DISPATCH_CONCURRENCY) {
+      const batch = targets.slice(index, index + DISPATCH_CONCURRENCY);
+      await Promise.allSettled(
+        batch.map(async (target) => {
+          const ip = ipMap.get(target);
+          if (!ip) {
+            return this.failRun(jobId, target, 'target vpn ip not found');
+          }
+          try {
+            await this.postRunToAgent(ip, jobId, payload, files);
+          } catch (error) {
+            await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
+          }
+        }),
+      );
+    }
   }
 
   private postRunToAgent(ip: string, jobId: string, payload: AgentJobPayload, files: RemoteControlRuntimeFile[]) {
