@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { SystemConfigModule } from './config/system-config.module';
 import { ContestModule } from './contest/contest.module';
 import { FloorPlanModule } from './floor-plan/floor-plan.module';
 import { GroupModule } from './group/group.module';
@@ -32,6 +33,7 @@ import { UserModule } from './user/user.module';
     ReactionModule,
     FloorPlanModule,
     RemoteControlModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],
