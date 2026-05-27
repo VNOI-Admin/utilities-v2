@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+title="${2:+$1}"
+message="${2:-$1}"
+title="${title:-Announcement}"
+
+exec sudo -Hu contestant \
+  env XDG_RUNTIME_DIR="/run/user/1001" \
+  DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1001/bus" \
+  notify-send -i dialog-information -t 0 "$title" "$message"
