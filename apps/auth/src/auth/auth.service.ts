@@ -1,4 +1,10 @@
+import {
+  CONTESTANT_LOGIN_LOCKED_UNTIL_CONFIG_KEY,
+  SystemConfig,
+  type SystemConfigDocument,
+} from '@libs/common-db/schemas/systemConfig.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { Role } from '@libs/common/decorators/role.decorator';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -14,6 +20,8 @@ export class AuthService {
   constructor(
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
+    @InjectModel(SystemConfig.name)
+    private systemConfigModel: Model<SystemConfigDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
@@ -35,6 +43,8 @@ export class AuthService {
       throw new BadRequestException('Invalid credentials');
     }
 
+    await this.ensureContestantLoginIsOpen(user.role);
+
     const tokens = await this.generateTokens(user.username);
 
     await this.userModel.updateOne(
@@ -45,6 +55,23 @@ export class AuthService {
     );
 
     return new TokensEntity(tokens);
+  }
+
+  private async ensureContestantLoginIsOpen(role: string) {
+    if (role !== Role.CONTESTANT) {
+      return;
+    }
+
+    const config = await this.systemConfigModel.findOne({ key: CONTESTANT_LOGIN_LOCKED_UNTIL_CONFIG_KEY }).lean();
+    const lockedUntil = config?.value;
+
+    if (!lockedUntil) {
+      return;
+    }
+
+    if (Date.now() < new Date(String(lockedUntil)).getTime()) {
+      throw new ForbiddenException('Contestant login is not open yet');
+    }
   }
 
   async getUserInfo(username: string) {
