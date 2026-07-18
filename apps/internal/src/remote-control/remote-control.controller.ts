@@ -93,7 +93,7 @@ export class RemoteControlController {
   @ApiBearerAuth()
   @AccessTokenOptional()
   @UseGuards(AccessTokenGuard, IPAddressGuard)
-  @RequiredRoles(Role.ADMIN, Role.CONTESTANT)
+  @RequiredRoles(Role.ADMIN, Role.CONTESTANT, Role.GUEST)
   @ApiOperation({ summary: 'Get script by name' })
   @ApiResponse({ status: 200, type: RemoteControlScriptEntity })
   @Get('/scripts/:name')
