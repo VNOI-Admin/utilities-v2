@@ -25,16 +25,16 @@ export class MachineUsageEntity {
   isOnline: boolean;
 
   @Expose()
-  @ApiProperty()
-  lastReportedAt: Date;
+  @ApiProperty({ required: false })
+  lastReportedAt?: Date;
 
-  constructor(data: ConstructorType<MachineUsageEntity>) {
-    this.cpu = data.cpu;
-    this.memory = data.memory;
-    this.disk = data.disk;
-    this.ping = data.ping;
-    this.isOnline = data.isOnline;
-    this.lastReportedAt = data.lastReportedAt;
+  constructor(data?: Partial<ConstructorType<MachineUsageEntity>>) {
+    this.cpu = data?.cpu ?? 0;
+    this.memory = data?.memory ?? 0;
+    this.disk = data?.disk ?? 0;
+    this.ping = data?.ping ?? 0;
+    this.isOnline = data?.isOnline ?? false;
+    this.lastReportedAt = data?.lastReportedAt;
   }
 }
 
