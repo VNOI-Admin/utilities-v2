@@ -847,6 +847,29 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         format: 'json',
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags User
+     * @name SyncAllVpnUsers
+     * @summary Queue VPN sync for all VPN users
+     * @request POST:/users/vpn/sync-all
+     * @secure
+     */
+    syncAllVpnUsers: (params: RequestParams = {}) =>
+      this.request<
+        {
+          count?: number;
+        },
+        any
+      >({
+        path: `/users/vpn/sync-all`,
+        method: 'POST',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
   };
   group = {
     /**
