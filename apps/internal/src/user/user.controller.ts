@@ -5,6 +5,7 @@ import { UserEntity } from '@libs/common/dtos/User.entity';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
+import { VpnSyncService } from '../vpn-sync/vpn-sync.service';
 import { BatchCreateUsersDto } from './dtos/batchCreateUsers.dto';
 import { BatchCreateUsersResponseDto } from './dtos/batchCreateUsersResponse.dto';
 import { BulkDeleteUsersDto, BulkDeleteUsersResponseDto } from './dtos/bulkDeleteUsers.dto';
@@ -16,7 +17,10 @@ import { UserService } from './user.service';
 @ApiTags('User')
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly vpnSyncService: VpnSyncService,
+  ) {}
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
@@ -122,5 +126,23 @@ export class UserController {
   @Delete('/:username')
   async deleteUser(@Param('username') username: string) {
     return await this.userService.deleteUser(username);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Queue VPN sync for all VPN users' })
+  @ApiResponse({
+    status: 200,
+    description: 'VPN sync jobs queued',
+    schema: {
+      properties: {
+        count: { type: 'number' },
+      },
+    },
+  })
+  @Post('/vpn/sync-all')
+  async syncAllVpnUsers() {
+    return await this.vpnSyncService.queueAllVpnUsers();
   }
 }

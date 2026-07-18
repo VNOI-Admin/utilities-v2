@@ -32,11 +32,33 @@ services:
     ports:
       - "127.0.0.1:8002:8002"
 
+  wg_portal:
+    image: wgportal/wg-portal:v2
+    container_name: utilities_wg-portal
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    network_mode: "host"
+    env_file:
+      - .docker.env
+    environment:
+      WG_PORTAL_CORE_IMPORT_EXISTING: "true"
+      WG_PORTAL_CORE_RESTORE_STATE: "true"
+      WG_PORTAL_WEB_LISTENING_ADDRESS: ":8888"
+      WG_PORTAL_ADVANCED_CONFIG_STORAGE_PATH: "/etc/wireguard"
+      WG_PORTAL_DATABASE_TYPE: "sqlite"
+      WG_PORTAL_DATABASE_DSN: "/app/data/sqlite.db"
+    volumes:
+      - ./data/wg-portal:/app/data
+      - /etc/wireguard:/etc/wireguard
+
   internal:
     image: utilities/internal
     container_name: utilities_internal
     networks:
       - utilities_network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .docker.env
     ports:

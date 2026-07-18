@@ -32,6 +32,10 @@ export class PingUsersProcessor extends WorkerHost {
 
     const pingResults = await Promise.all(
       users.map(async (user) => {
+        if (!user.vpnIpAddress) {
+          return null;
+        }
+
         const res = await ping.promise.probe(user.vpnIpAddress, {
           timeout: 3,
           min_reply: 3,
@@ -69,9 +73,7 @@ export class PingUsersProcessor extends WorkerHost {
       }),
     );
 
-    if (pingResults.length > 0) {
-      await this.userModel.bulkWrite(pingResults);
-    }
+    await this.userModel.bulkWrite(pingResults.filter((operation) => operation !== null));
 
     this.logger.log('Pinging completed');
   }
