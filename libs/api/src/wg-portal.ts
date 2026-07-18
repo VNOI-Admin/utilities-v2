@@ -58,6 +58,29 @@ export class WgPortalApi {
     });
   }
 
+  async upsertInterface(interfaceId: string, values: Record<string, unknown>): Promise<void> {
+    let current: Record<string, unknown> | undefined;
+    try {
+      current = (
+        await this.instance.get<Record<string, unknown>>(
+          `/interface/by-id/${encodeURIComponent(interfaceId)}`,
+        )
+      ).data;
+    } catch (error) {
+      if (!axios.isAxiosError(error) || error.response?.status !== 404) {
+        throw error;
+      }
+    }
+
+    const base = current ?? (await this.instance.get<Record<string, unknown>>('/interface/prepare')).data;
+    const iface = { ...base, ...values, Identifier: interfaceId };
+    if (current) {
+      await this.instance.put(`/interface/by-id/${encodeURIComponent(interfaceId)}`, iface);
+    } else {
+      await this.instance.post('/interface/new', iface);
+    }
+  }
+
   async getPeersByInterface(interfaceId: string): Promise<WgPortalPeer[]> {
     const response = await this.instance.get<WgPortalPeer[]>(`/peer/by-interface/${encodeURIComponent(interfaceId)}`);
     return response.data;
