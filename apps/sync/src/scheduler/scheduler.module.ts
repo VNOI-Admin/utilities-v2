@@ -1,10 +1,10 @@
-import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
+import { VNOJApiModule } from '@libs/api/vnoj-api.module';
 import { Contest, ContestSchema } from '@libs/common-db/schemas/contest.schema';
-import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
-import { RemoteControlCoreModule } from '@libs/common/remote-control/remote-control.module';
-import { VNOJApiModule } from '@libs/api/vnoj-api.module';
+import { RemoteControlScript, RemoteControlScriptSchema } from '@libs/common-db/schemas/remoteControlScript.schema';
+import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
+import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,14 +12,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { QUEUE_NAMES } from './constants';
 import { PingUsersProcessor } from './processors/ping-users.processor';
-import { SyncSubmissionsProcessor } from './processors/sync-submissions.processor';
 import { ProcessReactionsProcessor } from './processors/process-reactions.processor';
 import { ReactionRenderProcessor } from './processors/reaction-render.processor';
+import { SyncSubmissionsProcessor } from './processors/sync-submissions.processor';
 import { SchedulerService } from './scheduler.service';
 
 @Module({
   imports: [
-    RemoteControlCoreModule,
     BullModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         connection: {
@@ -50,6 +49,7 @@ import { SchedulerService } from './scheduler.service';
       { name: Submission.name, schema: SubmissionSchema },
       { name: Participant.name, schema: ParticipantSchema },
       { name: Problem.name, schema: ProblemSchema },
+      { name: RemoteControlScript.name, schema: RemoteControlScriptSchema },
     ]),
     VNOJApiModule.forRootAsync(),
   ],

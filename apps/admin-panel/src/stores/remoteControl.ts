@@ -1,10 +1,9 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { internalClient } from '~/services/api';
+import { internalClient, userClient } from '~/services/api';
 import type {
   CancelRemoteJobResponse,
   CreateRemoteJobPayload,
-  JobRunUpdatedEvent,
   RefreshRemoteJobPayload,
   RefreshRemoteJobSyncResponse,
   RemoteControlScript,
@@ -70,12 +69,6 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
   const jobsError = ref<string | null>(null);
   const runsError = ref<string | null>(null);
 
-  const eventsConnected = ref(false);
-  const eventsError = ref<string | null>(null);
-
-  let eventSource: EventSource | null = null;
-  let subscribedJobId: string | null = null;
-
   function upsertScriptSummary(script: RemoteControlScriptSummary) {
     const index = scripts.value.findIndex((item) => item.name === script.name);
     if (index === -1) {
@@ -100,35 +93,6 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     jobs.value = sortJobsByCreatedAt(next);
   }
 
-  function patchJobRun(jobId: string, target: string, updates: Partial<RemoteJobRun>) {
-    const index = jobRuns.value.findIndex((item) => item.jobId === jobId && item.target === target);
-
-    if (index === -1) {
-      const newRun: RemoteJobRun = {
-        id: updates.id ?? `${jobId}:${target}`,
-        jobId,
-        target,
-        status: updates.status ?? 'pending',
-        exitCode: updates.exitCode ?? null,
-        log: updates.log ?? null,
-        outputFiles: updates.outputFiles!,
-        updatedAt: updates.updatedAt ?? new Date().toISOString(),
-      };
-
-      jobRuns.value = sortRunsByTarget([...jobRuns.value, newRun]);
-      return;
-    }
-
-    const next = [...jobRuns.value];
-    next[index] = {
-      ...next[index],
-      ...updates,
-      jobId,
-      target,
-    };
-    jobRuns.value = next;
-  }
-
   function setRuns(runs: RemoteJobRun[]) {
     jobRuns.value = sortRunsByTarget(runs);
   }
@@ -150,9 +114,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
   async function getScriptByName(name: string) {
     try {
       scriptsError.value = null;
-      const response = await internalClient.get<RemoteControlScript>(
-        `/remote-control/scripts/${encodeURIComponent(name)}`,
-      );
+      const response = await userClient.get<RemoteControlScript>(`/remote-control/scripts/${encodeURIComponent(name)}`);
       upsertScriptSummary(response.data);
       return response.data;
     } catch (error: any) {
@@ -280,7 +242,10 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     }
   }
 
-  async function createJobWithFiles(payload: Omit<CreateRemoteJobPayload, 'files'>, files: CreateRemoteJobPayload['files']) {
+  async function createJobWithFiles(
+    payload: Omit<CreateRemoteJobPayload, 'files'>,
+    files: CreateRemoteJobPayload['files'],
+  ) {
     const formData = new FormData();
     formData.append('payload', JSON.stringify(payload));
     files?.forEach(({ key, file }) => formData.append(`file:${key}`, file, file.name));
@@ -344,76 +309,10 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     }
   }
 
-  function onRunUpdate(event: MessageEvent<string>) {
-    try {
-      const parsed = JSON.parse(event.data) as JobRunUpdatedEvent;
-      if (!parsed.jobId || !parsed.target) return;
-      if (subscribedJobId && parsed.jobId !== subscribedJobId) return;
-
-      const updates: Partial<RemoteJobRun> = {
-        status: parsed.status,
-        updatedAt: parsed.updatedAt,
-      };
-
-      if (Object.prototype.hasOwnProperty.call(parsed, 'exitCode')) {
-        updates.exitCode = parsed.exitCode;
-      }
-
-      if (Object.prototype.hasOwnProperty.call(parsed, 'log')) {
-        updates.log = parsed.log ?? null;
-      }
-
-      if (Object.prototype.hasOwnProperty.call(parsed, 'outputFiles')) {
-        updates.outputFiles = parsed.outputFiles;
-      }
-
-      patchJobRun(parsed.jobId, parsed.target, updates);
-    } catch {
-      // Ignore malformed SSE payloads.
-    }
-  }
-
-  function connectJobEvents(jobId: string) {
-    disconnectJobEvents();
-
-    const baseUrl = (internalClient.defaults.baseURL || '').replace(/\/$/, '');
-    const endpoint = `/remote-control/jobs/${encodeURIComponent(jobId)}/events`;
-    const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
-
-    eventsConnected.value = false;
-    eventsError.value = null;
-    subscribedJobId = jobId;
-
-    eventSource = new EventSource(url, { withCredentials: true });
-    eventSource.addEventListener('jobRun.updated', onRunUpdate as EventListener);
-
-    eventSource.onopen = () => {
-      eventsConnected.value = true;
-      eventsError.value = null;
-    };
-
-    eventSource.onerror = () => {
-      eventsConnected.value = false;
-      eventsError.value = 'Live updates disconnected';
-    };
-  }
-
-  function disconnectJobEvents() {
-    if (eventSource) {
-      eventSource.removeEventListener('jobRun.updated', onRunUpdate as EventListener);
-      eventSource.close();
-      eventSource = null;
-    }
-
-    subscribedJobId = null;
-    eventsConnected.value = false;
-  }
-
   function clearJobContext() {
     jobDetail.value = null;
     jobRuns.value = [];
     runsError.value = null;
-    eventsError.value = null;
   }
 
   return {
@@ -429,8 +328,6 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     scriptsError,
     jobsError,
     runsError,
-    eventsConnected,
-    eventsError,
     fetchScripts,
     getScriptByName,
     createScript,
@@ -443,8 +340,6 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
     cancelJob,
     downloadOutputFile,
     refreshJob,
-    connectJobEvents,
-    disconnectJobEvents,
     clearJobContext,
   };
 });

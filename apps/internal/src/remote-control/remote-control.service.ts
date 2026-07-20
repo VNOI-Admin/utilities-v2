@@ -1,7 +1,7 @@
 import { createHash } from 'crypto';
 import { createReadStream } from 'fs';
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import * as path from 'path';
+import { RemoteControlApi, type RemoteControlJobPayload } from '@libs/api/remote-control';
 import {
   RemoteControlScript,
   type RemoteControlScriptDocument,
@@ -18,44 +18,22 @@ import {
 } from '@libs/common-db/schemas/remoteJobRun.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { getErrorMessage } from '@libs/common/helper/error';
-import { HttpService } from '@nestjs/axios';
-import { BadRequestException, Injectable, type MessageEvent, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
+import { readFile, readdir } from 'fs/promises';
 import { Model } from 'mongoose';
-import { type Observable, Subject, finalize, firstValueFrom } from 'rxjs';
 import * as uuid from 'uuid';
-import type { AgentJobUpdateDto } from './dtos/agentJobUpdate.dto';
 import type { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
 import type { CreateRemoteControlJobDto } from './dtos/createJob.dto';
 import type { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
 import type { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
 import type { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
 
-interface AgentJobPayload {
-  scriptName: string;
-  scriptHash: string;
-  args: string[];
-  env: Record<string, string>;
-  inputFiles: RemoteJobFileMetadata[];
-}
-
-interface AgentJobStatus {
-  status: string;
-  exitCode: number | null;
-  log?: string;
-}
-
 interface RunUpdateInput {
-  status?: RemoteJobRunStatus;
+  status: RemoteJobRunStatus;
   exitCode?: number | null;
   log?: string;
-  outputFiles?: RemoteControlRuntimeFile[];
-}
-
-interface JobStream {
-  subject: Subject<MessageEvent>;
-  subscribers: number;
 }
 
 export interface RemoteControlFileInput {
@@ -70,27 +48,13 @@ export interface RemoteControlRuntimeFile extends RemoteJobFileMetadata {
   contentType?: string | null;
 }
 
-export interface RunRemoteControlScriptInput {
+interface CreateRemoteControlJobInput {
   scriptName: string;
   targets: string[];
   args?: string[];
   env?: Record<string, string>;
   files?: RemoteControlFileInput[];
   createdBy?: string;
-  saveRunFiles?: boolean;
-}
-
-export interface RemoteControlScriptRunResult {
-  target: string;
-  status: RemoteJobRunStatus;
-  exitCode: number | null;
-  log: string | null;
-  files: RemoteControlRuntimeFile[];
-}
-
-export interface RemoteControlScriptRunHandle {
-  jobId: string;
-  done: Promise<RemoteControlScriptRunResult[]>;
 }
 
 export interface RemoteControlStoredFile {
@@ -98,26 +62,14 @@ export interface RemoteControlStoredFile {
   filename: string;
 }
 
-interface RunResultCollector {
-  targets: string[];
-  saveRunFiles: boolean;
-  pending: Set<string>;
-  results: Map<string, RemoteControlScriptRunResult>;
-  resolve: (results: RemoteControlScriptRunResult[]) => void;
-}
-
-const HTTP_TIMEOUT_MS = 5000;
-const DEFAULT_AGENT_PORT = 9010;
 const DISPATCH_CONCURRENCY = 10;
 const DEFAULT_REMOTE_JOB_FILES_ROOT = 'data/remote-job-files';
 const REMOTE_JOB_SCRIPTS_DIR = 'scripts/remote';
 
 @Injectable()
 export class RemoteControlService implements OnModuleInit {
-  private readonly jobStreams = new Map<string, JobStream>();
-  private readonly resultCollectors = new Map<string, RunResultCollector>();
-  private readonly agentPort: number;
   private readonly filesRoot: string;
+  private readonly remoteAgent: RemoteControlApi;
 
   constructor(
     @InjectModel(RemoteControlScript.name)
@@ -126,11 +78,9 @@ export class RemoteControlService implements OnModuleInit {
     @InjectModel(RemoteJobRun.name)
     private runModel: Model<RemoteJobRunDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private http: HttpService,
     configService: ConfigService,
   ) {
-    const rawPort = configService.get('REMOTE_CONTROL_AGENT_PORT');
-    this.agentPort = rawPort ? Number(rawPort) : DEFAULT_AGENT_PORT;
+    this.remoteAgent = new RemoteControlApi();
     this.filesRoot = path.resolve(configService.get('REMOTE_JOB_FILES_ROOT') ?? DEFAULT_REMOTE_JOB_FILES_ROOT);
   }
 
@@ -151,12 +101,6 @@ export class RemoteControlService implements OnModuleInit {
       content,
     });
     return script.toObject();
-  }
-
-  async getScriptByName(name: string): Promise<RemoteControlScript> {
-    const script = await this.scriptModel.findOne({ name }).lean();
-    if (!script) throw new NotFoundException('Script not found');
-    return script;
   }
 
   async updateScriptContent(name: string, content: string): Promise<RemoteControlScript> {
@@ -203,21 +147,11 @@ export class RemoteControlService implements OnModuleInit {
     dto: CreateRemoteControlJobDto,
     files: RemoteControlFileInput[] = [],
   ): Promise<RemoteJob> {
-    const { job } = await this.createAndDispatch({
+    return this.createAndDispatch({
       ...dto,
       createdBy,
       files,
     });
-    return job;
-  }
-
-  async runRemoteScript(input: RunRemoteControlScriptInput): Promise<RemoteControlScriptRunHandle> {
-    const { job, done } = await this.createAndDispatch(input, true);
-    return { jobId: job.jobId, done };
-  }
-
-  releaseRemoteScriptResult(jobId: string) {
-    this.resultCollectors.delete(jobId);
   }
 
   async listJobs(query: GetRemoteControlJobsDto): Promise<RemoteJob[]> {
@@ -268,24 +202,6 @@ export class RemoteControlService implements OnModuleInit {
     return run;
   }
 
-  async applyAgentUpdate(
-    jobId: string,
-    target: string,
-    dto: AgentJobUpdateDto,
-    outputFiles: RemoteControlFileInput[] = [],
-  ): Promise<void> {
-    await this.getRun(jobId, target);
-    const collector = this.resultCollectors.get(jobId);
-    const files = await this.prepareRunFiles(jobId, target, outputFiles, collector?.saveRunFiles ?? true);
-    const run = await this.updateRun(jobId, target, {
-      log: dto.log,
-      exitCode: dto.exitCode,
-      status: dto.status,
-      outputFiles: files,
-    });
-    if (!run) throw new NotFoundException('Job run not found');
-  }
-
   async getRunOutputFile(jobId: string, target: string, key: string): Promise<RemoteControlStoredFile> {
     const run = await this.getRun(jobId, target);
     const file = run.outputFiles.find((item) => item.key === key);
@@ -315,7 +231,7 @@ export class RemoteControlService implements OnModuleInit {
           };
 
         try {
-          await this.agentPost(ip, `/jobs/${jobId}/cancel`, {});
+          await this.remoteAgent.cancel(ip, jobId);
           return { target, accepted: true, message: 'cancel requested' };
         } catch (error) {
           return { target, accepted: false, message: getErrorMessage(error) };
@@ -341,10 +257,7 @@ export class RemoteControlService implements OnModuleInit {
       await Promise.allSettled(
         dto.targets.map(async (target) => {
           const ip = ipMap.get(target);
-          if (ip)
-            await this.agentPost(ip, `/jobs/${jobId}/report`, {
-              includeLog: dto.includeLog,
-            });
+          if (ip) await this.remoteAgent.requestReport(ip, jobId, dto.includeLog);
         }),
       );
       return { accepted: true };
@@ -362,25 +275,6 @@ export class RemoteControlService implements OnModuleInit {
     return { jobId, runs };
   }
 
-  subscribe(jobId: string): Observable<MessageEvent> {
-    let stream = this.jobStreams.get(jobId);
-    if (!stream) {
-      stream = { subject: new Subject<MessageEvent>(), subscribers: 0 };
-      this.jobStreams.set(jobId, stream);
-    }
-    stream.subscribers++;
-
-    return stream.subject.asObservable().pipe(
-      finalize(() => {
-        const s = this.jobStreams.get(jobId);
-        if (s && --s.subscribers <= 0) {
-          s.subject.complete();
-          this.jobStreams.delete(jobId);
-        }
-      }),
-    );
-  }
-
   mapUploadedFiles(files: Express.Multer.File[] = []): RemoteControlFileInput[] {
     return files.map((file, index) => ({
       key: file.fieldname.startsWith('file:') ? file.fieldname.slice(5) : `file${index + 1}`,
@@ -390,18 +284,7 @@ export class RemoteControlService implements OnModuleInit {
     }));
   }
 
-  private async createAndDispatch(
-    input: RunRemoteControlScriptInput,
-    collectResults: true,
-  ): Promise<{ job: RemoteJob; done: Promise<RemoteControlScriptRunResult[]> }>;
-  private async createAndDispatch(
-    input: RunRemoteControlScriptInput,
-    collectResults?: false,
-  ): Promise<{ job: RemoteJob; done?: Promise<RemoteControlScriptRunResult[]> }>;
-  private async createAndDispatch(
-    input: RunRemoteControlScriptInput,
-    collectResults = false,
-  ): Promise<{ job: RemoteJob; done?: Promise<RemoteControlScriptRunResult[]> }> {
+  private async createAndDispatch(input: CreateRemoteControlJobInput): Promise<RemoteJob> {
     if (!input.scriptName) throw new BadRequestException('Script name is required');
     if (!Array.isArray(input.targets) || input.targets.length === 0) {
       throw new BadRequestException('At least one target is required');
@@ -447,10 +330,6 @@ export class RemoteControlService implements OnModuleInit {
       throw error;
     }
 
-    const done = collectResults
-      ? this.createResultCollector(job.jobId, targets, input.saveRunFiles ?? false)
-      : undefined;
-
     // Fire-and-forget dispatch
     void this.dispatchToAgents(
       job.jobId,
@@ -469,30 +348,13 @@ export class RemoteControlService implements OnModuleInit {
       );
     });
 
-    return { job: job.toObject(), done };
-  }
-
-  private agentPost(ip: string, path: string, body: object) {
-    return firstValueFrom(
-      this.http.post(`http://${ip}:${this.agentPort}${path}`, body, {
-        timeout: HTTP_TIMEOUT_MS,
-      }),
-    );
-  }
-
-  private agentGet<T>(ip: string, path: string, params: Record<string, string> = {}) {
-    return firstValueFrom(
-      this.http.get<T>(`http://${ip}:${this.agentPort}${path}`, {
-        timeout: HTTP_TIMEOUT_MS,
-        params,
-      }),
-    );
+    return job.toObject();
   }
 
   private async dispatchToAgents(
     jobId: string,
     targets: string[],
-    payload: AgentJobPayload,
+    payload: RemoteControlJobPayload,
     files: RemoteControlRuntimeFile[] = [],
   ) {
     const ipMap = await this.resolveVpnIps(targets);
@@ -506,33 +368,13 @@ export class RemoteControlService implements OnModuleInit {
             return this.failRun(jobId, target, 'target vpn ip not found');
           }
           try {
-            await this.postRunToAgent(ip, jobId, payload, files);
+            await this.remoteAgent.run(ip, jobId, payload, files);
           } catch (error) {
             await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
           }
         }),
       );
     }
-  }
-
-  private postRunToAgent(ip: string, jobId: string, payload: AgentJobPayload, files: RemoteControlRuntimeFile[]) {
-    const form = new FormData();
-    form.append('payload', JSON.stringify(payload));
-
-    for (const file of files) {
-      const bytes = new Uint8Array(file.buffer.length);
-      bytes.set(file.buffer);
-      const blob = new Blob([bytes], {
-        type: file.contentType ?? undefined,
-      });
-      form.append('files', blob, file.filename);
-    }
-
-    return firstValueFrom(
-      this.http.post(`http://${ip}:${this.agentPort}/jobs/${jobId}/run`, form, {
-        timeout: 0,
-      }),
-    );
   }
 
   private normalizeFiles(files: RemoteControlFileInput[]): RemoteControlRuntimeFile[] {
@@ -559,88 +401,10 @@ export class RemoteControlService implements OnModuleInit {
     return files.map(({ buffer: _buffer, contentType: _contentType, ...metadata }) => metadata);
   }
 
-  private async prepareRunFiles(
-    jobId: string,
-    target: string,
-    files: RemoteControlFileInput[],
-    saveFiles: boolean,
-  ): Promise<RemoteControlRuntimeFile[]> {
-    const normalized = this.normalizeFiles(files);
-    if (!saveFiles) return normalized;
-
-    await Promise.all(
-      normalized.map(async (file) => {
-        file.path = this.getStoredFilePath(jobId, target, file);
-        await this.writeStoredFile(file.path, file.buffer);
-      }),
-    );
-
-    return normalized;
-  }
-
-  private getStoredFilePath(jobId: string, target: string, file: RemoteControlRuntimeFile): string {
-    const filename = `${this.safePathPart(file.key)}-${this.safePathPart(file.filename)}`;
-    return path.join(this.safePathPart(jobId), this.safePathPart(target), filename);
-  }
-
-  private async writeStoredFile(relativePath: string, buffer: Buffer) {
-    const fullPath = this.resolveStoredFilePath(relativePath);
-    await mkdir(path.dirname(fullPath), { recursive: true });
-    await writeFile(fullPath, buffer);
-  }
-
   private resolveStoredFilePath(relativePath: string) {
     const fullPath = path.resolve(this.filesRoot, relativePath);
     if (!fullPath.startsWith(`${this.filesRoot}${path.sep}`)) throw new BadRequestException('Invalid file path');
     return fullPath;
-  }
-
-  private safePathPart(value: string) {
-    return value.replace(/[^a-zA-Z0-9._-]/g, '_');
-  }
-
-  private createResultCollector(
-    jobId: string,
-    targets: string[],
-    saveRunFiles: boolean,
-  ): Promise<RemoteControlScriptRunResult[]> {
-    let resolve!: (results: RemoteControlScriptRunResult[]) => void;
-    const done = new Promise<RemoteControlScriptRunResult[]>((res) => {
-      resolve = res;
-    });
-
-    this.resultCollectors.set(jobId, {
-      targets,
-      saveRunFiles,
-      pending: new Set(targets),
-      results: new Map(),
-      resolve,
-    });
-
-    return done;
-  }
-
-  private completeCollectedRun(jobId: string, result: RemoteControlScriptRunResult) {
-    if (!this.isFinalStatus(result.status)) return;
-
-    const collector = this.resultCollectors.get(jobId);
-    if (!collector || !collector.pending.has(result.target)) return;
-
-    collector.pending.delete(result.target);
-    collector.results.set(result.target, result);
-
-    if (collector.pending.size > 0) return;
-
-    this.resultCollectors.delete(jobId);
-    collector.resolve(
-      collector.targets
-        .map((target) => collector.results.get(target))
-        .filter((item): item is RemoteControlScriptRunResult => Boolean(item)),
-    );
-  }
-
-  private isFinalStatus(status: RemoteJobRunStatus) {
-    return status === RemoteJobRunStatus.SUCCESS || status === RemoteJobRunStatus.FAILED;
   }
 
   private async failRun(jobId: string, target: string, message: string) {
@@ -654,9 +418,7 @@ export class RemoteControlService implements OnModuleInit {
     if (!ip) return;
 
     try {
-      const { data: agent } = await this.agentGet<AgentJobStatus>(ip, `/jobs/${jobId}`, {
-        includeLog: String(includeLog),
-      });
+      const { data: agent } = await this.remoteAgent.getJob(ip, jobId, includeLog);
 
       await this.updateRun(jobId, target, {
         exitCode: agent.exitCode ?? undefined,
@@ -672,29 +434,10 @@ export class RemoteControlService implements OnModuleInit {
   }
 
   private async updateRun(jobId: string, target: string, input: RunUpdateInput): Promise<RemoteJobRun | null> {
-    if (
-      input.status === undefined &&
-      input.exitCode === undefined &&
-      input.log === undefined &&
-      input.outputFiles === undefined
-    ) {
-      return null;
-    }
-
     const update: Record<string, any> = {};
-    if (input.status !== undefined) update.status = input.status;
+    update.status = input.status;
     if (input.exitCode !== undefined) update.exitCode = input.exitCode;
     if (input.log !== undefined) update.log = input.log;
-    if (input.outputFiles !== undefined) update.outputFiles = this.toFileMetadata(input.outputFiles);
-
-    if (input.status === undefined) {
-      const updatedRunDoc = await this.runModel.findOneAndUpdate({ jobId, target }, update, { new: true });
-      if (!updatedRunDoc) return null;
-      const updatedRun = updatedRunDoc.toObject();
-      this.emitRunUpdate(jobId, updatedRun);
-      this.collectRunResult(jobId, updatedRun, input.outputFiles);
-      return updatedRun;
-    }
 
     for (let attempt = 0; attempt < 2; attempt++) {
       const currentRunDoc = await this.runModel.findOne({ jobId, target });
@@ -712,22 +455,10 @@ export class RemoteControlService implements OnModuleInit {
       }
 
       const updatedRun = updatedRunDoc.toObject();
-      this.emitRunUpdate(jobId, updatedRun);
-      this.collectRunResult(jobId, updatedRun, input.outputFiles);
       return updatedRun;
     }
 
     return null;
-  }
-
-  private collectRunResult(jobId: string, run: RemoteJobRun, files: RemoteControlRuntimeFile[] = []) {
-    this.completeCollectedRun(jobId, {
-      target: run.target,
-      status: run.status,
-      exitCode: run.exitCode ?? null,
-      log: run.log ?? null,
-      files,
-    });
   }
 
   private async resolveVpnIps(targets: string[]): Promise<Map<string, string>> {
@@ -770,23 +501,5 @@ export class RemoteControlService implements OnModuleInit {
 
   private getStatusDelta(from: RemoteJobRunStatus, to: RemoteJobRunStatus, value: RemoteJobRunStatus) {
     return (to === value ? 1 : 0) - (from === value ? 1 : 0);
-  }
-
-  private emitRunUpdate(jobId: string, run: RemoteJobRun) {
-    const stream = this.jobStreams.get(jobId);
-    if (!stream) return;
-
-    stream.subject.next({
-      type: 'jobRun.updated',
-      data: {
-        jobId,
-        target: run.target,
-        status: run.status,
-        exitCode: run.exitCode ?? null,
-        log: run.log ?? undefined,
-        outputFiles: run.outputFiles,
-        updatedAt: new Date(run.updatedAt!).toISOString(),
-      },
-    });
   }
 }

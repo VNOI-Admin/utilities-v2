@@ -1,8 +1,20 @@
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { RemoteControlApi } from '@libs/api/remote-control';
+import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import {
-  buildReactionParamsPartial,
+  RemoteControlScript,
+  type RemoteControlScriptDocument,
+} from '@libs/common-db/schemas/remoteControlScript.schema';
+import { Submission, type SubmissionDocument, SubmissionStatus } from '@libs/common-db/schemas/submission.schema';
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import {
   ReactionLogoError,
   ReactionRenderConfigError,
   type ReactionRenderEnvLoaded,
+  buildReactionParamsPartial,
   readReactionRenderEnv,
   renderReactionWebmFromSlicePaths,
   resolveUniversityLogoAbsolutePath,
@@ -14,23 +26,14 @@ import {
   putReactionWebm,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
-import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
-import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
-import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
-import { RemoteJobRunStatus } from '@libs/common-db/schemas/remoteJobRun.schema';
-import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import type { S3Client } from '@aws-sdk/client-s3';
 import { Job } from 'bullmq';
 import { Model, Types } from 'mongoose';
-import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
-import * as path from 'node:path';
 
-import { type ReactionRenderJobData, QUEUE_NAMES } from '../constants';
+import { QUEUE_NAMES, type ReactionRenderJobData } from '../constants';
 
 const EXTRACT_STREAM_SLICES_SCRIPT = 'extract-stream-slices';
 const EXTRACT_STREAM_SLICES_TIMEOUT_MS = 300_000;
@@ -38,15 +41,17 @@ const EXTRACT_STREAM_SLICES_TIMEOUT_MS = 300_000;
 @Processor(QUEUE_NAMES.REACTION_RENDER, { concurrency: 1 })
 export class ReactionRenderProcessor extends WorkerHost {
   private readonly logger = new Logger(ReactionRenderProcessor.name);
+  private readonly remoteAgent: RemoteControlApi;
 
   constructor(
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(RemoteControlScript.name) private scriptModel: Model<RemoteControlScriptDocument>,
     private readonly configService: ConfigService,
-    private readonly remoteControlService: RemoteControlService,
   ) {
     super();
+    this.remoteAgent = new RemoteControlApi();
   }
 
   async process(job: Job<ReactionRenderJobData>): Promise<void> {
@@ -104,10 +109,7 @@ export class ReactionRenderProcessor extends WorkerHost {
     s3Config: ReactionS3Config,
   ): Promise<void> {
     const submissionId = String(submission._id);
-    await this.submissionModel.updateOne(
-      { _id: submission._id },
-      { $inc: { 'data.renderRetries': 1 } },
-    );
+    await this.submissionModel.updateOne({ _id: submission._id }, { $inc: { 'data.renderRetries': 1 } });
     try {
       const mappedUsername = (
         await this.participantModel
@@ -132,9 +134,7 @@ export class ReactionRenderProcessor extends WorkerHost {
 
       let universityLogoSrc: string;
       try {
-        universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) =>
-          this.logger.warn(msg),
-        );
+        universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) => this.logger.warn(msg));
       } catch (error) {
         if (error instanceof ReactionLogoError) {
           this.logger.error(`${error.message} (submission ${submissionId})`);
@@ -155,7 +155,7 @@ export class ReactionRenderProcessor extends WorkerHost {
       const screenPath = path.join(workDir, 'screen.mkv');
 
       try {
-        await this.extractStreamSlices(user.username, startUnix, endUnix, webcamPath, screenPath);
+        await this.extractStreamSlices(user, startUnix, endUnix, webcamPath, screenPath);
 
         const webm = await renderReactionWebmFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
         this.logger.log(`Rendered reaction WebM (${webm.length} bytes) for submission ${submissionId}`);
@@ -163,10 +163,7 @@ export class ReactionRenderProcessor extends WorkerHost {
         const s3Key = `${submissionId}.webm`;
         const publicUrl = await putReactionWebm(s3Client, s3Config, s3Key, webm);
 
-        await this.submissionModel.updateOne(
-          { _id: submission._id },
-          { $set: { 'data.reaction': publicUrl } },
-        );
+        await this.submissionModel.updateOne({ _id: submission._id }, { $set: { 'data.reaction': publicUrl } });
         this.logger.log(`Uploaded reaction to ${publicUrl} for submission ${submissionId}`);
       } finally {
         await fs.rm(workDir, { recursive: true, force: true });
@@ -177,49 +174,33 @@ export class ReactionRenderProcessor extends WorkerHost {
   }
 
   private async extractStreamSlices(
-    username: string,
+    user: UserDocument,
     startUnix: number,
     endUnix: number,
     webcamPath: string,
     screenPath: string,
   ): Promise<void> {
-    const handle = await this.remoteControlService.runRemoteScript({
-      scriptName: EXTRACT_STREAM_SLICES_SCRIPT,
-      targets: [username],
-      args: [String(startUnix), String(endUnix)],
-      createdBy: 'reaction-render',
-      saveRunFiles: false,
-    });
-    let result;
-    try {
-      [result] = await this.withTimeout(handle.done, EXTRACT_STREAM_SLICES_TIMEOUT_MS);
-    } catch (error) {
-      this.remoteControlService.releaseRemoteScriptResult(handle.jobId);
-      throw error;
-    }
+    if (!user.vpnIpAddress) throw new Error(`VPN IP not found for ${user.username}`);
+    const script = await this.scriptModel.findOne({ name: EXTRACT_STREAM_SLICES_SCRIPT }).lean();
+    if (!script) throw new Error(`Remote-control script not found: ${EXTRACT_STREAM_SLICES_SCRIPT}`);
 
-    if (result.status !== RemoteJobRunStatus.SUCCESS) {
-      throw new Error(`Slice extraction failed for ${username}: ${result.log ?? result.status}`);
+    const result = await this.remoteAgent.runRemoteScript({
+      ip: user.vpnIpAddress,
+      scriptName: EXTRACT_STREAM_SLICES_SCRIPT,
+      scriptHash: script.hash,
+      args: [String(startUnix), String(endUnix)],
+      timeout: EXTRACT_STREAM_SLICES_TIMEOUT_MS,
+    });
+
+    if (result.status !== 'success') {
+      throw new Error(`Slice extraction failed for ${user.username}: ${result.log ?? result.status}`);
     }
 
     const webcam = result.files.find((file) => file.key === 'webcam');
     const screen = result.files.find((file) => file.key === 'screen');
-    if (!webcam || !screen) throw new Error(`Slice extraction did not return webcam and screen files for ${username}`);
+    if (!webcam || !screen)
+      throw new Error(`Slice extraction did not return webcam and screen files for ${user.username}`);
 
-    await Promise.all([
-      fs.writeFile(webcamPath, webcam.buffer),
-      fs.writeFile(screenPath, screen.buffer),
-    ]);
-  }
-
-  private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    const timeoutPromise = new Promise<T>((_, reject) => {
-      timeout = setTimeout(() => reject(new Error('Slice extraction timed out')), timeoutMs);
-    });
-
-    return Promise.race([promise, timeoutPromise]).finally(() => {
-      if (timeout) clearTimeout(timeout);
-    });
+    await Promise.all([fs.writeFile(webcamPath, webcam.buffer), fs.writeFile(screenPath, screen.buffer)]);
   }
 }

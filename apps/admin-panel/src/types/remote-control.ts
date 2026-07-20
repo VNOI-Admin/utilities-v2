@@ -89,16 +89,6 @@ export interface RefreshRemoteJobSyncResponse {
   runs: RemoteJobRun[];
 }
 
-export interface JobRunUpdatedEvent {
-  jobId: string;
-  target: string;
-  status: RemoteJobRunStatus;
-  exitCode: number | null;
-  log?: string;
-  outputFiles: RemoteControlFileMetadata[];
-  updatedAt: string;
-}
-
 export interface RemoteControlTargetOption {
   username: string;
   fullName: string;

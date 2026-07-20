@@ -2,14 +2,15 @@ import { RemoteControlScript, RemoteControlScriptSchema } from '@libs/common-db/
 import { RemoteJob, RemoteJobSchema } from '@libs/common-db/schemas/remoteJob.schema';
 import { RemoteJobRun, RemoteJobRunSchema } from '@libs/common-db/schemas/remoteJobRun.schema';
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
-import { HttpModule } from '@nestjs/axios';
+import { GuardsModule } from '@libs/common/guards/guards.module';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RemoteControlController } from './remote-control.controller';
 import { RemoteControlService } from './remote-control.service';
 
 @Module({
   imports: [
-    HttpModule,
+    GuardsModule,
     MongooseModule.forFeature([
       { name: RemoteControlScript.name, schema: RemoteControlScriptSchema },
       { name: RemoteJob.name, schema: RemoteJobSchema },
@@ -17,7 +18,7 @@ import { RemoteControlService } from './remote-control.service';
       { name: User.name, schema: UserSchema },
     ]),
   ],
+  controllers: [RemoteControlController],
   providers: [RemoteControlService],
-  exports: [RemoteControlService],
 })
-export class RemoteControlCoreModule {}
+export class RemoteControlModule {}

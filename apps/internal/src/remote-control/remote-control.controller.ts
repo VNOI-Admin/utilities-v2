@@ -1,7 +1,5 @@
-import { AccessTokenOptional } from '@libs/common/decorators/accessTokenOptional.decorator';
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
 import {
   BadRequestException,
   Body,
@@ -9,7 +7,6 @@ import {
   Controller,
   Delete,
   Get,
-  type MessageEvent,
   Param,
   Patch,
   Post,
@@ -17,32 +14,29 @@ import {
   Request,
   Res,
   SerializeOptions,
-  Sse,
   StreamableFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { type ClassConstructor, plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import type { Response } from 'express';
-import type { Observable } from 'rxjs';
-import { AgentJobUpdateDto } from '@libs/common/remote-control/dtos/agentJobUpdate.dto';
-import { CancelRemoteControlJobDto } from '@libs/common/remote-control/dtos/cancelJob.dto';
-import { CreateRemoteControlJobDto } from '@libs/common/remote-control/dtos/createJob.dto';
-import { GetRemoteControlJobRunsDto } from '@libs/common/remote-control/dtos/getJobRuns.dto';
-import { GetRemoteControlJobsDto } from '@libs/common/remote-control/dtos/getJobs.dto';
-import { RefreshRemoteControlJobDto } from '@libs/common/remote-control/dtos/refreshJob.dto';
-import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
+import { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
+import { CreateRemoteControlJobDto } from './dtos/createJob.dto';
 import { CreateRemoteControlScriptDto } from './dtos/createScript.dto';
+import { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
+import { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
+import { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
 import { UpdateRemoteControlScriptDto } from './dtos/updateScript.dto';
 import { RemoteControlScriptEntity, RemoteControlScriptSummaryEntity } from './entities/remoteControlScript.entity';
 import { RemoteJobEntity } from './entities/remoteJob.entity';
 import { RemoteJobCancelResponseEntity } from './entities/remoteJobCancel.entity';
 import { RemoteJobRefreshSyncResponseEntity } from './entities/remoteJobRefresh.entity';
 import { RemoteJobRunEntity } from './entities/remoteJobRun.entity';
+import { RemoteControlService } from './remote-control.service';
 
 @ApiTags('Remote Control')
 @Controller('remote-control')
@@ -87,18 +81,6 @@ export class RemoteControlController {
   @Post('/scripts')
   async createScript(@Body() dto: CreateRemoteControlScriptDto) {
     const script = await this.service.createScript(dto.name, dto.content);
-    return new RemoteControlScriptEntity(script as any);
-  }
-
-  @ApiBearerAuth()
-  @AccessTokenOptional()
-  @UseGuards(AccessTokenGuard, IPAddressGuard)
-  @RequiredRoles(Role.ADMIN, Role.CONTESTANT, Role.GUEST)
-  @ApiOperation({ summary: 'Get script by name' })
-  @ApiResponse({ status: 200, type: RemoteControlScriptEntity })
-  @Get('/scripts/:name')
-  async getScript(@Param('name') name: string) {
-    const script = await this.service.getScriptByName(name);
     return new RemoteControlScriptEntity(script as any);
   }
 
@@ -254,52 +236,5 @@ export class RemoteControlController {
       jobId: res.jobId,
       runs: res.runs.map((r) => new RemoteJobRunEntity(r as any)),
     });
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Subscribe to per-job updates' })
-  @ApiProduces('text/event-stream')
-  @Sse('/jobs/:jobId/events')
-  subscribe(@Param('jobId') jobId: string): Observable<MessageEvent> {
-    return this.service.subscribe(jobId);
-  }
-
-  @UseGuards(IPAddressGuard)
-  @RequiredRoles(Role.CONTESTANT)
-  @ApiOperation({ summary: 'Post job updates (status/log)' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        payload: {
-          type: 'string',
-          description: 'JSON AgentJobUpdateDto',
-        },
-        files: {
-          type: 'array',
-          items: { type: 'string', format: 'binary' },
-        },
-      },
-      required: ['payload'],
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    schema: { properties: { success: { type: 'boolean' } } },
-  })
-  @UseInterceptors(AnyFilesInterceptor())
-  @Post('/agent/jobs/:jobId/updates')
-  async agentUpdate(
-    @Request() req: any,
-    @Param('jobId') jobId: string,
-    @Body('payload') payload: string,
-    @UploadedFiles() files: Express.Multer.File[] = [],
-  ) {
-    const dto = this.parsePayload(payload, 'payload', AgentJobUpdateDto);
-    await this.service.applyAgentUpdate(jobId, req.user, dto, this.service.mapUploadedFiles(files));
-    return { success: true };
   }
 }
