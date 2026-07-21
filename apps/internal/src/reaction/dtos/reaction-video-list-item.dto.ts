@@ -4,7 +4,7 @@ export class ReactionVideoListItemDto {
   @ApiProperty({ description: 'S3 object key' })
   key!: string;
 
-  @ApiProperty({ description: 'Public URL for the WebM' })
+  @ApiProperty({ description: 'Public URL for the MP4' })
   url!: string;
 
   @ApiPropertyOptional({ type: String, format: 'date-time' })

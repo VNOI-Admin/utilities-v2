@@ -4,7 +4,7 @@
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <PageHeader
           title="REACTION_VIDEOS"
-          subtitle="S3 OBJECTS / RENDERED WEBM REACTIONS"
+          subtitle="S3 OBJECTS / RENDERED MP4 REACTIONS"
         />
         <div class="flex items-center gap-4">
           <StatCounter label="FILES:" :value="sortedItems.length" />
@@ -31,7 +31,7 @@
       <EmptyState
         v-else-if="sortedItems.length === 0"
         title="NO REACTION VIDEOS"
-        subtitle="No .webm objects found under the reaction S3 prefix"
+        subtitle="No .mp4 objects found under the reaction S3 prefix"
         icon="generic"
       />
 
@@ -98,8 +98,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
 import { Copy } from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
 import { useToast } from 'vue-toastification';
 import MissionTable from '~/components/MissionTable.vue';
 import { internalClient } from '~/services/api';
@@ -126,7 +126,7 @@ const sortedItems = computed((): ReactionVideoItem[] => {
 
 function submissionIdFromKey(key: string): string {
   const segment = key.split('/').pop() ?? key;
-  return segment.replace(/\.webm$/i, '');
+  return segment.replace(/\.mp4$/i, '');
 }
 
 function formatDateTime(iso: string): string {
@@ -177,8 +177,7 @@ async function loadList(): Promise<void> {
     const msg = ax.response?.data?.message;
     if (status === 503) {
       errorMessage.value =
-        msg ||
-        'Reaction S3 is not configured on the internal service (set AWS_* and REACTION_S3_* env vars).';
+        msg || 'Reaction S3 is not configured on the internal service (set AWS_* and REACTION_S3_* env vars).';
       items.value = [];
     } else {
       errorMessage.value = msg || 'Failed to load reaction videos';

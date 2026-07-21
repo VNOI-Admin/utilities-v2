@@ -54,13 +54,13 @@ export function reactionS3ListPrefix(config: ReactionS3Config): string {
   return config.keyPrefix ? `${config.keyPrefix}/` : '';
 }
 
-/** Public URL for an object key exactly as returned by S3 (e.g. `reactions/id.webm`). */
+/** Public URL for an object key exactly as returned by S3 (e.g. `reactions/id.mp4`). */
 export function reactionObjectPublicUrl(config: ReactionS3Config, fullKey: string): string {
   const baseUrl = config.publicBaseUrl.replace(/\/+$/, '');
   return `${baseUrl}/${fullKey}`;
 }
 
-export type ReactionWebmListItem = {
+export type ReactionMp4ListItem = {
   key: string;
   url: string;
   lastModified?: Date;
@@ -68,14 +68,14 @@ export type ReactionWebmListItem = {
 };
 
 /**
- * Lists `.webm` objects under the reaction prefix, paged until complete.
+ * Lists `.mp4` objects under the reaction prefix, paged until complete.
  */
-export async function listReactionWebmObjects(
+export async function listReactionMp4Objects(
   client: S3Client,
   config: ReactionS3Config,
-): Promise<ReactionWebmListItem[]> {
+): Promise<ReactionMp4ListItem[]> {
   const prefix = reactionS3ListPrefix(config);
-  const out: ReactionWebmListItem[] = [];
+  const out: ReactionMp4ListItem[] = [];
   let continuationToken: string | undefined;
 
   do {
@@ -89,7 +89,7 @@ export async function listReactionWebmObjects(
 
     for (const obj of response.Contents ?? []) {
       const key = obj.Key;
-      if (!key || !key.toLowerCase().endsWith('.webm')) {
+      if (!key || !key.toLowerCase().endsWith('.mp4')) {
         continue;
       }
       out.push({
@@ -107,10 +107,10 @@ export async function listReactionWebmObjects(
 }
 
 /**
- * Uploads a WebM buffer to S3 under `{keyPrefix}/{key}` and returns
+ * Uploads an MP4 buffer to S3 under `{keyPrefix}/{key}` and returns
  * the public URL built from REACTION_S3_PUBLIC_BASE_URL.
  */
-export async function putReactionWebm(
+export async function putReactionMp4(
   client: S3Client,
   config: ReactionS3Config,
   key: string,
@@ -123,7 +123,7 @@ export async function putReactionWebm(
       Bucket: config.bucket,
       Key: fullKey,
       Body: body,
-      ContentType: 'video/webm',
+      ContentType: 'video/mp4',
     }),
   );
 

@@ -1,9 +1,9 @@
-import { accessSync, constants } from 'node:fs';
+import { constants, accessSync } from 'node:fs';
 import * as path from 'node:path';
 
-import { probeHasAudio } from './renderer-audio';
 import type { Configuration, Params } from './renderer';
 import { render } from './renderer';
+import { probeHasAudio } from './renderer-audio';
 
 export class ReactionRenderConfigError extends Error {
   override readonly name = 'ReactionRenderConfigError';
@@ -108,10 +108,7 @@ export function resolveUniversityLogoAbsolutePath(
  * Escapes text for ffmpeg `drawtext=text='...'` (single-quoted) segments.
  */
 export function sanitizeDrawtext(text: string): string {
-  return text
-    .replace(/\\/g, '\\\\')
-    .replace(/'/g, "\\'")
-    .replace(/:/g, '\\:');
+  return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:');
 }
 
 function getDefaultReactionConfiguration(env: ReactionRenderEnvLoaded): Configuration {
@@ -185,10 +182,10 @@ export function buildReactionParamsPartial(
 }
 
 /**
- * Probes both slice files for audio, then renders a WebM via `render()`.
+ * Probes both slice files for audio, then renders an MP4 via `render()`.
  * No intermediate temp files — audio absence is handled in the filter graph.
  */
-export async function renderReactionWebmFromSlicePaths(
+export async function renderReactionMp4FromSlicePaths(
   envLoaded: ReactionRenderEnvLoaded,
   webcamSrc: string,
   screenSrc: string,
@@ -196,10 +193,7 @@ export async function renderReactionWebmFromSlicePaths(
 ): Promise<Buffer> {
   const config = getDefaultReactionConfiguration(envLoaded);
 
-  const [webcamHasAudio, screenHasAudio] = await Promise.all([
-    probeHasAudio(webcamSrc),
-    probeHasAudio(screenSrc),
-  ]);
+  const [webcamHasAudio, screenHasAudio] = await Promise.all([probeHasAudio(webcamSrc), probeHasAudio(screenSrc)]);
 
   const params: Params = {
     webcamSrc,

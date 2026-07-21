@@ -16,14 +16,14 @@ import {
   type ReactionRenderEnvLoaded,
   buildReactionParamsPartial,
   readReactionRenderEnv,
-  renderReactionWebmFromSlicePaths,
+  renderReactionMp4FromSlicePaths,
   resolveUniversityLogoAbsolutePath,
 } from '@libs/common/helper/reaction-render';
 import {
   type ReactionS3Config,
   ReactionS3ConfigError,
   createReactionS3Client,
-  putReactionWebm,
+  putReactionMp4,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
@@ -157,11 +157,11 @@ export class ReactionRenderProcessor extends WorkerHost {
       try {
         await this.extractStreamSlices(user, startUnix, endUnix, webcamPath, screenPath);
 
-        const webm = await renderReactionWebmFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
-        this.logger.log(`Rendered reaction WebM (${webm.length} bytes) for submission ${submissionId}`);
+        const mp4 = await renderReactionMp4FromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
+        this.logger.log(`Rendered reaction MP4 (${mp4.length} bytes) for submission ${submissionId}`);
 
-        const s3Key = `${submissionId}.webm`;
-        const publicUrl = await putReactionWebm(s3Client, s3Config, s3Key, webm);
+        const s3Key = `${submissionId}.mp4`;
+        const publicUrl = await putReactionMp4(s3Client, s3Config, s3Key, mp4);
 
         await this.submissionModel.updateOne({ _id: submission._id }, { $set: { 'data.reaction': publicUrl } });
         this.logger.log(`Uploaded reaction to ${publicUrl} for submission ${submissionId}`);

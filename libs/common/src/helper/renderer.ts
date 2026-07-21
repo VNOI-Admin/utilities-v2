@@ -123,11 +123,7 @@ function buildAudioFilter(webcamHasAudio: boolean, screenHasAudio: boolean): str
   return 'anullsrc=channel_layout=stereo:sample_rate=48000[outa]';
 }
 
-export async function render(
-  config: Configuration,
-  params: Params,
-  options?: RenderOptions,
-): Promise<Buffer> {
+export async function render(config: Configuration, params: Params, options?: RenderOptions): Promise<Buffer> {
   const smallW = config.width - 2 * config.padding;
   const smallH = Math.floor((smallW * 9) / 16);
 
@@ -145,8 +141,7 @@ export async function render(
 
   const uniLogoSize = bannerH - config.padding * 2;
 
-  const bannerTextHeight =
-    config.fontSize.teamName + config.padding + config.fontSize.universityName;
+  const bannerTextHeight = config.fontSize.teamName + config.padding + config.fontSize.universityName;
   const bannerTextX = 3 * config.padding + uniLogoSize;
   const teamNameY = bannerY + (bannerH - bannerTextHeight) / 2;
   const uniNameY = teamNameY + config.fontSize.teamName + config.padding;
@@ -213,34 +208,50 @@ export async function render(
   ].join('; ');
 
   const args = [
-    '-i', params.webcamSrc,
-    '-i', params.screenSrc,
-    '-i', config.backgroundSrc,
-    '-i', config.logoSrc,
-    '-i', params.university.logoSrc,
+    '-i',
+    params.webcamSrc,
+    '-i',
+    params.screenSrc,
+    '-i',
+    config.backgroundSrc,
+    '-i',
+    config.logoSrc,
+    '-i',
+    params.university.logoSrc,
 
     // Apply the filters
-    '-filter_complex', filter,
-    '-filter_threads', '1',
-    '-map', '[outv]',
-    '-map', '[outa]',
+    '-filter_complex',
+    filter,
+    '-filter_threads',
+    '1',
+    '-map',
+    '[outv]',
+    '-map',
+    '[outa]',
 
-    // VP9 video encoding
-    '-c:v', 'libx264',
-    '-crf', '23',
+    // H.264 video encoding
+    '-c:v',
+    'libx264',
+    '-crf',
+    '23',
 
     // Video encoding speed control
-    '-preset', 'veryfast',
-    '-threads', '1',
+    '-preset',
+    'veryfast',
+    '-threads',
+    '1',
 
-    // OPUS audio encoding
-    '-c:a', 'libopus',
-    '-b:a', '128k',
+    // AAC audio encoding
+    '-c:a',
+    'aac',
+    '-b:a',
+    '128k',
 
     // Write to stdout
     '-movflags',
-    '+faststart',
-    '-f', 'webm',
+    'frag_keyframe+empty_moov+default_base_moof',
+    '-f',
+    'mp4',
     '-',
   ];
 
