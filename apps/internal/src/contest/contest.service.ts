@@ -795,6 +795,9 @@ export class ContestService {
                 external_id: vnojSub.id,
                 'data.penalty': penaltyMinutes,
               },
+              $setOnInsert: {
+                'data.renderRetries': 0,
+              },
             },
             upsert: true,
           },

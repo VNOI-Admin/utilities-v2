@@ -159,6 +159,9 @@ export class SyncSubmissionsProcessor extends WorkerHost {
               external_id: vnojSub.id,
               'data.penalty': penaltyMinutes,
             },
+            $setOnInsert: {
+              'data.renderRetries': 0,
+            },
           },
           upsert: true,
         },
