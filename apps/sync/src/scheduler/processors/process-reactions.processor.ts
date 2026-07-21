@@ -32,7 +32,7 @@ export class ProcessReactionsProcessor extends WorkerHost {
           $or: [{ 'data.reaction': { $exists: false } }, { 'data.reaction': null }],
           'data.renderRetries': { $lt: maxRetries },
         })
-        .limit(10)
+        .limit(this.configService.get('REACTION_RENDER_MAX_PROCESS') ?? 1)
         .exec();
 
       this.logger.log(`Found ${submissions.length} AC submissions without reactions`);
