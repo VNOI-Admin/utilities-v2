@@ -745,7 +745,11 @@ export async function render(config: Configuration, params: Params, options?: Re
       '48000',
       '-ac',
       '2',
-      // PNG layers loop forever; without this the output would never end.
+      // Looping PNG layers and generated silence make the output streams
+      // unbounded, so cap them to the duration already probed from the clip.
+      '-t',
+      String(duration),
+      // Retain the existing shortest-stream guard as an additional safeguard.
       '-shortest',
       '-movflags',
       '+faststart',
