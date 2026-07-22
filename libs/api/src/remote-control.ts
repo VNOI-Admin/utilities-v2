@@ -76,7 +76,11 @@ export class RemoteControlApi {
 
   constructor({ port, timeout = 5000 }: RemoteControlApiConfig = {}) {
     this.agentPort = port ?? Number(process.env.REMOTE_CONTROL_AGENT_PORT ?? DEFAULT_AGENT_PORT);
-    this.instance = axios.create({ timeout });
+    const token = process.env.REMOTE_CONTROL_AGENT_TOKEN;
+    this.instance = axios.create({
+      timeout,
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
   }
 
   run(ip: string, jobId: string, payload: RemoteControlJobPayload, files: RemoteControlInputFile[] = []) {
