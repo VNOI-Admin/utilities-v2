@@ -84,10 +84,13 @@ function runCommand(cmd: string, args: readonly string[]): Promise<Buffer> {
     p.stderr.on('data', (chunk: Buffer) => errChunks.push(Buffer.from(chunk)));
 
     p.on('error', (err) => reject(err));
-    p.on('close', (code) => {
-      if (code !== 0) {
-        const stderr = Buffer.concat(errChunks).toString('utf8');
-        return reject(new Error(`${cmd} exited ${code}\n${stderr}`));
+    p.on('close', (code, signal) => {
+      if (code !== 0 || signal) {
+        const stderr = Buffer.concat(errChunks).toString('utf8').trim();
+        // A signal with no stderr is almost always the OOM killer; without
+        // naming it the failure is indistinguishable from a filter-graph error.
+        const how = signal ? `killed by ${signal}` : `exited ${code}`;
+        return reject(new Error(`${cmd} ${how}${stderr ? `\n${stderr}` : ' (no stderr output)'}`));
       }
       resolve(Buffer.concat(chunks));
     });
@@ -710,6 +713,12 @@ export async function render(config: Configuration, params: Params, options?: Re
       ...inputs,
       '-filter_complex',
       graph.join('; '),
+      // The reaction worker runs at concurrency 1 on a shared box, and this
+      // graph carries ~50 drawtext filters over six inputs. Letting ffmpeg fan
+      // out over every core costs far more memory than the render saves in
+      // wall-clock, so both the filter and encoder stages stay single-threaded.
+      '-filter_threads',
+      '1',
       '-map',
       '[outv]',
       '-map',
@@ -726,6 +735,8 @@ export async function render(config: Configuration, params: Params, options?: Re
       '21',
       '-preset',
       'veryfast',
+      '-threads',
+      '1',
       '-c:a',
       'aac',
       '-b:a',
