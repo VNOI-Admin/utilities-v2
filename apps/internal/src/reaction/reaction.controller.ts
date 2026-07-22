@@ -14,15 +14,15 @@ export class ReactionController {
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'List reaction MP4 objects in S3' })
+  @ApiOperation({ summary: 'List rendered reaction videos in S3' })
   @ApiResponse({
     status: 200,
-    description: 'Objects under the configured reaction prefix',
+    description: 'Objects under the configured reaction prefix, enriched with submission data',
     type: [ReactionVideoListItemDto],
   })
   @ApiResponse({ status: 503, description: 'Reaction S3 env not configured' })
   @Get()
-  async listRenderedMp4s(): Promise<ReactionVideoListItemDto[]> {
-    return this.reactionService.listRenderedMp4s();
+  async listRenderedVideos(): Promise<ReactionVideoListItemDto[]> {
+    return this.reactionService.listRenderedVideos();
   }
 }

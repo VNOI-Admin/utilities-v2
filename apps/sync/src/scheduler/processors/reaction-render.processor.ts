@@ -3,6 +3,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type { S3Client } from '@aws-sdk/client-s3';
 import { RemoteControlApi } from '@libs/api/remote-control';
+import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import {
   RemoteControlScript,
@@ -11,19 +12,18 @@ import {
 import { Submission, type SubmissionDocument, SubmissionStatus } from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import {
-  ReactionLogoError,
   ReactionRenderConfigError,
   type ReactionRenderEnvLoaded,
   buildReactionParamsPartial,
   readReactionRenderEnv,
-  renderReactionMp4FromSlicePaths,
+  renderReactionVideoFromSlicePaths,
   resolveUniversityLogoAbsolutePath,
 } from '@libs/common/helper/reaction-render';
 import {
   type ReactionS3Config,
   ReactionS3ConfigError,
   createReactionS3Client,
-  putReactionMp4,
+  putReactionVideo,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
@@ -48,6 +48,7 @@ export class ReactionRenderProcessor extends WorkerHost {
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(RemoteControlScript.name) private scriptModel: Model<RemoteControlScriptDocument>,
+    @InjectModel(Contest.name) private contestModel: Model<ContestDocument>,
     private readonly configService: ConfigService,
   ) {
     super();
@@ -132,23 +133,27 @@ export class ReactionRenderProcessor extends WorkerHost {
       const startUnix = anchorSec - beforeSec;
       const endUnix = anchorSec + afterSec;
 
-      let universityLogoSrc: string;
-      try {
-        universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) => this.logger.warn(msg));
-      } catch (error) {
-        if (error instanceof ReactionLogoError) {
-          this.logger.error(`${error.message} (submission ${submissionId})`);
-          return;
-        }
-        throw error;
-      }
-
-      const paramsPartial = buildReactionParamsPartial(
-        submission,
-        user,
-        universityLogoSrc,
-        envLoaded.defaultUniversityName,
+      // Never throws: users without a group fall back to the VNOI brand logo.
+      const universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) =>
+        this.logger.warn(`${msg} (submission ${submissionId})`),
       );
+
+      // The banner holds "pending" amber until the judge actually finished.
+      // Only judgedAt gives us that instant; without it we skip the pending
+      // phase rather than inventing one.
+      const verdictAtSeconds = submission.judgedAt ? submission.judgedAt.getTime() / 1000 - startUnix : undefined;
+
+      const contest = await this.contestModel
+        .findOne({ code: submission.contest_code })
+        .select('start_time')
+        .lean()
+        .exec();
+      const clockStartSeconds = contest?.start_time ? startUnix - contest.start_time.getTime() / 1000 : undefined;
+
+      const paramsPartial = buildReactionParamsPartial(submission, user, universityLogoSrc, {
+        verdictAtSeconds,
+        clockStartSeconds,
+      });
 
       const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reaction-slices-'));
       const webcamPath = path.join(workDir, 'webcam.mkv');
@@ -157,11 +162,11 @@ export class ReactionRenderProcessor extends WorkerHost {
       try {
         await this.extractStreamSlices(user, startUnix, endUnix, webcamPath, screenPath);
 
-        const mp4 = await renderReactionMp4FromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
-        this.logger.log(`Rendered reaction MP4 (${mp4.length} bytes) for submission ${submissionId}`);
+        const video = await renderReactionVideoFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
+        this.logger.log(`Rendered reaction MP4 (${video.length} bytes) for submission ${submissionId}`);
 
         const s3Key = `${submissionId}.mp4`;
-        const publicUrl = await putReactionMp4(s3Client, s3Config, s3Key, mp4);
+        const publicUrl = await putReactionVideo(s3Client, s3Config, s3Key, video);
 
         await this.submissionModel.updateOne({ _id: submission._id }, { $set: { 'data.reaction': publicUrl } });
         this.logger.log(`Uploaded reaction to ${publicUrl} for submission ${submissionId}`);

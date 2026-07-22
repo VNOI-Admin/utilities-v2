@@ -2,25 +2,24 @@ import { constants, accessSync } from 'node:fs';
 import * as path from 'node:path';
 
 import type { Configuration, Params } from './renderer';
-import { render } from './renderer';
+import { escapeDrawtext, render } from './renderer';
 import { probeHasAudio } from './renderer-audio';
 
 export class ReactionRenderConfigError extends Error {
   override readonly name = 'ReactionRenderConfigError';
 }
 
-export class ReactionLogoError extends Error {
-  override readonly name = 'ReactionLogoError';
-}
-
 export type ReactionRenderEnvLoaded = {
+  /** Optional patterned brand background behind the cards. */
   backgroundSrc: string;
   logoSrc: string;
   fontPath: string;
+  fontPathBold: string;
+  fontPathMono: string;
   universityLogoDir: string;
   universityLogoExt: string;
+  /** Optional; when unset the brand logo stands in for a missing crest. */
   universityLogoFallback: string;
-  defaultUniversityName: string;
   headerLeft: string;
   headerRight: string;
   footer: string;
@@ -37,20 +36,25 @@ function requireEnv(get: (key: string) => string | undefined, key: string): stri
 /**
  * Reads reaction renderer paths and labels from process/env (via ConfigService.get).
  *
- * Required: REACTION_RENDERER_BACKGROUND, REACTION_RENDERER_LOGO, REACTION_RENDERER_FONT,
- * REACTION_UNIVERSITY_LOGO_DIR, REACTION_UNIVERSITY_LOGO_FALLBACK.
- * Optional: REACTION_UNIVERSITY_LOGO_EXT, REACTION_DEFAULT_UNIVERSITY_NAME,
+ * Required: REACTION_RENDERER_LOGO, REACTION_RENDERER_FONT.
+ * Optional: REACTION_RENDERER_BACKGROUND, REACTION_RENDERER_FONT_BOLD,
+ * REACTION_RENDERER_FONT_MONO, REACTION_UNIVERSITY_LOGO_DIR,
+ * REACTION_UNIVERSITY_LOGO_EXT, REACTION_UNIVERSITY_LOGO_FALLBACK,
  * REACTION_TEXT_HEADER_LEFT, REACTION_TEXT_HEADER_RIGHT, REACTION_TEXT_FOOTER.
  */
 export function readReactionRenderEnv(get: (key: string) => string | undefined): ReactionRenderEnvLoaded {
+  const logoSrc = requireEnv(get, 'REACTION_RENDERER_LOGO');
+  const fontPath = requireEnv(get, 'REACTION_RENDERER_FONT');
+
   return {
-    backgroundSrc: requireEnv(get, 'REACTION_RENDERER_BACKGROUND'),
-    logoSrc: requireEnv(get, 'REACTION_RENDERER_LOGO'),
-    fontPath: requireEnv(get, 'REACTION_RENDERER_FONT'),
-    universityLogoDir: requireEnv(get, 'REACTION_UNIVERSITY_LOGO_DIR'),
+    backgroundSrc: get('REACTION_RENDERER_BACKGROUND')?.trim() || '',
+    logoSrc,
+    fontPath,
+    fontPathBold: get('REACTION_RENDERER_FONT_BOLD')?.trim() || fontPath,
+    fontPathMono: get('REACTION_RENDERER_FONT_MONO')?.trim() || fontPath,
+    universityLogoDir: get('REACTION_UNIVERSITY_LOGO_DIR')?.trim() || '',
     universityLogoExt: get('REACTION_UNIVERSITY_LOGO_EXT')?.trim() || '.png',
-    universityLogoFallback: requireEnv(get, 'REACTION_UNIVERSITY_LOGO_FALLBACK'),
-    defaultUniversityName: get('REACTION_DEFAULT_UNIVERSITY_NAME')?.trim() || 'University',
+    universityLogoFallback: get('REACTION_UNIVERSITY_LOGO_FALLBACK')?.trim() || '',
     headerLeft: get('REACTION_TEXT_HEADER_LEFT')?.trim() || 'VNOI',
     headerRight: get('REACTION_TEXT_HEADER_RIGHT')?.trim() || '',
     footer: get('REACTION_TEXT_FOOTER')?.trim() || 'Reaction',
@@ -74,72 +78,74 @@ export function slugGroupForLogoFilename(group: string): string {
   return slug || '_default';
 }
 
+function isReadable(target: string): boolean {
+  try {
+    accessSync(target, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Resolves an absolute path for the university logo; falls back when the primary file is missing.
+ * Resolves the crest shown in the verdict strip.
+ *
+ * Users without a group, or whose group has no crest on disk, fall back to the
+ * VNOI brand logo (rescaled into the avatar plate) rather than failing the
+ * render — a missing crest should never cost us a reaction video.
  */
 export function resolveUniversityLogoAbsolutePath(
   env: ReactionRenderEnvLoaded,
   userGroup: string | undefined,
   logWarn?: (message: string) => void,
 ): string {
-  const slug = slugGroupForLogoFilename(userGroup ?? '');
-  const primary = path.resolve(path.join(env.universityLogoDir, `${slug}${env.universityLogoExt}`));
-  try {
-    accessSync(primary, constants.R_OK);
-    return primary;
-  } catch {
-    logWarn?.(
-      `University logo not found for group="${userGroup ?? ''}" at ${primary}; using REACTION_UNIVERSITY_LOGO_FALLBACK`,
-    );
+  const group = userGroup?.trim() ?? '';
+
+  if (group && env.universityLogoDir) {
+    const slug = slugGroupForLogoFilename(group);
+    const primary = path.resolve(path.join(env.universityLogoDir, `${slug}${env.universityLogoExt}`));
+    if (isReadable(primary)) {
+      return primary;
+    }
+    logWarn?.(`University logo not found for group="${group}" at ${primary}; using brand logo`);
+  } else if (!group) {
+    logWarn?.('User has no group; using brand logo in place of a university crest');
   }
 
-  const fallback = path.resolve(env.universityLogoFallback);
-  try {
-    accessSync(fallback, constants.R_OK);
-    return fallback;
-  } catch {
-    throw new ReactionLogoError(
-      `University logo missing: primary ${primary} and fallback ${fallback} are not readable`,
-    );
+  if (env.universityLogoFallback) {
+    const fallback = path.resolve(env.universityLogoFallback);
+    if (isReadable(fallback)) {
+      return fallback;
+    }
+    logWarn?.(`REACTION_UNIVERSITY_LOGO_FALLBACK is not readable at ${fallback}; using brand logo`);
   }
+
+  return path.resolve(env.logoSrc);
 }
 
 /**
  * Escapes text for ffmpeg `drawtext=text='...'` (single-quoted) segments.
+ *
+ * @deprecated The renderer escapes its own text; this remains for callers that
+ * build drawtext fragments directly.
  */
 export function sanitizeDrawtext(text: string): string {
-  return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/:/g, '\\:');
+  return escapeDrawtext(text);
 }
 
 function getDefaultReactionConfiguration(env: ReactionRenderEnvLoaded): Configuration {
   return {
-    backgroundSrc: env.backgroundSrc,
+    backgroundSrc: env.backgroundSrc || undefined,
     logoSrc: env.logoSrc,
     fontPath: env.fontPath,
-    padding: 40,
+    fontPathBold: env.fontPathBold,
+    fontPathMono: env.fontPathMono,
     width: 1080,
     height: 1920,
-    barHeight: 80,
-    fontSize: {
-      base: 24,
-      teamName: 32,
-      universityName: 20,
-      problem: 28,
-    },
-    style: {
-      base: {
-        background: '#0f172a',
-        foreground: '#f8fafc',
-      },
-      banner: {
-        background: '#1e293b',
-        foreground: '#f8fafc',
-      },
-    },
     text: {
-      headerLeft: sanitizeDrawtext(env.headerLeft),
-      headerRight: sanitizeDrawtext(env.headerRight),
-      footer: sanitizeDrawtext(env.footer),
+      headerLeft: env.headerLeft,
+      headerRight: env.headerRight,
+      footer: env.footer,
     },
   };
 }
@@ -147,6 +153,7 @@ function getDefaultReactionConfiguration(env: ReactionRenderEnvLoaded): Configur
 export type ReactionSubmissionInput = {
   author: string;
   problem_code: string;
+  submissionStatus?: string;
   data: {
     old_rank: number;
     new_rank: number;
@@ -158,34 +165,58 @@ export type ReactionUserInput = {
   group?: string;
 };
 
+export type ReactionTiming = {
+  /**
+   * Seconds into the clip at which the judge finished. The banner stays amber
+   * ("pending") until this moment, then blinks and settles on the verdict
+   * colour. Omit when the judged time is unknown — the pending phase is then
+   * skipped rather than faked.
+   */
+  verdictAtSeconds?: number;
+  /** Contest elapsed seconds at clip t=0, for the ticking clock. */
+  clockStartSeconds?: number;
+};
+
+/** `Ho Chi Minh City University` -> `HoChiMinhCityUniversity` */
+export function hashtagFromGroup(group: string | undefined): string | undefined {
+  const compact = (group ?? '').replace(/[^a-zA-Z0-9]/g, '');
+  return compact ? compact : undefined;
+}
+
 export function buildReactionParamsPartial(
   submission: ReactionSubmissionInput,
   user: ReactionUserInput,
   universityLogoAbsolutePath: string,
-  defaultUniversityName: string,
+  timing?: ReactionTiming,
 ): Omit<Params, 'webcamSrc' | 'screenSrc'> {
   const teamName = (user.fullName?.trim() || submission.author).trim();
-  const universityName = (user.group?.trim() || defaultUniversityName).trim();
+  // Left blank when the user has no group: the banner then shows the team name
+  // alone instead of a placeholder university.
+  const universityName = user.group?.trim() ?? '';
+
   return {
     teamName,
     university: {
       name: universityName,
       logoSrc: universityLogoAbsolutePath,
     },
+    hashtag: hashtagFromGroup(user.group),
     problem: submission.problem_code,
     rank: {
       before: submission.data.old_rank,
       after: submission.data.new_rank,
     },
-    status: 'AC',
+    status: submission.submissionStatus ?? 'AC',
+    verdictAtSeconds: timing?.verdictAtSeconds,
+    clockStartSeconds: timing?.clockStartSeconds,
   };
 }
 
 /**
- * Probes both slice files for audio, then renders an MP4 via `render()`.
+ * Probes both slice files for audio, then renders the reaction MP4.
  * No intermediate temp files — audio absence is handled in the filter graph.
  */
-export async function renderReactionMp4FromSlicePaths(
+export async function renderReactionVideoFromSlicePaths(
   envLoaded: ReactionRenderEnvLoaded,
   webcamSrc: string,
   screenSrc: string,
@@ -195,18 +226,5 @@ export async function renderReactionMp4FromSlicePaths(
 
   const [webcamHasAudio, screenHasAudio] = await Promise.all([probeHasAudio(webcamSrc), probeHasAudio(screenSrc)]);
 
-  const params: Params = {
-    webcamSrc,
-    screenSrc,
-    teamName: sanitizeDrawtext(paramsPartial.teamName),
-    university: {
-      name: sanitizeDrawtext(paramsPartial.university.name),
-      logoSrc: paramsPartial.university.logoSrc,
-    },
-    problem: sanitizeDrawtext(paramsPartial.problem),
-    rank: paramsPartial.rank,
-    status: paramsPartial.status,
-  };
-
-  return render(config, params, { webcamHasAudio, screenHasAudio });
+  return render(config, { ...paramsPartial, webcamSrc, screenSrc }, { webcamHasAudio, screenHasAudio });
 }

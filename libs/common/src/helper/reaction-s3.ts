@@ -54,28 +54,31 @@ export function reactionS3ListPrefix(config: ReactionS3Config): string {
   return config.keyPrefix ? `${config.keyPrefix}/` : '';
 }
 
-/** Public URL for an object key exactly as returned by S3 (e.g. `reactions/id.mp4`). */
+/** Public URL for an object key exactly as returned by S3 (e.g. `reactions/id.webm`). */
 export function reactionObjectPublicUrl(config: ReactionS3Config, fullKey: string): string {
   const baseUrl = config.publicBaseUrl.replace(/\/+$/, '');
   return `${baseUrl}/${fullKey}`;
 }
 
-export type ReactionMp4ListItem = {
+export type ReactionVideoListItem = {
   key: string;
   url: string;
   lastModified?: Date;
   size?: number;
 };
 
+/** Renders are MP4 now; `.webm` stays listed so older objects remain visible. */
+const REACTION_VIDEO_EXTENSIONS = ['.mp4', '.webm'] as const;
+
 /**
- * Lists `.mp4` objects under the reaction prefix, paged until complete.
+ * Lists reaction video objects under the reaction prefix, paged until complete.
  */
-export async function listReactionMp4Objects(
+export async function listReactionVideoObjects(
   client: S3Client,
   config: ReactionS3Config,
-): Promise<ReactionMp4ListItem[]> {
+): Promise<ReactionVideoListItem[]> {
   const prefix = reactionS3ListPrefix(config);
-  const out: ReactionMp4ListItem[] = [];
+  const out: ReactionVideoListItem[] = [];
   let continuationToken: string | undefined;
 
   do {
@@ -89,7 +92,8 @@ export async function listReactionMp4Objects(
 
     for (const obj of response.Contents ?? []) {
       const key = obj.Key;
-      if (!key || !key.toLowerCase().endsWith('.mp4')) {
+      const lower = key?.toLowerCase();
+      if (!key || !lower || !REACTION_VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
         continue;
       }
       out.push({
@@ -107,14 +111,15 @@ export async function listReactionMp4Objects(
 }
 
 /**
- * Uploads an MP4 buffer to S3 under `{keyPrefix}/{key}` and returns
+ * Uploads a rendered reaction video to S3 under `{keyPrefix}/{key}` and returns
  * the public URL built from REACTION_S3_PUBLIC_BASE_URL.
  */
-export async function putReactionMp4(
+export async function putReactionVideo(
   client: S3Client,
   config: ReactionS3Config,
   key: string,
   body: Buffer,
+  contentType = 'video/mp4',
 ): Promise<string> {
   const fullKey = config.keyPrefix ? `${config.keyPrefix}/${key}` : key;
 
@@ -123,7 +128,7 @@ export async function putReactionMp4(
       Bucket: config.bucket,
       Key: fullKey,
       Body: body,
-      ContentType: 'video/mp4',
+      ContentType: contentType,
     }),
   );
 
