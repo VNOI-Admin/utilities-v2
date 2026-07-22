@@ -1,4 +1,4 @@
-import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import { Submission, type SubmissionDocument, SubmissionStatus } from '@libs/common-db/schemas/submission.schema';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -6,7 +6,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Job, Queue } from 'bullmq';
 import { Model } from 'mongoose';
 
-import { type ReactionRenderJobData, QUEUE_NAMES, REACTION_RENDER_JOB_NAME } from '../constants';
+import { QUEUE_NAMES, REACTION_RENDER_JOB_NAME, type ReactionRenderJobData } from '../constants';
 
 @Processor(QUEUE_NAMES.PROCESS_REACTIONS)
 export class ProcessReactionsProcessor extends WorkerHost {
@@ -35,22 +35,41 @@ export class ProcessReactionsProcessor extends WorkerHost {
         .limit(this.configService.get('REACTION_RENDER_MAX_PROCESS') ?? 1)
         .exec();
 
-      this.logger.log(`Found ${submissions.length} AC submissions without reactions`);
+      this.logger.log(
+        `Found ${submissions.length} AC submissions without reactions (maxRetries=${maxRetries}): ` +
+          `[${submissions.map((submission) => String(submission._id)).join(', ') || 'none'}]`,
+      );
 
       for (const submission of submissions) {
         const submissionId = String(submission._id);
+        const jobId = `reaction-${submissionId}`;
+        const retries = submission.data?.renderRetries ?? 0;
+        const existing = await this.reactionRenderQueue.getJob(jobId);
+
+        if (existing) {
+          this.logger.log(
+            `Skip enqueue for submission ${submissionId} (${submission.author}/${submission.contest_code}/${submission.problem_code}): ` +
+              `job ${jobId} already queued with state ${await existing.getState()}`,
+          );
+          continue;
+        }
+
         await this.reactionRenderQueue.add(
           REACTION_RENDER_JOB_NAME,
           { submissionId },
           {
-            jobId: `reaction-${submissionId}`,
+            jobId,
             removeOnComplete: true,
             removeOnFail: true,
           },
         );
+        this.logger.log(
+          `Enqueued reaction render for submission ${submissionId} ` +
+            `(${submission.author}/${submission.contest_code}/${submission.problem_code}, attempt ${retries + 1}/${maxRetries})`,
+        );
       }
 
-      this.logger.log('Process reactions fan-out completed');
+      this.logger.log(`Process reactions fan-out completed for ${submissions.length} submission(s)`);
     } catch (error) {
       this.logger.error('Error fanning out reaction jobs:', error);
       throw error;

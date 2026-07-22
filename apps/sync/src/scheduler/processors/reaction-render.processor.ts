@@ -57,8 +57,10 @@ export class ReactionRenderProcessor extends WorkerHost {
 
   async process(job: Job<ReactionRenderJobData>): Promise<void> {
     const submissionId = job.data.submissionId;
+    this.logger.log(`[${submissionId}] START job ${job.id} - ${job.name} (attempt ${job.attemptsMade + 1})`);
+
     if (!Types.ObjectId.isValid(submissionId)) {
-      this.logger.warn(`Invalid submissionId on job ${job.id}: ${submissionId}`);
+      this.logger.warn(`[${submissionId}] SKIP: invalid submissionId on job ${job.id}`);
       return;
     }
 
@@ -67,7 +69,7 @@ export class ReactionRenderProcessor extends WorkerHost {
       envLoaded = readReactionRenderEnv((key) => this.configService.get<string>(key));
     } catch (error) {
       if (error instanceof ReactionRenderConfigError) {
-        this.logger.error(error.message);
+        this.logger.error(`[${submissionId}] ABORT: render config invalid - ${error.message}`);
         return;
       }
       throw error;
@@ -80,7 +82,7 @@ export class ReactionRenderProcessor extends WorkerHost {
       s3Client = createReactionS3Client(s3Config);
     } catch (error) {
       if (error instanceof ReactionS3ConfigError) {
-        this.logger.error(error.message);
+        this.logger.error(`[${submissionId}] ABORT: S3 config invalid - ${error.message}`);
         return;
       }
       throw error;
@@ -88,15 +90,22 @@ export class ReactionRenderProcessor extends WorkerHost {
 
     const submission = await this.submissionModel.findById(submissionId).exec();
     if (!submission) {
-      this.logger.warn(`Submission ${submissionId} not found`);
+      this.logger.warn(`[${submissionId}] SKIP: submission not found`);
       return;
     }
+
+    this.logger.log(
+      `[${submissionId}] Loaded submission: author=${submission.author}, contest=${submission.contest_code}, ` +
+        `problem=${submission.problem_code}, status=${submission.submissionStatus}, ` +
+        `judgedAt=${submission.judgedAt?.toISOString() ?? 'none'}, renderRetries=${submission.data?.renderRetries ?? 0}`,
+    );
+
     if (submission.submissionStatus !== SubmissionStatus.AC) {
-      this.logger.log(`Submission ${submissionId} is not AC, skip`);
+      this.logger.log(`[${submissionId}] SKIP: status is ${submission.submissionStatus}, not AC`);
       return;
     }
     if (submission.data.reaction) {
-      this.logger.log(`Submission ${submissionId} already has reaction, skip`);
+      this.logger.log(`[${submissionId}] SKIP: already has reaction ${submission.data.reaction}`);
       return;
     }
 
@@ -110,6 +119,7 @@ export class ReactionRenderProcessor extends WorkerHost {
     s3Config: ReactionS3Config,
   ): Promise<void> {
     const submissionId = String(submission._id);
+    const startedAt = Date.now();
     await this.submissionModel.updateOne({ _id: submission._id }, { $inc: { 'data.renderRetries': 1 } });
     try {
       const mappedUsername = (
@@ -122,10 +132,15 @@ export class ReactionRenderProcessor extends WorkerHost {
       const user = mappedUsername ? await this.userModel.findOne({ username: mappedUsername }).exec() : null;
       if (!user) {
         this.logger.warn(
-          `No mapped user for author=${submission.author}, contest=${submission.contest_code}, skip reaction`,
+          `[${submissionId}] SKIP: no mapped user for author=${submission.author}, contest=${submission.contest_code} ` +
+            `(mapToUser=${mappedUsername ?? 'unset'})`,
         );
         return;
       }
+      this.logger.log(
+        `[${submissionId}] Mapped ${submission.author} -> user ${user.username} (group=${user.group ?? 'none'})`,
+      );
+
       const anchor = submission.judgedAt ?? submission.submittedAt;
       const anchorSec = anchor.getTime() / 1000;
       const beforeSec = Number(this.configService.get('REACTION_BEFORE_SECONDS') ?? 5);
@@ -160,21 +175,32 @@ export class ReactionRenderProcessor extends WorkerHost {
       const screenPath = path.join(workDir, 'screen.mkv');
 
       try {
+        this.logger.log(
+          `[${submissionId}] Extracting stream slices from ${user.username} ` +
+            `(window ${startUnix.toFixed(3)} -> ${endUnix.toFixed(3)}, ${(endUnix - startUnix).toFixed(1)}s)`,
+        );
         await this.extractStreamSlices(user, startUnix, endUnix, webcamPath, screenPath);
 
+        this.logger.log(`[${submissionId}] Rendering reaction video`);
         const video = await renderReactionVideoFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
-        this.logger.log(`Rendered reaction MP4 (${video.length} bytes) for submission ${submissionId}`);
+        this.logger.log(`[${submissionId}] Rendered reaction MP4 (${video.length} bytes)`);
 
         const s3Key = `${submissionId}.mp4`;
+        this.logger.log(`[${submissionId}] Uploading to S3 key ${s3Key}`);
         const publicUrl = await putReactionVideo(s3Client, s3Config, s3Key, video);
 
         await this.submissionModel.updateOne({ _id: submission._id }, { $set: { 'data.reaction': publicUrl } });
-        this.logger.log(`Uploaded reaction to ${publicUrl} for submission ${submissionId}`);
+        this.logger.log(`[${submissionId}] DONE in ${Date.now() - startedAt}ms: reaction available at ${publicUrl}`);
       } finally {
         await fs.rm(workDir, { recursive: true, force: true });
       }
     } catch (error) {
-      this.logger.error(`Error generating reaction for submission ${submissionId}:`, error);
+      this.logger.error(
+        `[${submissionId}] FAILED after ${Date.now() - startedAt}ms ` +
+          `(author=${submission.author}, contest=${submission.contest_code}, problem=${submission.problem_code}): ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
   }
 
