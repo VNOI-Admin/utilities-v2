@@ -84,7 +84,7 @@ export class RemoteControlApi {
   }
 
   run(ip: string, jobId: string, payload: RemoteControlJobPayload, files: RemoteControlInputFile[] = []) {
-    return this.instance.post(this.jobUrl(ip, jobId, 'run'), this.createRunForm(payload, files), { timeout: 0 });
+    return this.instance.post(this.jobUrl(ip, jobId, 'run'), this.createRunForm(payload, files));
   }
 
   async runRemoteScript(input: RunRemoteScriptInput): Promise<RunRemoteScriptResult> {
