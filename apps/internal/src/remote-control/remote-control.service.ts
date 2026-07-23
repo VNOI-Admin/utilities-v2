@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { createReadStream } from 'fs';
 import * as path from 'path';
 import { RemoteControlApi, type RemoteControlJobPayload } from '@libs/api/remote-control';
+import pLimit from 'p-limit';
 import {
   RemoteControlScript,
   type RemoteControlScriptDocument,
@@ -358,11 +359,11 @@ export class RemoteControlService implements OnModuleInit {
     files: RemoteControlRuntimeFile[] = [],
   ) {
     const ipMap = await this.resolveVpnIps(targets);
+    const limit = pLimit(DISPATCH_CONCURRENCY);
 
-    for (let index = 0; index < targets.length; index += DISPATCH_CONCURRENCY) {
-      const batch = targets.slice(index, index + DISPATCH_CONCURRENCY);
-      await Promise.allSettled(
-        batch.map(async (target) => {
+    await Promise.allSettled(
+      targets.map((target) =>
+        limit(async () => {
           const ip = ipMap.get(target);
           if (!ip) {
             return this.failRun(jobId, target, 'target vpn ip not found');
@@ -373,8 +374,8 @@ export class RemoteControlService implements OnModuleInit {
             await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
           }
         }),
-      );
-    }
+      ),
+    );
   }
 
   private normalizeFiles(files: RemoteControlFileInput[]): RemoteControlRuntimeFile[] {
