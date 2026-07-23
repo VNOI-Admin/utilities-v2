@@ -4,7 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { type DecodedImage, type Rgba, Surface, decodePng, luminance, parseColor } from './png';
+import { type DecodedImage, type Rgba, Surface, decodePng, parseColor } from './png';
 import {
   BANNER,
   BLINK_DURATION,
@@ -228,21 +228,6 @@ async function loadImage(
   }
 }
 
-/** Alpha-weighted mean relative luminance of an image's visible pixels. */
-function meanLuminance(image: DecodedImage): number {
-  let weighted = 0;
-  let weight = 0;
-  for (let i = 0; i < image.data.length; i += 16) {
-    const alpha = image.data[i + 3] / 255;
-    if (alpha <= 0.05) {
-      continue;
-    }
-    weighted += alpha * luminance([image.data[i], image.data[i + 1], image.data[i + 2], 255]);
-    weight += alpha;
-  }
-  return weight > 0 ? weighted / weight : 0;
-}
-
 // --- layer painting -----------------------------------------------------------
 
 /**
@@ -275,10 +260,8 @@ function paintFrameLayer(
     const size = 56;
     const x = 40;
     const y = (FRAME.headerHeight - size) / 2;
-    // A white brand mark would vanish on the white bar, so give it a plate.
-    if (meanLuminance(brandLogo) > 0.6) {
-      surface.fillCircle(x + size / 2, y + size / 2, size / 2 + 8, parseColor('#111827'));
-    }
+    // Drawn straight onto the white header bar with no backing plate; the brand
+    // mark is expected to carry its own contrast against white.
     surface.drawImageContain(brandLogo, x, y, size, size);
   }
 
@@ -309,8 +292,7 @@ function paintBannerLayer(background: string, crest: DecodedImage | null): Surfa
 
   const crestCx = localX + (BANNER.crestCx - BANNER.x);
   const crestCy = localY + (BANNER.crestCy - BANNER.y);
-  const plate = crest && meanLuminance(crest) > 0.6 ? parseColor('#111827', 0.92) : parseColor('#ffffff', 0.97);
-  surface.fillCircle(crestCx, crestCy, BANNER.crestRadius, plate);
+  // The crest sits directly on the banner — no backing plate circle behind it.
   if (crest) {
     const inner = BANNER.crestRadius * 1.5;
     surface.drawImageContain(crest, crestCx - inner / 2, crestCy - inner / 2, inner, inner);

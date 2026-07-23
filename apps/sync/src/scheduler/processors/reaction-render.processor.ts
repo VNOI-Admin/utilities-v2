@@ -141,12 +141,15 @@ export class ReactionRenderProcessor extends WorkerHost {
         `[${submissionId}] Mapped ${submission.author} -> user ${user.username} (group=${user.group ?? 'none'})`,
       );
 
-      const anchor = submission.judgedAt ?? submission.submittedAt;
-      const anchorSec = anchor.getTime() / 1000;
-      const beforeSec = Number(this.configService.get('REACTION_BEFORE_SECONDS') ?? 5);
-      const afterSec = Number(this.configService.get('REACTION_AFTER_SECONDS') ?? 10);
-      const startUnix = anchorSec - beforeSec;
-      const endUnix = anchorSec + afterSec;
+      // Feed window: BEFORE seconds ahead of the submission, through the whole
+      // judging gap, then AFTER seconds past the verdict. judgedAt is always
+      // present for AC; submittedAt only backs the tail if it somehow is not.
+      const submittedSec = submission.submittedAt.getTime() / 1000;
+      const judgedSec = submission.judgedAt ? submission.judgedAt.getTime() / 1000 : undefined;
+      const beforeSec = Number(this.configService.get('REACTION_BEFORE_SECONDS') ?? 10);
+      const afterSec = Number(this.configService.get('REACTION_AFTER_SECONDS') ?? 15);
+      const startUnix = submittedSec - beforeSec;
+      const endUnix = (judgedSec ?? submittedSec) + afterSec;
 
       // Never throws: users without a group fall back to the VNOI brand logo.
       const universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) =>
@@ -156,7 +159,7 @@ export class ReactionRenderProcessor extends WorkerHost {
       // The banner holds "pending" amber until the judge actually finished.
       // Only judgedAt gives us that instant; without it we skip the pending
       // phase rather than inventing one.
-      const verdictAtSeconds = submission.judgedAt ? submission.judgedAt.getTime() / 1000 - startUnix : undefined;
+      const verdictAtSeconds = judgedSec !== undefined ? judgedSec - startUnix : undefined;
 
       const contest = await this.contestModel
         .findOne({ code: submission.contest_code })
