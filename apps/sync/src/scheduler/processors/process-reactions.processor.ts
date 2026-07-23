@@ -26,9 +26,18 @@ export class ProcessReactionsProcessor extends WorkerHost {
     try {
       const maxRetries = Number(this.configService.get('REACTION_RENDER_MAX_RETRIES') ?? 5);
 
+      // Hold off until the entire feed window is guaranteed to be recorded: the
+      // post-verdict tail (AFTER seconds) must have elapsed in real time, plus a
+      // safety margin, before we ask the client for slices. Gating on judgedAt
+      // stops a just-judged submission from being picked up too early.
+      const delaySec = Number(this.configService.get('REACTION_RENDER_DELAY_SECONDS') ?? 20);
+      const afterSec = Number(this.configService.get('REACTION_AFTER_SECONDS') ?? 15);
+      const feedReadyBefore = new Date(Date.now() - Math.max(delaySec, afterSec) * 1000);
+
       const submissions = await this.submissionModel
         .find({
           submissionStatus: SubmissionStatus.AC,
+          judgedAt: { $ne: null, $lte: feedReadyBefore },
           $or: [{ 'data.reaction': { $exists: false } }, { 'data.reaction': null }],
           'data.renderRetries': { $lt: maxRetries },
         })
@@ -36,8 +45,8 @@ export class ProcessReactionsProcessor extends WorkerHost {
         .exec();
 
       this.logger.log(
-        `Found ${submissions.length} AC submissions without reactions (maxRetries=${maxRetries}): ` +
-          `[${submissions.map((submission) => String(submission._id)).join(', ') || 'none'}]`,
+        `Found ${submissions.length} AC submissions with ready feed windows (judged ≤ ${feedReadyBefore.toISOString()}, ` +
+          `maxRetries=${maxRetries}): [${submissions.map((submission) => String(submission._id)).join(', ') || 'none'}]`,
       );
 
       for (const submission of submissions) {
