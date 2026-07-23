@@ -141,6 +141,21 @@
                       <div class="tech-label mb-1">STATUS</div>
                       <div class="font-mono text-sm data-value">{{ contestStatus.toUpperCase() }}</div>
                     </div>
+                    <div>
+                      <div class="tech-label mb-1">FORMAT</div>
+                      <select
+                        v-model="formatSelectValue"
+                        :disabled="savingFormat"
+                        @change="onFormatChange"
+                        class="input-mission font-mono text-sm w-full"
+                      >
+                        <option value="ICPC">ICPC (ranked by AC count)</option>
+                        <option value="VNOJ">VNOJ (ranked by points)</option>
+                      </select>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Changing format immediately recomputes standings, ranks, and submission rank history.
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -353,7 +368,7 @@
                   <span class="tech-label">STATUS:</span>
                   <MissionSelect
                     v-model="submissionStatusFilter"
-                    :options="['all', 'AC', 'WA', 'RTE', 'RE', 'IR', 'OLE', 'MLE', 'TLE', 'IE', 'AB', 'CE', 'UNKNOWN']"
+                    :options="['all', 'AC', 'PAC', 'WA', 'RTE', 'RE', 'IR', 'OLE', 'MLE', 'TLE', 'SC', 'IE', 'AB', 'CE', 'UNKNOWN']"
                     :searchable="false"
                     container-class="w-32"
                   />
@@ -563,8 +578,8 @@
                     <tr class="border-b border-white/10 bg-mission-gray">
                       <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 w-12">#</th>
                       <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 min-w-[150px]">Participant</th>
-                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20">Solved</th>
-                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-24">Penalty</th>
+                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20">{{ primaryLabel(rankingFormat) }}</th>
+                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-24">{{ secondaryLabel(rankingFormat) }}</th>
                       <th
                         v-for="problem in sortedProblems"
                         :key="problem._id"
@@ -592,13 +607,13 @@
                           @{{ row.participant.username }}
                         </div>
                       </td>
-                      <!-- Solved Count -->
+                      <!-- Primary metric (Score for VNOJ, Solved for ICPC) -->
                       <td class="px-3 py-3 text-center">
-                        <span class="font-mono text-sm data-value">{{ row.participant.solvedCount || 0 }}</span>
+                        <span class="font-mono text-sm data-value">{{ row.primary }}</span>
                       </td>
-                      <!-- Total Penalty -->
+                      <!-- Secondary metric (Time for VNOJ, Penalty for ICPC) -->
                       <td class="px-3 py-3 text-center">
-                        <span class="font-mono text-sm text-gray-400">{{ row.participant.totalPenalty || 0 }}</span>
+                        <span class="font-mono text-sm text-gray-400">{{ row.secondary }}</span>
                       </td>
                       <!-- Problem Cells -->
                       <td
@@ -607,17 +622,18 @@
                         class="px-2 py-3 text-center"
                       >
                         <div
-                          v-if="row.problemStates[problem.code]?.tries > 0"
+                          v-if="row.problemStates[problem.code]?.attempted"
                           class="inline-flex flex-col items-center justify-center min-w-[50px] px-2 py-1 rounded text-xs font-mono"
                           :class="row.problemStates[problem.code]?.solved
                             ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                             : 'bg-red-500/20 text-red-400 border border-red-500/30'"
                         >
                           <span class="font-semibold">
-                            {{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}
+                            <template v-if="rankingFormat === 'VNOJ'">{{ row.problemStates[problem.code]?.points }}</template>
+                            <template v-else>{{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}</template>
                           </span>
                           <span v-if="row.problemStates[problem.code]?.solved" class="text-[10px] opacity-75">
-                            {{ row.problemStates[problem.code]?.penalty }}'
+                            {{ row.problemStates[problem.code]?.time }}'
                           </span>
                         </div>
                         <span v-else class="text-gray-600">-</span>
@@ -731,6 +747,79 @@
                   type="button"
                   @click="closeDeleteModal"
                   :disabled="deleting"
+                  class="btn-secondary px-8"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Change Format Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showFormatConfirm"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          @click.self="cancelFormatChange"
+        >
+          <div class="mission-card w-full max-w-lg mx-4 border-mission-amber overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+              <div class="flex items-center justify-between">
+                <h2 class="text-xl font-display font-bold flex items-center gap-2 text-mission-amber">
+                  <AlertCircle :size="24" :stroke-width="2" />
+                  CHANGE CONTEST FORMAT
+                </h2>
+                <button
+                  @click="cancelFormatChange"
+                  class="text-gray-400 hover:text-mission-amber transition-colors"
+                >
+                  <X :size="24" :stroke-width="2" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+              <div class="p-4 border border-mission-amber bg-mission-amber/10">
+                <p class="text-sm font-mono text-mission-amber">
+                  ⚠️ This contest is currently {{ contestStatus.toUpperCase() }}.
+                </p>
+              </div>
+
+              <p class="text-sm text-gray-300">
+                Switching <span class="font-mono text-mission-accent">{{ contest?.code }}</span> from
+                <span class="font-mono text-white">{{ contest?.format ?? 'ICPC' }}</span> to
+                <span class="font-mono text-white">{{ pendingFormat }}</span>
+                immediately recomputes participant standings, ranks, and every submission's rank
+                history using different ranking rules. This can visibly reshuffle the live leaderboard
+                and may take a moment for large contests.
+              </p>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  @click="confirmFormatChange"
+                  :disabled="savingFormat"
+                  class="flex-1 px-6 py-3 border font-mono text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 border-mission-amber text-mission-amber hover:bg-mission-amber hover:text-black disabled:opacity-50"
+                >
+                  <RotateCw
+                    v-if="savingFormat"
+                    :size="20"
+                    :stroke-width="2"
+                    class="animate-spin"
+                  />
+                  <span>{{ savingFormat ? 'APPLYING...' : `SWITCH TO ${pendingFormat}` }}</span>
+                </button>
+                <button
+                  type="button"
+                  @click="cancelFormatChange"
+                  :disabled="savingFormat"
                   class="btn-secondary px-8"
                 >
                   CANCEL
@@ -1158,6 +1247,16 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useContestsStore } from '~/stores/contests';
+import {
+  resolveFormat,
+  buildProblemState,
+  primaryMetric,
+  secondaryMetric,
+  primaryLabel,
+  secondaryLabel,
+  type ProblemState,
+  type RankingFormat,
+} from '~/common/ranking';
 import type { ContestEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
 import { internalApi } from '~/services/api';
 import type { UserEntity, ParticipantResponse } from '@libs/api/internal';
@@ -1185,6 +1284,19 @@ const availableUsers = ref<UserEntity[]>([]);
 // Draft display-name values per problem (keyed by _id) for the Problems tab editor.
 const problemNameDrafts = ref<Record<string, string>>({});
 const savingProblemId = ref<string | null>(null);
+const savingFormat = ref(false);
+const formatSelectValue = ref<'ICPC' | 'VNOJ'>('ICPC');
+const pendingFormat = ref<'ICPC' | 'VNOJ' | null>(null);
+const showFormatConfirm = ref(false);
+
+// Keep the dropdown in sync with the loaded contest's actual format.
+watch(
+  () => contest.value?.format,
+  (fmt) => {
+    formatSelectValue.value = (fmt ?? 'ICPC') as 'ICPC' | 'VNOJ';
+  },
+  { immediate: true },
+);
 
 // Tab state
 const validTabs = ['details', 'participants', 'submissions', 'problems', 'ranking'] as const;
@@ -1316,37 +1428,31 @@ function problemName(code: string): string {
   return problemNameByCode.value.get(code) ?? code;
 }
 
-// Ranking computed - participants sorted by ICPC rules with problem states
+// Ranking format for this contest (VNOJ: score/time; ICPC: solved/penalty).
+const rankingFormat = computed<RankingFormat>(() =>
+  resolveFormat(contest.value ?? participants.value[0]),
+);
+
+// Ranking computed - participants ordered by the server-computed rank (which is
+// already format-aware), enriched with per-problem display state.
 const rankingData = computed(() => {
-  // Sort participants: more solved first, then lower penalty
-  const sorted = [...participants.value].sort((a, b) => {
-    const solvedDiff = (b.solvedCount || 0) - (a.solvedCount || 0);
-    if (solvedDiff !== 0) return solvedDiff;
-    return (a.totalPenalty || 0) - (b.totalPenalty || 0);
-  });
+  const fmt = rankingFormat.value;
+  // Order by stored rank (falls back to index for un-ranked participants).
+  const sorted = [...participants.value].sort(
+    (a, b) => (a.rank || Number.MAX_SAFE_INTEGER) - (b.rank || Number.MAX_SAFE_INTEGER),
+  );
 
   return sorted.map((participant, index) => {
-    // Build problem states for this participant
-    const problemStates: Record<string, { solved: boolean; tries: number; penalty: number }> = {};
-
+    const problemStates: Record<string, ProblemState> = {};
     for (const problem of sortedProblems.value) {
-      const problemDataMap = participant.problemData as Record<string, { solveTime: number; wrongTries: number }> | undefined;
-      const problemData = problemDataMap?.[problem.code];
-      if (problemData) {
-        const solved = participant.solvedProblems?.includes(problem.code) || false;
-        problemStates[problem.code] = {
-          solved,
-          tries: problemData.wrongTries + (solved ? 1 : 0), // Total attempts including AC
-          penalty: solved ? problemData.solveTime : 0,
-        };
-      } else {
-        problemStates[problem.code] = { solved: false, tries: 0, penalty: 0 };
-      }
+      problemStates[problem.code] = buildProblemState(participant, problem.code, fmt);
     }
 
     return {
-      rank: participant.rank || (index + 1), // Use stored rank, fallback to calculated
+      rank: participant.rank || index + 1,
       participant,
+      primary: primaryMetric(participant, fmt),
+      secondary: secondaryMetric(participant, fmt),
       problemStates,
     };
   });
@@ -1390,6 +1496,7 @@ function formatFullDateTime(date: string | Date): string {
 function getStatusClass(status: string): string {
   const classes: Record<string, string> = {
     'AC': 'border-mission-accent text-mission-accent bg-mission-accent/10',
+    'PAC': 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
     'WA': 'border-mission-red text-mission-red bg-mission-red/10',
     'RTE': 'border-mission-red text-mission-red bg-mission-red/10',
     'RE': 'border-mission-red text-mission-red bg-mission-red/10',
@@ -1397,6 +1504,7 @@ function getStatusClass(status: string): string {
     'OLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
     'MLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
     'TLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    'SC': 'border-mission-amber text-mission-amber bg-mission-amber/10',
     'IE': 'border-gray-600 text-gray-500 bg-gray-600/10',
     'AB': 'border-gray-600 text-gray-500 bg-gray-600/10',
     'CE': 'border-gray-600 text-gray-500 bg-gray-600/10',
@@ -1475,7 +1583,7 @@ async function loadSubmissions() {
       page: number;
       limit: number;
       search?: string;
-      status?: 'AC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
+      status?: 'AC' | 'PAC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'SC' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
     } = {
       page: currentPage.value,
       limit: pageSize.value,
@@ -1550,6 +1658,58 @@ async function saveProblemName(problem: ProblemEntity) {
     console.error('Update problem name error:', err);
   } finally {
     savingProblemId.value = null;
+  }
+}
+
+function onFormatChange() {
+  if (!contest.value) return;
+  const target = formatSelectValue.value;
+  const current = (contest.value.format ?? 'ICPC') as 'ICPC' | 'VNOJ';
+  if (target === current) return;
+
+  // Live contests (ongoing/frozen) get a confirmation step because switching
+  // format visibly reshuffles the leaderboard on the next sync.
+  const isLive = contestStatus.value === 'ongoing' || contestStatus.value === 'frozen';
+  if (isLive) {
+    pendingFormat.value = target;
+    showFormatConfirm.value = true;
+    return;
+  }
+
+  applyFormat(target);
+}
+
+function confirmFormatChange() {
+  if (pendingFormat.value) applyFormat(pendingFormat.value);
+}
+
+function cancelFormatChange() {
+  // Revert the dropdown to the contest's actual format.
+  formatSelectValue.value = (contest.value?.format ?? 'ICPC') as 'ICPC' | 'VNOJ';
+  pendingFormat.value = null;
+  showFormatConfirm.value = false;
+}
+
+async function applyFormat(format: 'ICPC' | 'VNOJ') {
+  if (!contest.value) return;
+
+  savingFormat.value = true;
+  try {
+    const updated = await internalApi.contest.update(contest.value.code, { format });
+    contest.value = updated;
+    contestsStore.setCurrentContest(updated);
+    contestsStore.updateContest(updated.code, { format: updated.format });
+    formatSelectValue.value = format;
+    toast.success(`Contest format set to ${format}`);
+  } catch (err: any) {
+    // Revert the dropdown on failure.
+    formatSelectValue.value = (contest.value?.format ?? 'ICPC') as 'ICPC' | 'VNOJ';
+    toast.error('Failed to update contest format');
+    console.error('Update contest format error:', err);
+  } finally {
+    savingFormat.value = false;
+    pendingFormat.value = null;
+    showFormatConfirm.value = false;
   }
 }
 

@@ -224,13 +224,17 @@
                 </div>
                 <div class="h-8 w-px bg-white/20"></div>
                 <div>
-                  <div class="tech-label mb-1">SOLVED</div>
-                  <div class="font-mono text-xs md:text-sm text-white">{{ participantData.solvedCount || 0 }}</div>
+                  <div class="tech-label mb-1">{{ participantData.format === 'VNOJ' ? 'SCORE' : 'SOLVED' }}</div>
+                  <div class="font-mono text-xs md:text-sm text-white">
+                    {{ participantData.format === 'VNOJ' ? (participantData.score || 0) : (participantData.solvedCount || 0) }}
+                  </div>
                 </div>
                 <div class="h-8 w-px bg-white/20"></div>
                 <div>
-                  <div class="tech-label mb-1">PENALTY</div>
-                  <div class="font-mono text-xs md:text-sm text-white">{{ participantData.totalPenalty || 0 }}m</div>
+                  <div class="tech-label mb-1">{{ participantData.format === 'VNOJ' ? 'TIME' : 'PENALTY' }}</div>
+                  <div class="font-mono text-xs md:text-sm text-white">
+                    {{ participantData.format === 'VNOJ' ? (participantData.cumtime || 0) : (participantData.totalPenalty || 0) }}m
+                  </div>
                 </div>
               </template>
             </div>

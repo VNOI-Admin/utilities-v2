@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { ParticipantResponse } from '@libs/api/internal';
 
+export type ContestFormat = 'ICPC' | 'VNOJ';
+
 // Type definitions matching backend schemas
 export interface ContestEntity {
   _id?: string;
@@ -11,11 +13,14 @@ export interface ContestEntity {
   end_time: string | Date;
   frozen_at?: string | Date;
   penalty?: number; // Minutes penalty per wrong submission (default 20)
+  format?: ContestFormat; // Ranking format (default 'ICPC')
 }
 
 export interface ProblemData {
   solveTime: number;
   wrongTries: number;
+  points?: number; // VNOJ: best points achieved on this problem
+  pending?: number; // VNOJ: submissions after the freeze not yet in the frozen board
 }
 
 // Re-export ParticipantResponse as ParticipantEntity for backwards compatibility
@@ -23,6 +28,7 @@ export type ParticipantEntity = ParticipantResponse;
 
 export enum SubmissionStatus {
   AC = 'AC',
+  PAC = 'PAC',
   WA = 'WA',
   RTE = 'RTE',
   RE = 'RE',
@@ -30,6 +36,7 @@ export enum SubmissionStatus {
   OLE = 'OLE',
   MLE = 'MLE',
   TLE = 'TLE',
+  SC = 'SC',
   IE = 'IE',
   AB = 'AB',
   CE = 'CE',
@@ -55,6 +62,7 @@ export interface SubmissionEntity {
   data: SubmissionData;
   external_id?: string;
   language?: string;
+  points?: number; // VNOJ points awarded for this submission (optional)
 }
 
 export interface ProblemEntity {

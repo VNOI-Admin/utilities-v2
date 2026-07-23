@@ -29,8 +29,8 @@
           <tr class="table-header">
             <th class="col-rank">#</th>
             <th class="col-participant">Participant</th>
-            <th class="col-solved">Solved</th>
-            <th class="col-penalty">Penalty</th>
+            <th class="col-solved">{{ primaryLabel(format) }}</th>
+            <th class="col-penalty">{{ secondaryLabel(format) }}</th>
             <th
               v-for="problem in sortedProblems"
               :key="problem._id"
@@ -66,10 +66,10 @@
               </div>
             </td>
             <td class="col-solved">
-              <span class="solved-count">{{ row.participant.solvedCount || 0 }}</span>
+              <span class="solved-count">{{ row.primary }}</span>
             </td>
             <td class="col-penalty">
-              <span class="penalty-value">{{ row.participant.totalPenalty || 0 }}</span>
+              <span class="penalty-value">{{ row.secondary }}</span>
             </td>
             <td
               v-for="problem in sortedProblems"
@@ -77,15 +77,16 @@
               class="col-problem"
             >
               <div
-                v-if="row.problemStates[problem.code]?.tries > 0"
+                v-if="row.problemStates[problem.code]?.attempted"
                 class="problem-cell"
                 :class="row.problemStates[problem.code]?.solved ? 'solved' : 'failed'"
               >
                 <span class="tries">
-                  {{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}
+                  <template v-if="format === 'VNOJ'">{{ row.problemStates[problem.code]?.points }}</template>
+                  <template v-else>{{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}</template>
                 </span>
                 <span v-if="row.problemStates[problem.code]?.solved" class="time">
-                  {{ row.problemStates[problem.code]?.penalty }}'
+                  {{ row.problemStates[problem.code]?.time }}'
                 </span>
               </div>
               <span v-else class="no-attempt">-</span>
@@ -103,6 +104,16 @@ import { internalApi } from '~/services/api';
 import type { ParticipantResponse } from '@libs/api/internal';
 import type { ProblemEntity } from '~/stores/contests';
 import { useContestsStore } from '~/stores/contests';
+import {
+  resolveFormat,
+  buildProblemState,
+  primaryMetric,
+  secondaryMetric,
+  primaryLabel,
+  secondaryLabel,
+  type ProblemState,
+  type RankingFormat,
+} from '~/common/ranking';
 
 const props = defineProps<{
   contestId: string;
@@ -119,6 +130,9 @@ const currentContest = computed(() => {
   if (!props.contestId) return null;
   return contestsStore.getContestByCode(props.contestId);
 });
+
+// Ranking format (VNOJ shows score/time; ICPC shows solved/penalty).
+const format = computed<RankingFormat>(() => resolveFormat(participants.value[0] ?? currentContest.value));
 
 // Check if frozen design should be shown
 const showFrozenDesign = computed(() => {
@@ -152,28 +166,19 @@ const displayedParticipants = computed(() => {
 
 // Ranking data with problem states
 const rankingData = computed(() => {
+  const fmt = format.value;
   return displayedParticipants.value.map((participant) => {
-    // Build problem states for this participant
-    const problemStates: Record<string, { solved: boolean; tries: number; penalty: number }> = {};
-
+    // Build problem states for this participant (format-aware)
+    const problemStates: Record<string, ProblemState> = {};
     for (const problem of sortedProblems.value) {
-      const problemDataMap = participant.problemData as Record<string, { solveTime: number; wrongTries: number }> | undefined;
-      const problemData = problemDataMap?.[problem.code];
-      if (problemData) {
-        const solved = participant.solvedProblems?.includes(problem.code) || false;
-        problemStates[problem.code] = {
-          solved,
-          tries: problemData.wrongTries + (solved ? 1 : 0), // Total attempts including AC
-          penalty: solved ? problemData.solveTime : 0,
-        };
-      } else {
-        problemStates[problem.code] = { solved: false, tries: 0, penalty: 0 };
-      }
+      problemStates[problem.code] = buildProblemState(participant, problem.code, fmt);
     }
 
     return {
       rank: participant.rank,
       participant,
+      primary: primaryMetric(participant, fmt),
+      secondary: secondaryMetric(participant, fmt),
       problemStates,
     };
   });

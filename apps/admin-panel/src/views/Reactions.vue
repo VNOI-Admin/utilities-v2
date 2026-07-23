@@ -278,6 +278,8 @@ function verdictClass(status: string): string {
   switch (status.toUpperCase()) {
     case 'AC':
       return 'bg-mission-accent/15 border-mission-accent/60 text-mission-accent';
+    case 'PAC':
+      return 'bg-mission-cyan/15 border-mission-cyan/60 text-mission-cyan';
     case 'WA':
     case 'RTE':
     case 'RE':
@@ -286,6 +288,7 @@ function verdictClass(status: string): string {
     case 'TLE':
     case 'MLE':
     case 'OLE':
+    case 'SC':
     case 'CE':
       return 'bg-mission-amber/15 border-mission-amber/60 text-mission-amber';
     default:

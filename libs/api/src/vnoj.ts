@@ -40,6 +40,7 @@ export interface VnojSubmission {
   submissionStatus: string; // AC, WA, TLE, MLE, etc.
   contest_code: string;
   problem_code: string;
+  points?: number; // Points awarded by VNOJ (optional; used by the VNOJ contest format)
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';

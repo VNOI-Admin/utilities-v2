@@ -5,6 +5,7 @@ export type SubmissionDocument = Submission & Document;
 
 export enum SubmissionStatus {
   AC = 'AC',
+  PAC = 'PAC', // Partially Accepted (VNOJ partial scoring)
   WA = 'WA',
   RTE = 'RTE',
   RE = 'RE',
@@ -12,6 +13,7 @@ export enum SubmissionStatus {
   OLE = 'OLE',
   MLE = 'MLE',
   TLE = 'TLE',
+  SC = 'SC', // Short Circuited
   IE = 'IE',
   AB = 'AB',
   CE = 'CE',
@@ -67,6 +69,12 @@ export class Submission {
 
   @Prop({ required: false })
   language?: string;
+
+  // Points awarded to this submission by VNOJ (optional; used by the VNOJ
+  // contest format for points-based ranking). May be absent for older
+  // submissions or when the VNOJ feed does not provide it.
+  @Prop({ required: false })
+  points?: number;
 }
 
 export const SubmissionSchema = SchemaFactory.createForClass(Submission);
