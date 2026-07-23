@@ -1,6 +1,8 @@
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
+import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Submission, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { resolveProblemName } from '@libs/common/helper/problem-name';
 import {
   ReactionS3ConfigError,
   createReactionS3Client,
@@ -28,6 +30,7 @@ export class ReactionService {
     @InjectModel(Submission.name) private readonly submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private readonly participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Problem.name) private readonly problemModel: Model<ProblemDocument>,
   ) {}
 
   /**
@@ -52,6 +55,7 @@ export class ReactionService {
 
     const submissions = await this.loadSubmissions(items.map((item) => item.key));
     const users = await this.loadUsersForSubmissions([...submissions.values()]);
+    const problemNames = await this.loadProblemNames([...submissions.values()]);
 
     return items.map((item) => {
       const submissionId = submissionIdFromKey(item.key);
@@ -77,6 +81,10 @@ export class ReactionService {
         group: user?.group?.trim() || undefined,
         author: submission.author,
         problemCode: submission.problem_code,
+        problemDisplayName: resolveProblemName(
+          submission.problem_code,
+          problemNames.get(`${submission.contest_code}::${submission.problem_code}`),
+        ),
         contestCode: submission.contest_code,
         status: submission.submissionStatus,
         rankBefore: submission.data?.old_rank,
@@ -100,6 +108,39 @@ export class ReactionService {
       .exec();
 
     return new Map(submissions.map((submission) => [String(submission._id), submission]));
+  }
+
+  /**
+   * Loads the manual display-name overrides for the problems referenced by the
+   * given submissions, keyed by `contest::code`. Only problems that actually
+   * carry a `displayName` are returned; callers fall back to the code otherwise.
+   */
+  private async loadProblemNames(submissions: SubmissionDocument[]): Promise<Map<string, string>> {
+    if (submissions.length === 0) {
+      return new Map();
+    }
+
+    const pairs = new Map<string, { contest: string; code: string }>();
+    for (const submission of submissions) {
+      pairs.set(`${submission.contest_code}::${submission.problem_code}`, {
+        contest: submission.contest_code,
+        code: submission.problem_code,
+      });
+    }
+
+    const problems = await this.problemModel
+      .find({ $or: [...pairs.values()] })
+      .select('contest code displayName')
+      .lean<ProblemDocument[]>()
+      .exec();
+
+    const out = new Map<string, string>();
+    for (const problem of problems) {
+      if (problem.displayName?.trim()) {
+        out.set(`${problem.contest}::${problem.code}`, problem.displayName);
+      }
+    }
+    return out;
   }
 
   /**

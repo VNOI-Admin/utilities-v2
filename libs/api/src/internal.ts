@@ -1600,6 +1600,30 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * No description
      *
      * @tags Contest
+     * @name UpdateProblem
+     * @summary Update a problem (e.g. set its display name)
+     * @request PATCH:/contests/{code}/problems/{problemCode}
+     * @secure
+     */
+    updateProblem: (
+      code: string,
+      problemCode: string,
+      data: { displayName?: string },
+      params: RequestParams = {},
+    ) =>
+      this.request<any, any>({
+        path: `/contests/${code}/problems/${problemCode}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
      * @name SyncParticipants
      * @summary Sync participants from VNOJ API
      * @request POST:/contests/{code}/sync-participants

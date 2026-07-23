@@ -406,7 +406,7 @@
                   >
                     <div class="col-span-2 font-mono text-gray-400">{{ formatFullDateTime(submission.submittedAt) }}</div>
                     <div class="col-span-2 font-mono">{{ submission.author }}</div>
-                    <div class="col-span-1 font-mono text-mission-cyan">{{ submission.problem_code }}</div>
+                    <div class="col-span-1 font-mono text-mission-cyan">{{ problemName(submission.problem_code) }}</div>
                     <div class="col-span-2">
                       <span
                         class="px-2 py-1 font-mono uppercase border rounded-sm"
@@ -505,8 +505,34 @@
                 >
                   <div class="flex items-center gap-2 mb-3">
                     <span class="text-mission-accent">●</span>
-                    <h3 class="font-mono font-semibold uppercase text-sm">{{ problem.code }}</h3>
+                    <h3 class="font-mono font-semibold uppercase text-sm">{{ problem.displayName || problem.code }}</h3>
+                    <span v-if="problem.displayName" class="font-mono text-[10px] text-gray-500 uppercase">({{ problem.code }})</span>
                   </div>
+
+                  <!-- Display-name mapping editor -->
+                  <div class="mb-4">
+                    <label class="tech-label block mb-1">DISPLAY NAME</label>
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="problemNameDrafts[problem._id]"
+                        type="text"
+                        :placeholder="problem.code"
+                        class="flex-1 min-w-0 bg-mission-dark border border-white/10 px-2 py-1 font-mono text-xs text-white focus:border-mission-accent focus:outline-none"
+                        @keyup.enter="saveProblemName(problem)"
+                      />
+                      <button
+                        @click="saveProblemName(problem)"
+                        :disabled="savingProblemId === problem._id || (problemNameDrafts[problem._id] ?? '').trim() === (problem.displayName ?? '')"
+                        class="px-3 py-1 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
+                        :class="savingProblemId === problem._id || (problemNameDrafts[problem._id] ?? '').trim() === (problem.displayName ?? '')
+                          ? 'border-white/10 text-gray-600 cursor-not-allowed'
+                          : 'border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark'"
+                      >
+                        {{ savingProblemId === problem._id ? '...' : 'SAVE' }}
+                      </button>
+                    </div>
+                  </div>
+
                   <div class="space-y-2 text-xs">
                     <div class="flex items-center justify-between">
                       <span class="tech-label">SUBMISSIONS</span>
@@ -543,8 +569,9 @@
                         v-for="problem in sortedProblems"
                         :key="problem._id"
                         class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20"
+                        :title="problem.displayName ? problem.code : undefined"
                       >
-                        {{ problem.code }}
+                        {{ problem.displayName || problem.code }}
                       </th>
                     </tr>
                   </thead>
@@ -1134,6 +1161,7 @@ import { useContestsStore } from '~/stores/contests';
 import type { ContestEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
 import { internalApi } from '~/services/api';
 import type { UserEntity, ParticipantResponse } from '@libs/api/internal';
+import { resolveProblemName } from '~/utils/problemName';
 import { useToast } from 'vue-toastification';
 import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList, Trophy } from 'lucide-vue-next';
 
@@ -1153,6 +1181,10 @@ const participants = ref<ParticipantResponse[]>([]);
 const submissions = ref<SubmissionEntity[]>([]);
 const problems = ref<ProblemEntity[]>([]);
 const availableUsers = ref<UserEntity[]>([]);
+
+// Draft display-name values per problem (keyed by _id) for the Problems tab editor.
+const problemNameDrafts = ref<Record<string, string>>({});
+const savingProblemId = ref<string | null>(null);
 
 // Tab state
 const validTabs = ['details', 'participants', 'submissions', 'problems', 'ranking'] as const;
@@ -1269,6 +1301,20 @@ const canSubmitParticipant = computed(() => {
 const sortedProblems = computed(() => {
   return [...problems.value].sort((a, b) => a.code.localeCompare(b.code));
 });
+
+// Map problem code -> display name, so surfaces that only carry a code
+// (e.g. the submissions table) can show the mapped name.
+const problemNameByCode = computed(() => {
+  const map = new Map<string, string>();
+  for (const problem of problems.value) {
+    map.set(problem.code, resolveProblemName(problem.code, problem.displayName));
+  }
+  return map;
+});
+
+function problemName(code: string): string {
+  return problemNameByCode.value.get(code) ?? code;
+}
 
 // Ranking computed - participants sorted by ICPC rules with problem states
 const rankingData = computed(() => {
@@ -1469,11 +1515,41 @@ async function loadProblems() {
     const data = await internalApi.contest.getProblems(contest.value.code);
     problems.value = data;
     contestsStore.setProblems(data);
+    // Seed the editor drafts with the current display names.
+    problemNameDrafts.value = Object.fromEntries(
+      (data as ProblemEntity[]).map((problem) => [problem._id, problem.displayName ?? '']),
+    );
   } catch (err: any) {
     toast.error('Failed to load problems');
     console.error('Load problems error:', err);
   } finally {
     loadingProblems.value = false;
+  }
+}
+
+async function saveProblemName(problem: ProblemEntity) {
+  if (!contest.value) return;
+  const draft = (problemNameDrafts.value[problem._id] ?? '').trim();
+  if (draft === (problem.displayName ?? '')) return;
+
+  savingProblemId.value = problem._id;
+  try {
+    await internalApi.contest.updateProblem(contest.value.code, problem.code, {
+      displayName: draft,
+    });
+    // Reflect the change locally without a full reload.
+    const updated = problems.value.map((p) =>
+      p._id === problem._id ? { ...p, displayName: draft || undefined } : p,
+    );
+    problems.value = updated;
+    contestsStore.setProblems(updated);
+    problemNameDrafts.value[problem._id] = draft;
+    toast.success(draft ? `Renamed ${problem.code} → ${draft}` : `Cleared display name for ${problem.code}`);
+  } catch (err: any) {
+    toast.error('Failed to update problem name');
+    console.error('Update problem name error:', err);
+  } finally {
+    savingProblemId.value = null;
   }
 }
 

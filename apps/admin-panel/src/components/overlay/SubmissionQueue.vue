@@ -29,7 +29,7 @@
           <div class="submission-rank">#{{ index + 1 }}</div>
           <div class="submission-content">
             <div class="submission-author">{{ submission.authorFullName || submission.author }}</div>
-            <div class="submission-problem">{{ submission.problem_code }}</div>
+            <div class="submission-problem">{{ submission.problemDisplayName || submission.problem_code }}</div>
           </div>
           <div class="submission-status" :class="`status-${submission.submissionStatus.toLowerCase()}`">
             {{ submission.submissionStatus }}

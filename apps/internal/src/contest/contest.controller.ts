@@ -17,6 +17,7 @@ import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entit
 import { ContestService } from './contest.service';
 import { CreateContestDto } from './dtos/createContest.dto';
 import { UpdateContestDto } from './dtos/updateContest.dto';
+import { UpdateProblemDto } from './dtos/updateProblem.dto';
 import { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { ContestFilter, GetContestsDto } from './dtos/getContests.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
@@ -88,6 +89,17 @@ export class ContestController {
   @ApiOperation({ summary: 'Get problems for contest' })
   async getProblems(@Param('code') code: string) {
     return this.contestService.getProblems(code);
+  }
+
+  @Patch(':code/problems/:problemCode')
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update a problem (e.g. set its display name)' })
+  async updateProblem(
+    @Param('code') code: string,
+    @Param('problemCode') problemCode: string,
+    @Body() dto: UpdateProblemDto,
+  ) {
+    return this.contestService.updateProblem(code, problemCode, dto.displayName);
   }
 
   @Patch('participants/:participantId/link-user')

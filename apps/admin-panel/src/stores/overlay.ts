@@ -47,6 +47,7 @@ export interface Submission {
   submissionStatus: string;
   contest_code: string;
   problem_code: string;
+  problemDisplayName?: string;
   data: {
     score: number;
     penalty: number;

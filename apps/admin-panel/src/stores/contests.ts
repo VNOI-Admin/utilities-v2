@@ -61,6 +61,8 @@ export interface ProblemEntity {
   _id: string;
   code: string;
   contest: string;
+  // Manual display name that overrides `code` in all problem displays.
+  displayName?: string;
 }
 
 export type ContestStatus = 'upcoming' | 'ongoing' | 'past' | 'frozen';

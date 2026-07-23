@@ -28,6 +28,11 @@ export class ReactionVideoListItemDto {
   @ApiPropertyOptional({ description: 'Problem code, e.g. "E"' })
   problemCode?: string;
 
+  @ApiPropertyOptional({
+    description: 'Display name for the problem (manual override, falls back to the code)',
+  })
+  problemDisplayName?: string;
+
   @ApiPropertyOptional({ description: 'Contest code the submission belongs to' })
   contestCode?: string;
 

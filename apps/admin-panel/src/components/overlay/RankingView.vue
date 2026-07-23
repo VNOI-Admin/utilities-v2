@@ -36,7 +36,7 @@
               :key="problem._id"
               class="col-problem"
             >
-              {{ problem.code }}
+              {{ problem.displayName || problem.code }}
             </th>
           </tr>
         </thead>

@@ -291,6 +291,33 @@ export class ContestService {
     return this.problemModel.find({ contest: code }).sort({ code: 1 }).exec();
   }
 
+  /**
+   * Sets (or clears) the manual display-name override for a single problem.
+   * An empty/whitespace-only value unsets the override so the code is shown again.
+   */
+  async updateProblem(
+    contestCode: string,
+    problemCode: string,
+    displayName?: string,
+  ): Promise<ProblemDocument> {
+    const trimmed = displayName?.trim();
+    const update = trimmed
+      ? { $set: { displayName: trimmed } }
+      : { $unset: { displayName: '' } };
+
+    const problem = await this.problemModel
+      .findOneAndUpdate({ contest: contestCode, code: problemCode }, update, { new: true })
+      .exec();
+
+    if (!problem) {
+      throw new NotFoundException(
+        `Problem with code ${problemCode} not found in contest ${contestCode}`,
+      );
+    }
+
+    return problem;
+  }
+
   async linkParticipant(participantId: string, linkDto: LinkParticipantDto): Promise<ParticipantDocument> {
     const participant = await this.participantModel
       .findByIdAndUpdate(participantId, { mapToUser: linkDto.user }, { new: true })

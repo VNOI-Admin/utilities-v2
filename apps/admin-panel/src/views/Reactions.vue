@@ -178,6 +178,7 @@ interface ReactionVideoItem {
   group?: string;
   author?: string;
   problemCode?: string;
+  problemDisplayName?: string;
   contestCode?: string;
   status?: string;
   rankBefore?: number;
@@ -224,6 +225,7 @@ const filteredItems = computed((): ReactionVideoItem[] => {
       item.group,
       item.author,
       item.problemCode,
+      item.problemDisplayName,
       item.contestCode,
       item.submissionId,
     ]
@@ -233,8 +235,9 @@ const filteredItems = computed((): ReactionVideoItem[] => {
 });
 
 function title(item: ReactionVideoItem): string {
-  if (item.problemCode && item.teamName) {
-    return `${item.teamName} solves ${item.problemCode}`;
+  const problem = item.problemDisplayName || item.problemCode;
+  if (problem && item.teamName) {
+    return `${item.teamName} solves ${problem}`;
   }
   if (item.teamName) {
     return item.teamName;
@@ -294,7 +297,7 @@ function details(item: ReactionVideoItem): { label: string; value: string }[] {
   return [
     { label: 'TEAM', value: item.teamName ?? '—' },
     { label: 'GROUP', value: item.group ?? '—' },
-    { label: 'PROBLEM', value: item.problemCode ?? '—' },
+    { label: 'PROBLEM', value: item.problemDisplayName || item.problemCode || '—' },
     { label: 'CONTEST', value: item.contestCode ?? '—' },
     { label: 'VERDICT', value: item.status ?? '—' },
     { label: 'RANK', value: rankDelta(item) || '—' },
