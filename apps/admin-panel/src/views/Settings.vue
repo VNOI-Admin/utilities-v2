@@ -179,7 +179,7 @@ const TIMING_LABELS: Record<string, { label: string; unit: string; hint: string 
   revealDelaySeconds: {
     label: 'REVEAL BUFFER',
     unit: 'seconds',
-    hint: "Safety margin on top of the problem's assumed runtime before the verdict flips.",
+    hint: 'Safety margin after the judge finishes before the verdict flips.',
   },
   blinkHalfPeriod: {
     label: 'BLINK HALF-PERIOD',

@@ -168,6 +168,7 @@ export class SyncSubmissionsProcessor extends WorkerHost {
             $set: {
               submittedAt,
               judgedAt: vnojSub.judgedAt ? new Date(vnojSub.judgedAt) : undefined,
+              judgeEndAt: vnojSub.judgeEndAt ? new Date(vnojSub.judgeEndAt) : undefined,
               author: vnojSub.author,
               submissionStatus,
               contest_code: contest.code,

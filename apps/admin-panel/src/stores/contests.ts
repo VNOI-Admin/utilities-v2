@@ -72,11 +72,6 @@ export interface ProblemEntity {
   contest: string;
   // Manual display name that overrides `code` in all problem displays.
   displayName?: string;
-  /**
-   * Assumed judging runtime in seconds. `judgedAt` is when judging started, so
-   * the reaction reveal is anchored to `judgedAt + this + buffer`.
-   */
-  assumedRuntimeSeconds?: number;
 }
 
 export type ContestStatus = 'upcoming' | 'ongoing' | 'past' | 'frozen';

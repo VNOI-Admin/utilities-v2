@@ -134,13 +134,13 @@ export const TIMELINE = {
   /** Rank counts up while the banner is blinking. */
   rankCountDuration: 1.2,
   /**
-   * Safety buffer on the estimated judge-finish time, in seconds.
+   * Safety buffer on the judge-finish time, in seconds.
    *
-   * `judgedAt` is when judging *started*, so the verdict really surfaces around
-   * `judgedAt + Problem.assumedRuntimeSeconds`. The caller folds that runtime
-   * into `verdictAtSeconds`; this buffer is added on top to absorb the residual
-   * slop (stream/server clock drift, a problem running slower than assumed) so
-   * the banner never flips before the contestant has visibly reacted.
+   * The caller anchors `verdictAtSeconds` to `Submission.judgeEndAt` — when
+   * judging actually finished, as opposed to `judgedAt`, which is only when it
+   * started. This buffer is added on top to absorb the residual slop between the
+   * judge finishing and the contestant seeing it, so the banner never flips
+   * before they have visibly reacted.
    */
   revealDelay: 1,
 } as const;

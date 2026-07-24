@@ -647,39 +647,6 @@
                     </div>
                   </div>
 
-                  <!-- Assumed judging runtime. judgedAt records when judging
-                       started, so the reaction reveal is anchored to
-                       judgedAt + this + buffer. -->
-                  <div class="mb-4">
-                    <label class="tech-label block mb-1">ASSUMED RUNTIME (SEC)</label>
-                    <div class="flex items-center gap-2">
-                      <input
-                        v-model="problemRuntimeDrafts[problem._id]"
-                        type="number"
-                        min="0"
-                        max="3600"
-                        step="0.5"
-                        :placeholder="String(DEFAULT_ASSUMED_RUNTIME_SECONDS)"
-                        class="flex-1 min-w-0 bg-mission-dark border border-white/10 px-2 py-1 font-mono text-xs text-white focus:border-mission-accent focus:outline-none"
-                        @keyup.enter="saveProblemRuntime(problem)"
-                      />
-                      <button
-                        @click="saveProblemRuntime(problem)"
-                        :disabled="savingRuntimeId === problem._id || !runtimeChanged(problem)"
-                        class="px-3 py-1 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
-                        :class="savingRuntimeId === problem._id || !runtimeChanged(problem)
-                          ? 'border-white/10 text-gray-600 cursor-not-allowed'
-                          : 'border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark'"
-                      >
-                        {{ savingRuntimeId === problem._id ? '...' : 'SAVE' }}
-                      </button>
-                    </div>
-                    <p class="mt-1 text-[10px] font-mono text-gray-500">
-                      Delays the verdict reveal to match when judging actually finishes.
-                      Blank = default ({{ DEFAULT_ASSUMED_RUNTIME_SECONDS }}s); enter 0 for no delay.
-                    </p>
-                  </div>
-
                   <div class="space-y-2 text-xs">
                     <div class="flex items-center justify-between">
                       <span class="tech-label">SUBMISSIONS</span>
@@ -1502,26 +1469,45 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useContestsStore } from '~/stores/contests';
+import type { ParticipantResponse, UserEntity } from '@libs/api/internal';
 import {
-  resolveFormat,
-  buildProblemState,
-  primaryMetric,
-  secondaryMetric,
-  primaryLabel,
-  secondaryLabel,
+  AlertCircle,
+  Calculator,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Download,
+  EyeOff,
+  FileText,
+  Info,
+  Play,
+  RotateCw,
+  Trash2,
+  Trophy,
+  UserPlus,
+  Users,
+  Video,
+  X,
+} from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useToast } from 'vue-toastification';
+import {
   type ProblemState,
   type RankingFormat,
+  buildProblemState,
+  primaryLabel,
+  primaryMetric,
+  resolveFormat,
+  secondaryLabel,
+  secondaryMetric,
 } from '~/common/ranking';
-import type { ContestEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
-import { internalApi, internalClient } from '~/services/api';
-import type { UserEntity, ParticipantResponse } from '@libs/api/internal';
-import { resolveProblemName } from '~/utils/problemName';
-import { useToast } from 'vue-toastification';
-import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList, Trophy, Calculator, Video, Play } from 'lucide-vue-next';
 import MissionModal from '~/components/MissionModal.vue';
+import { internalApi, internalClient } from '~/services/api';
+import { useContestsStore } from '~/stores/contests';
+import type { ContestEntity, ProblemEntity, SubmissionEntity } from '~/stores/contests';
+import { resolveProblemName } from '~/utils/problemName';
 
 const route = useRoute();
 const router = useRouter();
@@ -1543,17 +1529,6 @@ const availableUsers = ref<UserEntity[]>([]);
 // Draft display-name values per problem (keyed by _id) for the Problems tab editor.
 const problemNameDrafts = ref<Record<string, string>>({});
 const savingProblemId = ref<string | null>(null);
-// Draft assumed-runtime values per problem. Kept as strings so a cleared field
-// is distinguishable from an explicit 0.
-const problemRuntimeDrafts = ref<Record<string, string>>({});
-const savingRuntimeId = ref<string | null>(null);
-/**
- * Display-only mirror of DEFAULT_ASSUMED_RUNTIME_SECONDS in
- * `@libs/common/helper/reaction-timing`, which cannot be imported here — it
- * transitively pulls in node:zlib. The server owns the real fallback; this only
- * drives the placeholder and hint.
- */
-const DEFAULT_ASSUMED_RUNTIME_SECONDS = 3;
 const savingFormat = ref(false);
 const formatSelectValue = ref<'ICPC' | 'VNOJ'>('ICPC');
 const pendingFormat = ref<'ICPC' | 'VNOJ' | null>(null);
@@ -1585,7 +1560,7 @@ watch(
 
 // Tab state
 const validTabs = ['details', 'participants', 'submissions', 'problems', 'ranking'] as const;
-type TabType = typeof validTabs[number];
+type TabType = (typeof validTabs)[number];
 
 // Initialize activeTab from URL query parameter
 const getInitialTab = (): TabType => {
@@ -1659,7 +1634,13 @@ const showAddParticipantModal = ref(false);
 const addParticipantMode = ref<'existing_user' | 'csv_import' | 'create_user' | 'auto_create_user'>('existing_user');
 const addingParticipant = ref(false);
 const addParticipantError = ref('');
-const addParticipantResult = ref<{added: number; skipped: number; total: number; errors: string[]; generatedCredentials?: {username: string; password: string}[]} | null>(null);
+const addParticipantResult = ref<{
+  added: number;
+  skipped: number;
+  total: number;
+  errors: string[];
+  generatedCredentials?: { username: string; password: string }[];
+} | null>(null);
 const newParticipant = ref({
   participantUsername: '',
   userId: '',
@@ -1675,7 +1656,7 @@ const quickMappingAll = ref(false);
 // Delete participant modal state
 const showDeleteParticipantModal = ref(false);
 const deletingParticipant = ref(false);
-const participantToDelete = ref<{id: string; displayName: string} | null>(null);
+const participantToDelete = ref<{ id: string; displayName: string } | null>(null);
 
 // Computed
 const contestStatus = computed(() => {
@@ -1686,16 +1667,17 @@ const contestStatus = computed(() => {
 const filteredParticipants = computed(() => {
   if (!participantSearch.value) return participants.value;
   const query = participantSearch.value.toLowerCase();
-  return participants.value.filter(p =>
-    p.displayName.toLowerCase().includes(query) ||
-    p.username.toLowerCase().includes(query) ||
-    (p.mapToUser && p.mapToUser.toLowerCase().includes(query))
+  return participants.value.filter(
+    (p) =>
+      p.displayName.toLowerCase().includes(query) ||
+      p.username.toLowerCase().includes(query) ||
+      p.mapToUser?.toLowerCase().includes(query),
   );
 });
 
 // Count of participants without mapped users
 const unmappedParticipantsCount = computed(() => {
-  return participants.value.filter(p => !p.mapToUser).length;
+  return participants.value.filter((p) => !p.mapToUser).length;
 });
 
 const canSubmitParticipant = computed(() => {
@@ -1736,9 +1718,7 @@ function problemName(code: string): string {
 }
 
 // Ranking format for this contest (VNOJ: score/time; ICPC: solved/penalty).
-const rankingFormat = computed<RankingFormat>(() =>
-  resolveFormat(contest.value ?? participants.value[0]),
-);
+const rankingFormat = computed<RankingFormat>(() => resolveFormat(contest.value ?? participants.value[0]));
 
 // Ranking computed - participants ordered by the server-computed rank (which is
 // already format-aware), enriched with per-problem display state.
@@ -1802,32 +1782,32 @@ function formatFullDateTime(date: string | Date): string {
 
 function getStatusClass(status: string): string {
   const classes: Record<string, string> = {
-    'AC': 'border-mission-accent text-mission-accent bg-mission-accent/10',
-    'PAC': 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
-    'WA': 'border-mission-red text-mission-red bg-mission-red/10',
-    'RTE': 'border-mission-red text-mission-red bg-mission-red/10',
-    'RE': 'border-mission-red text-mission-red bg-mission-red/10',
-    'IR': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'OLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'MLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'TLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'SC': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'IE': 'border-gray-600 text-gray-500 bg-gray-600/10',
-    'AB': 'border-gray-600 text-gray-500 bg-gray-600/10',
-    'CE': 'border-gray-600 text-gray-500 bg-gray-600/10',
-    'UNKNOWN': 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
+    AC: 'border-mission-accent text-mission-accent bg-mission-accent/10',
+    PAC: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
+    WA: 'border-mission-red text-mission-red bg-mission-red/10',
+    RTE: 'border-mission-red text-mission-red bg-mission-red/10',
+    RE: 'border-mission-red text-mission-red bg-mission-red/10',
+    IR: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    OLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    MLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    TLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    SC: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    IE: 'border-gray-600 text-gray-500 bg-gray-600/10',
+    AB: 'border-gray-600 text-gray-500 bg-gray-600/10',
+    CE: 'border-gray-600 text-gray-500 bg-gray-600/10',
+    UNKNOWN: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
   };
   return classes[status] || 'border-gray-600 text-gray-500';
 }
 
 function getProblemSubmissionCount(problemCode: string): number {
-  return submissions.value.filter(s => s.problem_code === problemCode).length;
+  return submissions.value.filter((s) => s.problem_code === problemCode).length;
 }
 
 function getProblemACRate(problemCode: string): string {
-  const problemSubmissions = submissions.value.filter(s => s.problem_code === problemCode);
+  const problemSubmissions = submissions.value.filter((s) => s.problem_code === problemCode);
   if (problemSubmissions.length === 0) return '0.0';
-  const acCount = problemSubmissions.filter(s => s.submissionStatus === 'AC').length;
+  const acCount = problemSubmissions.filter((s) => s.submissionStatus === 'AC').length;
   return ((acCount / problemSubmissions.length) * 100).toFixed(1);
 }
 
@@ -1839,13 +1819,16 @@ function changeTab(tab: TabType) {
 }
 
 // Watch for URL changes and update activeTab
-watch(() => route.query.tab, (newTab) => {
-  if (newTab && validTabs.includes(newTab as TabType)) {
-    activeTab.value = newTab as TabType;
-  } else if (!newTab) {
-    activeTab.value = 'details';
-  }
-});
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && validTabs.includes(newTab as TabType)) {
+      activeTab.value = newTab as TabType;
+    } else if (!newTab) {
+      activeTab.value = 'details';
+    }
+  },
+);
 
 async function loadContest() {
   loading.value = true;
@@ -1890,7 +1873,21 @@ async function loadSubmissions() {
       page: number;
       limit: number;
       search?: string;
-      status?: 'AC' | 'PAC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'SC' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
+      status?:
+        | 'AC'
+        | 'PAC'
+        | 'WA'
+        | 'RTE'
+        | 'RE'
+        | 'IR'
+        | 'OLE'
+        | 'MLE'
+        | 'TLE'
+        | 'SC'
+        | 'IE'
+        | 'AB'
+        | 'CE'
+        | 'UNKNOWN';
     } = {
       page: currentPage.value,
       limit: pageSize.value,
@@ -1934,14 +1931,6 @@ async function loadProblems() {
     problemNameDrafts.value = Object.fromEntries(
       (data as ProblemEntity[]).map((problem) => [problem._id, problem.displayName ?? '']),
     );
-    problemRuntimeDrafts.value = Object.fromEntries(
-      (data as ProblemEntity[]).map((problem) => [
-        problem._id,
-        problem.assumedRuntimeSeconds === undefined || problem.assumedRuntimeSeconds === null
-          ? ''
-          : String(problem.assumedRuntimeSeconds),
-      ]),
-    );
   } catch (err: any) {
     toast.error('Failed to load problems');
     console.error('Load problems error:', err);
@@ -1961,9 +1950,7 @@ async function saveProblemName(problem: ProblemEntity) {
       displayName: draft,
     });
     // Reflect the change locally without a full reload.
-    const updated = problems.value.map((p) =>
-      p._id === problem._id ? { ...p, displayName: draft || undefined } : p,
-    );
+    const updated = problems.value.map((p) => (p._id === problem._id ? { ...p, displayName: draft || undefined } : p));
     problems.value = updated;
     contestsStore.setProblems(updated);
     problemNameDrafts.value[problem._id] = draft;
@@ -1973,54 +1960,6 @@ async function saveProblemName(problem: ProblemEntity) {
     console.error('Update problem name error:', err);
   } finally {
     savingProblemId.value = null;
-  }
-}
-
-/** Current stored runtime rendered the same way the draft is, for comparison. */
-function storedRuntimeText(problem: ProblemEntity): string {
-  return problem.assumedRuntimeSeconds === undefined || problem.assumedRuntimeSeconds === null
-    ? ''
-    : String(problem.assumedRuntimeSeconds);
-}
-
-function runtimeChanged(problem: ProblemEntity): boolean {
-  return (problemRuntimeDrafts.value[problem._id] ?? '').trim() !== storedRuntimeText(problem);
-}
-
-async function saveProblemRuntime(problem: ProblemEntity) {
-  if (!contest.value) return;
-  const draft = (problemRuntimeDrafts.value[problem._id] ?? '').trim();
-  if (draft === storedRuntimeText(problem)) return;
-
-  // Blank clears the override; anything else must be a non-negative number.
-  const parsed = draft === '' ? null : Number(draft);
-  if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
-    toast.error('Assumed runtime must be a non-negative number of seconds');
-    return;
-  }
-
-  savingRuntimeId.value = problem._id;
-  try {
-    await internalApi.contest.updateProblem(contest.value.code, problem.code, {
-      assumedRuntimeSeconds: parsed,
-    });
-    // Reflect the change locally without a full reload.
-    const updated = problems.value.map((p) =>
-      p._id === problem._id ? { ...p, assumedRuntimeSeconds: parsed ?? undefined } : p,
-    );
-    problems.value = updated;
-    contestsStore.setProblems(updated);
-    problemRuntimeDrafts.value[problem._id] = parsed === null ? '' : String(parsed);
-    toast.success(
-      parsed === null
-        ? `Cleared assumed runtime for ${problem.code}`
-        : `${problem.code} assumed runtime set to ${parsed}s`,
-    );
-  } catch (err: any) {
-    toast.error('Failed to update assumed runtime');
-    console.error('Update assumed runtime error:', err);
-  } finally {
-    savingRuntimeId.value = null;
   }
 }
 
@@ -2239,7 +2178,7 @@ async function saveParticipantMapping(participantId: string) {
 
     // Update local state
     contestsStore.updateParticipant(participantId, { mapToUser: userToLink || undefined });
-    const index = participants.value.findIndex(p => p._id === participantId);
+    const index = participants.value.findIndex((p) => p._id === participantId);
     if (index !== -1) {
       participants.value[index].mapToUser = userToLink || undefined;
     }
@@ -2262,7 +2201,7 @@ async function unlinkParticipant(participantId: string) {
 
     // Update local state
     contestsStore.updateParticipant(participantId, { mapToUser: undefined });
-    const index = participants.value.findIndex(p => p._id === participantId);
+    const index = participants.value.findIndex((p) => p._id === participantId);
     if (index !== -1) {
       participants.value[index].mapToUser = undefined;
     }
@@ -2288,9 +2227,7 @@ async function syncParticipants() {
     await loadParticipants();
 
     // Show success message with stats
-    toast.success(
-      `Participants synced: ${result.added} added, ${result.skipped} skipped (${result.total} total)`
-    );
+    toast.success(`Participants synced: ${result.added} added, ${result.skipped} skipped (${result.total} total)`);
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to sync participants');
     console.error('Sync participants error:', err);
@@ -2312,14 +2249,11 @@ async function resyncContest() {
     contestsStore.setCurrentContest(result.contest);
 
     // Reload all data
-    await Promise.all([
-      loadParticipants(),
-      loadProblems(),
-    ]);
+    await Promise.all([loadParticipants(), loadProblems()]);
 
     // Show detailed success message
     toast.success(
-      `Contest resynced! Problems: ${result.problems.added} added (${result.problems.total} total), Participants: ${result.participants.added} added (${result.participants.total} total)`
+      `Contest resynced! Problems: ${result.problems.added} added (${result.problems.total} total), Participants: ${result.participants.added} added (${result.participants.total} total)`,
     );
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to resync contest');
@@ -2338,10 +2272,7 @@ async function forceSyncSubmissions() {
     const result = await internalApi.contest.forceSyncSubmissions(contest.value.code);
 
     // Reload submissions and participants to reflect updated data
-    await Promise.all([
-      loadSubmissions(),
-      loadParticipants(),
-    ]);
+    await Promise.all([loadSubmissions(), loadParticipants()]);
 
     // Show detailed success message
     toast.success(result.message);
@@ -2366,10 +2297,7 @@ async function recalculateContestData() {
   try {
     const result = await internalApi.contest.recalculateContestData(contest.value.code);
 
-    await Promise.all([
-      loadSubmissions(),
-      loadParticipants(),
-    ]);
+    await Promise.all([loadSubmissions(), loadParticipants()]);
 
     toast.success(result.message);
   } catch (err: any) {
@@ -2435,9 +2363,7 @@ async function confirmRegenerateSubmissionReaction() {
       `/reactions/submissions/${submissionId}/regenerate`,
     );
     toast.success(data.message);
-    logReaction(
-      `${submission.author} / ${problemName(submission.problem_code)} — ${data.message}`,
-    );
+    logReaction(`${submission.author} / ${problemName(submission.problem_code)} — ${data.message}`);
     regenTarget.value = null;
     await loadSubmissions();
   } catch (err: any) {
@@ -2491,7 +2417,7 @@ async function handleDeleteContest() {
 
     // Show success message with deletion counts
     toast.success(
-      `Contest deleted successfully! Removed: ${result.deletedCounts.participants} participants, ${result.deletedCounts.submissions} submissions, ${result.deletedCounts.problems} problems`
+      `Contest deleted successfully! Removed: ${result.deletedCounts.participants} participants, ${result.deletedCounts.submissions} submissions, ${result.deletedCounts.problems} problems`,
     );
 
     // Navigate back to contests list
@@ -2524,14 +2450,17 @@ function copyCredentialsToClipboard() {
   if (!addParticipantResult.value?.generatedCredentials) return;
 
   const text = addParticipantResult.value.generatedCredentials
-    .map(cred => `${cred.username},${cred.password}`)
+    .map((cred) => `${cred.username},${cred.password}`)
     .join('\n');
 
-  navigator.clipboard.writeText(text).then(() => {
-    toast.success('Credentials copied to clipboard');
-  }).catch(() => {
-    toast.error('Failed to copy credentials');
-  });
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      toast.success('Credentials copied to clipboard');
+    })
+    .catch(() => {
+      toast.error('Failed to copy credentials');
+    });
 }
 
 async function handleAddParticipants() {
@@ -2596,7 +2525,7 @@ async function handleDeleteParticipant() {
     await internalApi.contest.removeParticipant(participantToDelete.value.id);
 
     // Remove from local state
-    const index = participants.value.findIndex(p => p._id === participantToDelete.value?.id);
+    const index = participants.value.findIndex((p) => p._id === participantToDelete.value?.id);
     if (index !== -1) {
       participants.value.splice(index, 1);
     }
@@ -2616,7 +2545,7 @@ async function quickMapAll() {
 
   try {
     // Get all unmapped participants
-    const unmappedParticipants = participants.value.filter(p => !p.mapToUser);
+    const unmappedParticipants = participants.value.filter((p) => !p.mapToUser);
 
     if (unmappedParticipants.length === 0) {
       toast.info('No unmapped participants found');
@@ -2631,7 +2560,7 @@ async function quickMapAll() {
     for (const participant of unmappedParticipants) {
       // Find users with matching username and CONTESTANT role
       const matchingUsers = availableUsers.value.filter(
-        user => user.username === participant.username && user.role === 'contestant'
+        (user) => user.username === participant.username && user.role === 'contestant',
       );
 
       if (matchingUsers.length === 0) {
@@ -2646,7 +2575,7 @@ async function quickMapAll() {
 
           // Update local state
           contestsStore.updateParticipant(participant._id, { mapToUser: matchingUsers[0].username });
-          const index = participants.value.findIndex(p => p._id === participant._id);
+          const index = participants.value.findIndex((p) => p._id === participant._id);
           if (index !== -1) {
             participants.value[index].mapToUser = matchingUsers[0].username;
           }
@@ -2660,7 +2589,7 @@ async function quickMapAll() {
       } else {
         // Error if multiple matching users found
         errors.push(
-          `Multiple CONTESTANT users found for participant "${participant.username}" (${matchingUsers.length} matches). Please map manually.`
+          `Multiple CONTESTANT users found for participant "${participant.username}" (${matchingUsers.length} matches). Please map manually.`,
         );
       }
     }
@@ -2689,12 +2618,7 @@ async function quickMapAll() {
 onMounted(async () => {
   await loadContest();
   if (contest.value) {
-    await Promise.all([
-      loadParticipants(),
-      loadSubmissions(),
-      loadProblems(),
-      loadUsers(),
-    ]);
+    await Promise.all([loadParticipants(), loadSubmissions(), loadProblems(), loadUsers()]);
     startAutoRefresh();
   }
 });

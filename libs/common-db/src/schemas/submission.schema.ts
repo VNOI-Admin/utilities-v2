@@ -46,8 +46,18 @@ export class Submission {
   @Prop({ required: true })
   submittedAt!: Date;
 
+  /** When judging STARTED. */
   @Prop({ required: false })
   judgedAt?: Date;
+
+  /**
+   * When judging FINISHED — the moment the verdict actually surfaces to the
+   * contestant, and what the reaction renderer anchors its pending→verdict
+   * reveal to. Absent on submissions synced before the upstream feed exposed it;
+   * callers fall back to `judgedAt`.
+   */
+  @Prop({ required: false })
+  judgeEndAt?: Date;
 
   @Prop({ required: true })
   author!: string;

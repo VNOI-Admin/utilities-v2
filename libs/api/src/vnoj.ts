@@ -35,7 +35,8 @@ export interface VnojParticipant {
 export interface VnojSubmission {
   id: string;
   submittedAt: string; // ISO 8601 datetime
-  judgedAt?: string; // ISO 8601 datetime
+  judgedAt?: string; // ISO 8601 datetime — when judging STARTED
+  judgeEndAt?: string; // ISO 8601 datetime — when judging FINISHED
   author: string;
   submissionStatus: string; // AC, WA, TLE, MLE, etc.
   contest_code: string;

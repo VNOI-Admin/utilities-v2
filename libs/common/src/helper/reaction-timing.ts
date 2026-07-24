@@ -1,20 +1,6 @@
 import { TIMELINE } from './reaction-theme';
 
 /**
- * Assumed judging runtime, in seconds, for a problem with no explicit
- * `assumedRuntimeSeconds` set.
- *
- * `Submission.judgedAt` is when judging started, and virtually every problem
- * takes at least a moment to finish, so falling back to 0 would flip the verdict
- * banner early on every unconfigured problem. A small non-zero default is closer
- * to the truth than no allowance at all.
- *
- * An explicit 0 on a problem is honoured as 0 — only an absent value falls back
- * to this.
- */
-export const DEFAULT_ASSUMED_RUNTIME_SECONDS = 3;
-
-/**
  * Every tunable time value in the reaction pipeline, in seconds (except
  * `blinkCount`, a plain count).
  *
@@ -31,18 +17,17 @@ export type ReactionTimingConfig = {
   /** Clip ends this many seconds after the verdict. */
   afterSeconds: number;
   /**
-   * How long to wait past the *estimated verdict reveal*
-   * (`judgedAt + Problem.assumedRuntimeSeconds + revealDelaySeconds`) before
-   * enqueuing a render, so the post-reveal tail has actually been recorded.
-   * Effectively the floor on `afterSeconds`: the scheduler waits
-   * `max(this, afterSeconds)` from the reveal.
+   * How long to wait past the verdict reveal
+   * (`Submission.judgeEndAt + revealDelaySeconds`) before enqueuing a render, so
+   * the post-reveal tail has actually been recorded. Effectively the floor on
+   * `afterSeconds`: the scheduler waits `max(this, afterSeconds)` from the reveal.
    */
   renderDelaySeconds: number;
   /**
-   * Safety buffer added on top of the estimated judge-finish time
-   * (`judgedAt + Problem.assumedRuntimeSeconds`) before the pending->verdict
-   * reveal fires. Absorbs the residual slop — clock drift, a problem running
-   * slower than assumed — so the flip lands on the visible reaction.
+   * Safety buffer added on top of `Submission.judgeEndAt` before the
+   * pending->verdict reveal fires. Absorbs the residual slop between the judge
+   * finishing and the contestant seeing it — clock drift, UI refresh lag — so
+   * the flip lands on the visible reaction.
    */
   revealDelaySeconds: number;
   /** Half-period of the verdict blink. */

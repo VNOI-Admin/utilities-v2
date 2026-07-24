@@ -5,7 +5,6 @@ import type { S3Client } from '@aws-sdk/client-s3';
 import { RemoteControlApi } from '@libs/api/remote-control';
 import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
-import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import {
   RemoteControlScript,
   type RemoteControlScriptDocument,
@@ -32,11 +31,7 @@ import {
   putReactionVideo,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
-import {
-  DEFAULT_ASSUMED_RUNTIME_SECONDS,
-  resolveReactionTiming,
-  revealTimingFrom,
-} from '@libs/common/helper/reaction-timing';
+import { resolveReactionTiming, revealTimingFrom } from '@libs/common/helper/reaction-timing';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -60,7 +55,6 @@ export class ReactionRenderProcessor extends WorkerHost {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(RemoteControlScript.name) private scriptModel: Model<RemoteControlScriptDocument>,
     @InjectModel(Contest.name) private contestModel: Model<ContestDocument>,
-    @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
     @InjectModel(SystemConfig.name) private systemConfigModel: Model<SystemConfigDocument>,
     private readonly configService: ConfigService,
   ) {
@@ -110,7 +104,9 @@ export class ReactionRenderProcessor extends WorkerHost {
     this.logger.log(
       `[${submissionId}] Loaded submission: author=${submission.author}, contest=${submission.contest_code}, ` +
         `problem=${submission.problem_code}, status=${submission.submissionStatus}, ` +
-        `judgedAt=${submission.judgedAt?.toISOString() ?? 'none'}, renderRetries=${submission.data?.renderRetries ?? 0}`,
+        `judgedAt=${submission.judgedAt?.toISOString() ?? 'none'}, ` +
+        `judgeEndAt=${submission.judgeEndAt?.toISOString() ?? 'none'}, ` +
+        `renderRetries=${submission.data?.renderRetries ?? 0}`,
     );
 
     if (submission.submissionStatus !== SubmissionStatus.AC) {
@@ -158,20 +154,19 @@ export class ReactionRenderProcessor extends WorkerHost {
       // the built-in defaults, so a contest can be retimed without a redeploy.
       const timing = await this.loadReactionTiming();
 
-      // judgedAt is when judging *started*, not when it finished, so the verdict
-      // only surfaces to the contestant around judgedAt + the problem's assumed
-      // runtime. Anchoring on judgedAt alone is what made the banner flip before
-      // the on-screen reaction.
-      const assumedRuntimeSec = await this.loadAssumedRuntimeSeconds(submission.contest_code, submission.problem_code);
+      // judgeEndAt is when judging finished — the moment the verdict actually
+      // surfaces to the contestant. judgedAt is only when judging started, so it
+      // would flip the banner early; it is used solely as a fallback for
+      // submissions synced before the feed exposed judgeEndAt.
+      const judgeFinished = submission.judgeEndAt ?? submission.judgedAt;
 
       // Feed window: BEFORE seconds ahead of the submission, through the whole
-      // judging gap, then AFTER seconds past the *estimated verdict reveal* —
-      // judge finish plus the buffer — so the tail is measured from what the
-      // viewer actually sees, not from when judging began. judgedAt is always
-      // present for AC; submittedAt only backs the tail if it somehow is not.
+      // judging gap, then AFTER seconds past the *verdict reveal* — judge finish
+      // plus the buffer — so the tail is measured from what the viewer actually
+      // sees. judgeEndAt is normally present for AC; submittedAt only backs the
+      // tail if neither timestamp is.
       const submittedSec = submission.submittedAt.getTime() / 1000;
-      const judgedSec = submission.judgedAt ? submission.judgedAt.getTime() / 1000 : undefined;
-      const judgeFinishedSec = judgedSec !== undefined ? judgedSec + assumedRuntimeSec : undefined;
+      const judgeFinishedSec = judgeFinished ? judgeFinished.getTime() / 1000 : undefined;
       const startUnix = submittedSec - timing.beforeSeconds;
       const endUnix = (judgeFinishedSec ?? submittedSec) + timing.revealDelaySeconds + timing.afterSeconds;
 
@@ -180,10 +175,10 @@ export class ReactionRenderProcessor extends WorkerHost {
         this.logger.warn(`${msg} (submission ${submissionId})`),
       );
 
-      // The banner holds "pending" amber until judging is estimated to have
-      // finished. Without judgedAt there is no instant to anchor to, so the
-      // pending phase is skipped rather than invented. The renderer adds the
-      // buffer (`revealDelaySeconds`) on top of this.
+      // The banner holds "pending" amber until judging finished. Without either
+      // timestamp there is no instant to anchor to, so the pending phase is
+      // skipped rather than invented. The renderer adds the buffer
+      // (`revealDelaySeconds`) on top of this.
       const verdictAtSeconds = judgeFinishedSec !== undefined ? judgeFinishedSec - startUnix : undefined;
 
       const contest = await this.contestModel
@@ -207,7 +202,8 @@ export class ReactionRenderProcessor extends WorkerHost {
         this.logger.log(
           `[${submissionId}] Extracting stream slices from ${user.username} ` +
             `(window ${startUnix.toFixed(3)} -> ${endUnix.toFixed(3)}, ${(endUnix - startUnix).toFixed(1)}s; ` +
-            `assumedRuntime=${assumedRuntimeSec}s, buffer=${timing.revealDelaySeconds}s, ` +
+            `anchor=${submission.judgeEndAt ? 'judgeEndAt' : 'judgedAt (fallback)'}, ` +
+            `buffer=${timing.revealDelaySeconds}s, ` +
             `reveal at t=${verdictAtSeconds !== undefined ? (verdictAtSeconds + timing.revealDelaySeconds).toFixed(1) : 'n/a'}s)`,
         );
         await this.extractStreamSlices(user, startUnix, endUnix, webcamPath, screenPath);
@@ -232,33 +228,6 @@ export class ReactionRenderProcessor extends WorkerHost {
           `${error instanceof Error ? error.message : String(error)}`,
         error instanceof Error ? error.stack : undefined,
       );
-    }
-  }
-
-  /**
-   * The problem's manually-set assumed judging runtime, used to turn `judgedAt`
-   * (judge start) into an estimated judge-finish time. Falls back to
-   * `DEFAULT_ASSUMED_RUNTIME_SECONDS` when the problem has no value set, is
-   * missing, or cannot be read — an explicit 0 is honoured as 0.
-   */
-  private async loadAssumedRuntimeSeconds(contestCode: string, problemCode: string): Promise<number> {
-    try {
-      const problem = await this.problemModel
-        .findOne({ contest: contestCode, code: problemCode })
-        .select('assumedRuntimeSeconds')
-        .lean()
-        .exec();
-      const raw = problem?.assumedRuntimeSeconds;
-      const value = Number(raw);
-      return raw !== undefined && raw !== null && Number.isFinite(value) && value >= 0
-        ? value
-        : DEFAULT_ASSUMED_RUNTIME_SECONDS;
-    } catch (error) {
-      this.logger.warn(
-        `Could not read assumed runtime for ${contestCode}/${problemCode}, ` +
-          `assuming ${DEFAULT_ASSUMED_RUNTIME_SECONDS}s: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return DEFAULT_ASSUMED_RUNTIME_SECONDS;
     }
   }
 

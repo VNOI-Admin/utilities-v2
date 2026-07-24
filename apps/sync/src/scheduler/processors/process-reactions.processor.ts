@@ -1,11 +1,10 @@
-import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Submission, type SubmissionDocument, SubmissionStatus } from '@libs/common-db/schemas/submission.schema';
 import {
   REACTION_TIMING_CONFIG_KEY,
   SystemConfig,
   type SystemConfigDocument,
 } from '@libs/common-db/schemas/systemConfig.schema';
-import { DEFAULT_ASSUMED_RUNTIME_SECONDS, resolveReactionTiming } from '@libs/common/helper/reaction-timing';
+import { resolveReactionTiming } from '@libs/common/helper/reaction-timing';
 import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,15 +14,6 @@ import { Model } from 'mongoose';
 
 import { QUEUE_NAMES, REACTION_RENDER_JOB_NAME, type ReactionRenderJobData, reactionRenderJobId } from '../constants';
 
-/**
- * How far past the batch limit to look for candidates before filtering them by
- * their own problem's assumed runtime. Generous on purpose: the query is a
- * light indexed read, and under-fetching is what would let slow-problem
- * submissions block the batch.
- */
-const CANDIDATE_OVERFETCH_FACTOR = 10;
-const CANDIDATE_OVERFETCH_FLOOR = 50;
-
 @Processor(QUEUE_NAMES.PROCESS_REACTIONS)
 export class ProcessReactionsProcessor extends WorkerHost {
   private readonly logger = new Logger(ProcessReactionsProcessor.name);
@@ -31,7 +21,6 @@ export class ProcessReactionsProcessor extends WorkerHost {
   constructor(
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectQueue(QUEUE_NAMES.REACTION_RENDER) private reactionRenderQueue: Queue<ReactionRenderJobData>,
-    @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
     @InjectModel(SystemConfig.name) private systemConfigModel: Model<SystemConfigDocument>,
     private readonly configService: ConfigService,
   ) {
@@ -45,64 +34,44 @@ export class ProcessReactionsProcessor extends WorkerHost {
       const maxRetries = Number(this.configService.get('REACTION_RENDER_MAX_RETRIES') ?? 5);
 
       // Hold off until the entire feed window is guaranteed to be recorded: the
-      // post-verdict tail must have elapsed in real time, plus a safety margin,
-      // before we ask the client for slices. Gating on judgedAt stops a
-      // just-judged submission from being picked up too early.
+      // post-reveal tail must have elapsed in real time, plus a safety margin,
+      // before we ask the client for slices.
       //
-      // Readiness is measured from the estimated verdict reveal —
-      // judgedAt + the problem's assumed runtime + buffer — not from judgedAt,
-      // since judgedAt is only when judging started. The window then runs AFTER
-      // seconds past that reveal, and renderDelaySeconds is the floor on the
-      // margin beyond it.
-      //
-      // The assumed runtime is per problem, and Mongo cannot express that in one
-      // predicate without joining, so the query applies the loosest possible gate
-      // and each candidate is then checked against its own problem's runtime
-      // below. The floor is runtime 0, not the default — a problem may store an
-      // explicit 0, and gating on the higher default would hide it from the
-      // candidate set entirely.
+      // Readiness is measured from the verdict reveal — judgeEndAt + buffer —
+      // not from judgedAt, which is only when judging *started*. The window runs
+      // AFTER seconds past that reveal, and renderDelaySeconds is the floor on
+      // the margin beyond it. The cutoff is the same for every submission, so it
+      // goes straight into the query.
       const timing = await this.loadReactionTiming();
       const limit = Number(this.configService.get('REACTION_RENDER_MAX_PROCESS') ?? 1);
       const marginSeconds = Math.max(timing.renderDelaySeconds, timing.afterSeconds);
-      const earliestReady = new Date(Date.now() - (timing.revealDelaySeconds + marginSeconds) * 1000);
+      const readyBefore = new Date(Date.now() - (timing.revealDelaySeconds + marginSeconds) * 1000);
 
-      // Over-fetch, oldest-first: the readiest candidates sort to the front, so
-      // the surplus only has to absorb submissions on slower-than-average
-      // problems. Without it, a not-yet-ready submission could hold the single
-      // batch slot indefinitely and starve ready ones behind it.
-      const candidates = await this.submissionModel
+      const submissions = await this.submissionModel
         .find({
           submissionStatus: SubmissionStatus.AC,
-          judgedAt: { $ne: null, $lte: earliestReady },
-          $or: [{ 'data.reaction': { $exists: false } }, { 'data.reaction': null }],
           'data.renderRetries': { $lt: maxRetries },
+          $and: [
+            { $or: [{ 'data.reaction': { $exists: false } }, { 'data.reaction': null }] },
+            {
+              // judgeEndAt when the feed provides it, judgedAt as the fallback
+              // for submissions synced before it existed. `null` also matches a
+              // missing field in Mongo.
+              $or: [
+                { judgeEndAt: { $ne: null, $lte: readyBefore } },
+                { judgeEndAt: null, judgedAt: { $ne: null, $lte: readyBefore } },
+              ],
+            },
+          ],
         })
         .sort({ judgedAt: 1 })
-        .limit(Math.max(limit * CANDIDATE_OVERFETCH_FACTOR, CANDIDATE_OVERFETCH_FLOOR))
+        .limit(limit)
         .exec();
-
-      const runtimes = await this.loadAssumedRuntimes(candidates);
-      const now = Date.now();
-      const ready = candidates.filter((submission) => {
-        const judgedAt = submission.judgedAt?.getTime();
-        if (judgedAt === undefined) {
-          return false;
-        }
-        const runtime =
-          runtimes.get(`${submission.contest_code}::${submission.problem_code}`) ?? DEFAULT_ASSUMED_RUNTIME_SECONDS;
-        // The moment the viewer sees the verdict; the clip runs AFTER seconds
-        // past it, so the feed is only complete once the margin has elapsed too.
-        const revealAt = judgedAt + (runtime + timing.revealDelaySeconds) * 1000;
-        return revealAt + marginSeconds * 1000 <= now;
-      });
-
-      const submissions = ready.slice(0, limit);
 
       this.logger.log(
         `Found ${submissions.length} AC submissions with ready feed windows ` +
-          `(${candidates.length} candidate(s) judged ≤ ${earliestReady.toISOString()}, ` +
-          `${candidates.length - ready.length} still within their problem's assumed runtime, ` +
-          `maxRetries=${maxRetries}): [${submissions.map((submission) => String(submission._id)).join(', ') || 'none'}]`,
+          `(judge finished ≤ ${readyBefore.toISOString()}, maxRetries=${maxRetries}): ` +
+          `[${submissions.map((submission) => String(submission._id)).join(', ') || 'none'}]`,
       );
 
       for (const submission of submissions) {
@@ -138,53 +107,6 @@ export class ProcessReactionsProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error('Error fanning out reaction jobs:', error);
       throw error;
-    }
-  }
-
-  /**
-   * Assumed judging runtimes for the problems the given submissions belong to,
-   * keyed by `contest::code`. One batched query rather than a lookup per
-   * submission. Problems with no runtime set are simply absent, and callers
-   * treat a miss as 0; a query failure degrades the whole batch to 0, i.e. the
-   * pre-existing behaviour.
-   */
-  private async loadAssumedRuntimes(submissions: SubmissionDocument[]): Promise<Map<string, number>> {
-    const pairs = new Map<string, { contest: string; code: string }>();
-    for (const submission of submissions) {
-      pairs.set(`${submission.contest_code}::${submission.problem_code}`, {
-        contest: submission.contest_code,
-        code: submission.problem_code,
-      });
-    }
-
-    if (pairs.size === 0) {
-      return new Map();
-    }
-
-    try {
-      const problems = await this.problemModel
-        .find({ $or: [...pairs.values()] })
-        .select('contest code assumedRuntimeSeconds')
-        .lean<ProblemDocument[]>()
-        .exec();
-
-      const out = new Map<string, number>();
-      for (const problem of problems) {
-        const raw = problem.assumedRuntimeSeconds;
-        const value = Number(raw);
-        // An explicit 0 is a real value, not "unset", so it must land in the map
-        // rather than fall through to the non-zero default.
-        if (raw !== undefined && raw !== null && Number.isFinite(value) && value >= 0) {
-          out.set(`${problem.contest}::${problem.code}`, value);
-        }
-      }
-      return out;
-    } catch (error) {
-      this.logger.warn(
-        `Could not read assumed runtimes, falling back to ${DEFAULT_ASSUMED_RUNTIME_SECONDS}s: ` +
-          `${error instanceof Error ? error.message : String(error)}`,
-      );
-      return new Map();
     }
   }
 

@@ -465,10 +465,9 @@ export class ContestService {
   /**
    * Sets (or clears) the manual overrides for a single problem.
    *
-   * A true partial update: only fields present on the DTO are touched, so
-   * saving the assumed runtime cannot silently drop the display name (or the
-   * other way round). Clearing is explicit — an empty/whitespace-only
-   * `displayName`, or a null `assumedRuntimeSeconds`, unsets that field.
+   * A true partial update: only fields present on the DTO are touched, so a
+   * body naming one field cannot silently drop another. Clearing is explicit —
+   * an empty/whitespace-only `displayName` unsets the override.
    */
   async updateProblem(contestCode: string, problemCode: string, dto: UpdateProblemDto): Promise<ProblemDocument> {
     const $set: Record<string, unknown> = {};
@@ -480,14 +479,6 @@ export class ContestService {
         $set.displayName = trimmed;
       } else {
         $unset.displayName = '';
-      }
-    }
-
-    if (dto.assumedRuntimeSeconds !== undefined) {
-      if (dto.assumedRuntimeSeconds === null) {
-        $unset.assumedRuntimeSeconds = '';
-      } else {
-        $set.assumedRuntimeSeconds = dto.assumedRuntimeSeconds;
       }
     }
 
@@ -1014,6 +1005,7 @@ export class ContestService {
               $set: {
                 submittedAt,
                 judgedAt: vnojSub.judgedAt ? new Date(vnojSub.judgedAt) : undefined,
+                judgeEndAt: vnojSub.judgeEndAt ? new Date(vnojSub.judgeEndAt) : undefined,
                 author: vnojSub.author,
                 submissionStatus,
                 contest_code: contest.code,
