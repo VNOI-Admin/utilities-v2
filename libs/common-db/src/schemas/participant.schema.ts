@@ -5,8 +5,10 @@ export type ParticipantDocument = Participant & Document;
 
 @Schema({ _id: false })
 export class ProblemData {
+  // Time from contest start to the scoring submission, in the contest format's
+  // own unit: minutes for ICPC, seconds for VNOJ (matching the judge).
   @Prop({ required: true, default: 0 })
-  solveTime!: number; // Minutes from contest start to the scoring submission
+  solveTime!: number;
 
   @Prop({ required: true, default: 0 })
   wrongTries!: number; // Number of wrong submissions before the scoring submission
@@ -40,7 +42,9 @@ export class Participant {
   @Prop({ required: false, default: 0 })
   solvedCount!: number;
 
-  // Total penalty in minutes (sum of solve times + wrong submission penalties)
+  // Sum of solve times + attempt penalties, in the format's time unit (ICPC:
+  // minutes; VNOJ: seconds, where it simply mirrors cumtime and is unused for
+  // ranking).
   @Prop({ required: false, default: 0 })
   totalPenalty!: number;
 
@@ -62,11 +66,13 @@ export class Participant {
   @Prop({ required: false, default: 0 })
   score!: number;
 
-  // Primary tiebreak: sum of solve times + penalties (minutes).
+  // Primary tiebreak: sum of solve times + penalties, in seconds. The judge
+  // scores VNOJ in exact seconds rather than whole minutes so that participants
+  // who scored within the same minute are still separated.
   @Prop({ required: false, default: 0 })
   cumtime!: number;
 
-  // Secondary tiebreak: time of the latest scoring submission (minutes).
+  // Secondary tiebreak: time of the latest scoring submission (seconds).
   @Prop({ required: false, default: 0 })
   tiebreaker!: number;
 

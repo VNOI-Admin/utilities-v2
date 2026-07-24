@@ -1,5 +1,10 @@
 import { randomFillSync } from 'crypto';
-import { Contest, ContestFormat, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
+import {
+  Contest,
+  ContestFormat,
+  resolvePenaltyMinutes,
+  type ContestDocument,
+} from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
@@ -145,12 +150,18 @@ export class ContestService {
   }
 
   async update(code: string, updateContestDto: UpdateContestDto): Promise<ContestDocument> {
-    // Capture the previous format so we can detect a ranking-format switch.
+    // Capture the previous scoring settings so we can detect a rules change.
     const existing = await this.contestModel.findOne({ code }).exec();
     if (!existing) {
       throw new NotFoundException(`Contest with code ${code} not found`);
     }
-    const previousFormat = existing.format || ContestFormat.ICPC;
+    const before = {
+      format: existing.format || ContestFormat.ICPC,
+      penalty: resolvePenaltyMinutes(existing),
+      lso: existing.lso ?? false,
+      startTime: existing.start_time.getTime(),
+      frozenAt: existing.frozen_at?.getTime(),
+    };
 
     const contest = await this.contestModel
       .findOneAndUpdate({ code }, updateContestDto, {
@@ -162,11 +173,20 @@ export class ContestService {
       throw new NotFoundException(`Contest with code ${code} not found`);
     }
 
-    // Switching the ranking format changes how every standing is computed, so
-    // recompute participant standings/ranks and per-submission rank snapshots
-    // immediately instead of waiting for the next sync.
-    const newFormat = contest.format || ContestFormat.ICPC;
-    if (updateContestDto.format !== undefined && newFormat !== previousFormat) {
+    // Any of these changes how every standing is computed, so recompute
+    // participant standings/ranks and per-submission rank snapshots immediately
+    // instead of leaving stale numbers until the next sync.
+    const after = {
+      format: contest.format || ContestFormat.ICPC,
+      penalty: resolvePenaltyMinutes(contest),
+      lso: contest.lso ?? false,
+      startTime: contest.start_time.getTime(),
+      frozenAt: contest.frozen_at?.getTime(),
+    };
+    const scoringChanged = (Object.keys(before) as (keyof typeof before)[]).some(
+      (key) => before[key] !== after[key],
+    );
+    if (scoringChanged) {
       await this.fullRecalculate(contest);
     }
 
@@ -243,7 +263,8 @@ export class ContestService {
       {
         format: contest.format || ContestFormat.ICPC,
         startTime: contest.start_time,
-        penaltyPerWrong: contest.penalty || 20,
+        penaltyPerWrong: resolvePenaltyMinutes(contest),
+        lso: contest.lso,
       },
     );
 
@@ -1042,7 +1063,8 @@ export class ContestService {
     const config = {
       format: contest.format || ContestFormat.ICPC,
       startTime: contest.start_time,
-      penaltyPerWrong: contest.penalty || 20,
+      penaltyPerWrong: resolvePenaltyMinutes(contest),
+      lso: contest.lso,
       frozenAt: contest.frozen_at,
     };
 

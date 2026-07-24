@@ -1,4 +1,9 @@
-import { Contest, ContestFormat, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
+import {
+  Contest,
+  ContestFormat,
+  resolvePenaltyMinutes,
+  type ContestDocument,
+} from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import {
@@ -200,7 +205,8 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     const config = {
       format: contest.format || ContestFormat.ICPC,
       startTime: contest.start_time,
-      penaltyPerWrong: contest.penalty || 20,
+      penaltyPerWrong: resolvePenaltyMinutes(contest),
+      lso: contest.lso,
       frozenAt: contest.frozen_at,
     };
 
@@ -312,7 +318,8 @@ export class SyncSubmissionsProcessor extends WorkerHost {
         {
           format: contest.format || ContestFormat.ICPC,
           startTime: contest.start_time,
-          penaltyPerWrong: contest.penalty || 20,
+          penaltyPerWrong: resolvePenaltyMinutes(contest),
+          lso: contest.lso,
         },
       );
 

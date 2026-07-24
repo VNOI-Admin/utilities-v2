@@ -184,6 +184,47 @@
                         Changing format immediately recomputes standings, ranks, and submission rank history.
                       </div>
                     </div>
+                    <div>
+                      <div class="tech-label mb-1">PENALTY (MINUTES PER ATTEMPT)</div>
+                      <div class="flex gap-2">
+                        <input
+                          v-model.number="penaltyInput"
+                          type="number"
+                          min="0"
+                          :disabled="savingScoring"
+                          class="input-mission font-mono text-sm flex-1"
+                          :placeholder="String(defaultPenalty)"
+                        />
+                        <button
+                          class="btn-mission-secondary text-xs px-3"
+                          :disabled="savingScoring || penaltyInput === (contest.penalty ?? null)"
+                          @click="applyPenalty"
+                        >
+                          {{ savingScoring ? '...' : 'SET' }}
+                        </button>
+                      </div>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Every attempt before the first maximum-score submission is charged. Leave blank to use the
+                        format default ({{ defaultPenalty }}m for {{ formatSelectValue }}).
+                      </div>
+                    </div>
+                    <div v-if="formatSelectValue === 'VNOJ'">
+                      <div class="tech-label mb-1">LAST SUBMISSION ONLY (LSO)</div>
+                      <label class="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          :checked="contest.lso === true"
+                          :disabled="savingScoring"
+                          class="accent-mission-cyan"
+                          @change="applyLso(($event.target as HTMLInputElement).checked)"
+                        />
+                        <span class="font-mono text-sm">{{ contest.lso ? 'ENABLED' : 'DISABLED' }}</span>
+                      </label>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Cumulative time counts only the latest scoring submission instead of the sum across problems.
+                        Penalties still apply.
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -1474,11 +1515,26 @@ const formatSelectValue = ref<'ICPC' | 'VNOJ'>('ICPC');
 const pendingFormat = ref<'ICPC' | 'VNOJ' | null>(null);
 const showFormatConfirm = ref(false);
 
+const savingScoring = ref(false);
+// null means "unset" — the contest falls back to the format's default penalty.
+const penaltyInput = ref<number | null>(null);
+
+// Judge defaults: ICPC charges 20 minutes per attempt, VNOJ only 5.
+const defaultPenalty = computed(() => (formatSelectValue.value === 'VNOJ' ? 5 : 20));
+
 // Keep the dropdown in sync with the loaded contest's actual format.
 watch(
   () => contest.value?.format,
   (fmt) => {
     formatSelectValue.value = (fmt ?? 'ICPC') as 'ICPC' | 'VNOJ';
+  },
+  { immediate: true },
+);
+
+watch(
+  () => contest.value?.penalty,
+  (penalty) => {
+    penaltyInput.value = penalty ?? null;
   },
   { immediate: true },
 );
@@ -1895,6 +1951,43 @@ function cancelFormatChange() {
   formatSelectValue.value = (contest.value?.format ?? 'ICPC') as 'ICPC' | 'VNOJ';
   pendingFormat.value = null;
   showFormatConfirm.value = false;
+}
+
+/**
+ * Push a scoring-rule change. The API recomputes standings, ranks and the
+ * per-submission rank history itself, so reload both lists afterwards.
+ */
+async function applyScoringChange(updates: { penalty?: number; lso?: boolean }, label: string) {
+  if (!contest.value) return;
+
+  savingScoring.value = true;
+  try {
+    const updated = await internalApi.contest.update(contest.value.code, updates);
+    contest.value = updated;
+    contestsStore.setCurrentContest(updated);
+    contestsStore.updateContest(updated.code, updates);
+    await Promise.all([loadSubmissions(), loadParticipants()]);
+    toast.success(`${label} updated — standings recalculated`);
+  } catch (err: any) {
+    // Revert the inputs to whatever the contest actually holds.
+    penaltyInput.value = contest.value?.penalty ?? null;
+    toast.error(`Failed to update ${label.toLowerCase()}`);
+    console.error('Update contest scoring error:', err);
+  } finally {
+    savingScoring.value = false;
+  }
+}
+
+function applyPenalty() {
+  if (penaltyInput.value === null || penaltyInput.value < 0) {
+    toast.error('Penalty must be zero or more minutes');
+    return;
+  }
+  applyScoringChange({ penalty: penaltyInput.value }, 'Penalty');
+}
+
+function applyLso(enabled: boolean) {
+  applyScoringChange({ lso: enabled }, 'LSO');
 }
 
 async function applyFormat(format: 'ICPC' | 'VNOJ') {

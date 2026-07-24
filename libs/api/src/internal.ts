@@ -259,8 +259,10 @@ export interface UpdateContestDto {
   frozen_at?: string;
   /** Ranking format: ICPC (default, ranked by AC count) or VNOJ (ranked by points) */
   format?: 'ICPC' | 'VNOJ';
-  /** Minutes of penalty per wrong submission */
+  /** Minutes of penalty per counted attempt. Left unset the format decides: ICPC 20, VNOJ 5. */
   penalty?: number;
+  /** VNOJ only — Last Submission Only. When set, cumulative time is the time of the single latest scoring submission instead of the sum across problems. */
+  lso?: boolean;
 }
 
 export interface PaginationMetadata {

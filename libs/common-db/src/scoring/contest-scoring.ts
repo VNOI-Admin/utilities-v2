@@ -19,13 +19,17 @@ export interface ProblemSubmissions {
 
 /** Per-problem outcome written back onto the participant document. */
 export interface ProblemResult {
-  solveTime: number; // Minutes from contest start to the scoring submission
+  solveTime: number; // Time from contest start to the scoring submission (see TIME UNITS)
   wrongTries: number; // Wrong submissions before the scoring submission
   points?: number; // VNOJ: best points achieved on this problem
   pending?: number; // VNOJ: submissions after the freeze not reflected in the frozen board
 }
 
-/** Aggregate metrics for a participant under a single (live or frozen) view. */
+/**
+ * Aggregate metrics for a participant under a single (live or frozen) view.
+ * `totalPenalty`, `cumtime` and `tiebreaker` are all expressed in the format's
+ * time unit — minutes for ICPC, seconds for VNOJ. See TIME UNITS below.
+ */
 export interface AggregateScore {
   solvedCount: number;
   totalPenalty: number;
@@ -45,8 +49,12 @@ export interface ParticipantScore extends AggregateScore {
 export interface ScoringConfig {
   format: ContestFormat;
   startTime: Date;
-  penaltyPerWrong: number; // Minutes of penalty per wrong submission
+  // Minutes charged per counted attempt. Resolve it with resolvePenaltyMinutes()
+  // rather than defaulting inline — the default differs per format.
+  penaltyPerWrong: number;
   frozenAt?: Date | null; // Submissions at/after this instant are hidden from the frozen board
+  // VNOJ only — Last Submission Only. See computeAggregate for what it changes.
+  lso?: boolean;
 }
 
 // Statuses that never count as a wrong attempt.
@@ -55,8 +63,22 @@ const VNOJ_IGNORED = new Set(['CE', 'IE']);
 
 const POINTS_PRECISION = 3;
 
-function minutesFromStart(start: Date, when: Date): number {
-  return Math.floor((when.getTime() - start.getTime()) / 60000);
+/**
+ * TIME UNITS — deliberately different per format, matching the judge:
+ *
+ * - ICPC works in whole minutes (`int(dt_seconds // 60)`), so a penalty of N
+ *   minutes is simply `tries * N`.
+ * - VNOJ works in exact seconds (`total_seconds()`), so a penalty of N minutes
+ *   is `tries * N * 60`.
+ *
+ * The distinction matters for more than presentation: flooring VNOJ times to
+ * minutes collapses participants whose scoring submissions land in the same
+ * minute into a tie the judge would have separated, and then resolves them by
+ * the wrong tiebreak.
+ */
+function elapsed(start: Date, when: Date, format: ContestFormat): number {
+  const seconds = (when.getTime() - start.getTime()) / 1000;
+  return format === ContestFormat.VNOJ ? seconds : Math.floor(seconds / 60);
 }
 
 function roundScore(value: number): number {
@@ -70,22 +92,30 @@ function roundScore(value: number): number {
  * When `cutoff` is supplied, submissions at/after it are excluded from scoring
  * (used to build the frozen scoreboard), while `pending` records how many were
  * hidden so the UI can flag problems with unresolved post-freeze activity.
+ *
+ * VNOJ's `lso` (Last Submission Only) switches the cumulative time from the sum
+ * of every problem's scoring time to just the latest one — attempt penalties are
+ * still added on top either way, and the tiebreaker is that latest time
+ * regardless of the setting.
  */
 function computeAggregate(
   problems: ProblemSubmissions[],
   config: ScoringConfig,
   cutoff?: Date,
 ): AggregateScore {
-  const { format, startTime, penaltyPerWrong } = config;
+  const { format, startTime, penaltyPerWrong, lso } = config;
   const isVnoj = format === ContestFormat.VNOJ;
   const ignored = isVnoj ? VNOJ_IGNORED : ICPC_IGNORED;
+  // Charged per counted attempt, in the format's own time unit (see TIME UNITS).
+  const penaltyPerTry = isVnoj ? penaltyPerWrong * 60 : penaltyPerWrong;
 
   const problemData: Record<string, ProblemResult> = {};
   const solvedProblems: string[] = [];
   let solvedCount = 0;
-  let totalPenalty = 0;
   let score = 0;
-  let cumtime = 0;
+  // Kept apart so LSO can swap the time component without disturbing penalties.
+  let solveTimeTotal = 0;
+  let penaltyTotal = 0;
   let tiebreaker = 0;
 
   for (const { problemCode, submissions } of problems) {
@@ -113,7 +143,9 @@ function computeAggregate(
       if (maxPoints > 0) {
         // Earliest submission that reached the best score for this problem.
         const scoringIndex = considered.findIndex((s) => (s.points ?? 0) === maxPoints);
-        const solveTime = minutesFromStart(startTime, considered[scoringIndex].submittedAt);
+        const solveTime = elapsed(startTime, considered[scoringIndex].submittedAt, format);
+        // Every attempt before the scoring one is charged, not only the failing
+        // ones: a partial that raised the score still cost an attempt.
         const wrongTries = considered
           .slice(0, scoringIndex)
           .filter((s) => !ignored.has(s.status)).length;
@@ -127,9 +159,8 @@ function computeAggregate(
         solvedProblems.push(problemCode);
         solvedCount++;
         score += maxPoints;
-        const penalty = solveTime + wrongTries * penaltyPerWrong;
-        cumtime += penalty;
-        totalPenalty += penalty;
+        solveTimeTotal += solveTime;
+        penaltyTotal += wrongTries * penaltyPerTry;
         tiebreaker = Math.max(tiebreaker, solveTime);
       } else {
         const wrongTries = considered.filter((s) => !ignored.has(s.status)).length;
@@ -145,7 +176,7 @@ function computeAggregate(
       const firstACIndex = considered.findIndex((s) => s.status === 'AC');
 
       if (firstACIndex !== -1) {
-        const solveTime = minutesFromStart(startTime, considered[firstACIndex].submittedAt);
+        const solveTime = elapsed(startTime, considered[firstACIndex].submittedAt, format);
         const wrongTries = considered
           .slice(0, firstACIndex)
           .filter((s) => !ignored.has(s.status)).length;
@@ -153,7 +184,8 @@ function computeAggregate(
         problemData[problemCode] = { solveTime, wrongTries };
         solvedProblems.push(problemCode);
         solvedCount++;
-        totalPenalty += solveTime + wrongTries * penaltyPerWrong;
+        solveTimeTotal += solveTime;
+        penaltyTotal += wrongTries * penaltyPerTry;
       } else {
         const wrongTries = considered.filter((s) => !ignored.has(s.status)).length;
         if (wrongTries > 0) {
@@ -163,13 +195,19 @@ function computeAggregate(
     }
   }
 
+  // LSO counts only the latest scoring submission; otherwise every problem's
+  // scoring time is summed. Clamped like the judge does, since a submission
+  // recorded before the official start would contribute a negative time.
+  const timeBase = isVnoj && lso ? tiebreaker : solveTimeTotal;
+  const total = Math.max(timeBase + penaltyTotal, 0);
+
   return {
     solvedCount,
-    totalPenalty,
+    totalPenalty: total,
     solvedProblems,
     problemData,
     score: roundScore(score),
-    cumtime,
+    cumtime: isVnoj ? total : 0,
     tiebreaker,
   };
 }

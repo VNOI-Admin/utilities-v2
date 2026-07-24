@@ -10,7 +10,7 @@ export interface ProblemState {
   attempted: boolean;
   solved: boolean; // VNOJ: scored any points; ICPC: got AC
   tries: number; // Total attempts including the scoring submission
-  time: number; // Minutes from start to the scoring submission
+  time: number; // Whole minutes from start to the scoring submission
   points: number; // VNOJ points on this problem (0 for ICPC)
   pending: number; // VNOJ: submissions after the freeze not yet reflected
 }
@@ -20,6 +20,16 @@ interface RawProblemData {
   wrongTries: number;
   points?: number;
   pending?: number;
+}
+
+/**
+ * Convert a stored time into the whole minutes the scoreboard displays.
+ *
+ * VNOJ times are stored in seconds (the judge scores in exact seconds so that
+ * same-minute submissions still break ties); ICPC times are already minutes.
+ */
+export function toDisplayMinutes(value: number, format: RankingFormat): number {
+  return format === 'VNOJ' ? Math.floor(value / 60) : value;
 }
 
 /** Resolve a contest/participant's ranking format, defaulting to ICPC. */
@@ -48,7 +58,14 @@ export function buildProblemState(
     const scored = points > 0;
     const pending = pd.pending ?? 0;
     const tries = pd.wrongTries + (scored ? 1 : 0);
-    return { attempted: tries > 0 || pending > 0, solved: scored, tries, time: pd.solveTime, points, pending };
+    return {
+      attempted: tries > 0 || pending > 0,
+      solved: scored,
+      tries,
+      time: toDisplayMinutes(pd.solveTime, format),
+      points,
+      pending,
+    };
   }
 
   const solved = participant.solvedProblems?.includes(problemCode) || false;
@@ -61,9 +78,13 @@ export function primaryMetric(p: ParticipantResponse, format: RankingFormat): nu
   return format === 'VNOJ' ? p.score ?? 0 : p.solvedCount ?? 0;
 }
 
-/** Secondary ranking metric (VNOJ: cumulative time incl. penalty; ICPC: penalty). */
+/**
+ * Secondary ranking metric in whole minutes (VNOJ: cumulative time incl.
+ * penalty; ICPC: penalty). Display only — the stored second-resolution cumtime
+ * is what the ranking actually sorts on.
+ */
 export function secondaryMetric(p: ParticipantResponse, format: RankingFormat): number {
-  return format === 'VNOJ' ? p.cumtime ?? 0 : p.totalPenalty ?? 0;
+  return format === 'VNOJ' ? toDisplayMinutes(p.cumtime ?? 0, format) : p.totalPenalty ?? 0;
 }
 
 /** Header label for the primary metric column. */

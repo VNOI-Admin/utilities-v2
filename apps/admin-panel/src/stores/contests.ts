@@ -12,8 +12,9 @@ export interface ContestEntity {
   start_time: string | Date;
   end_time: string | Date;
   frozen_at?: string | Date;
-  penalty?: number; // Minutes penalty per wrong submission (default 20)
+  penalty?: number; // Minutes penalty per counted attempt (unset: ICPC 20, VNOJ 5)
   format?: ContestFormat; // Ranking format (default 'ICPC')
+  lso?: boolean; // VNOJ only: cumtime counts the latest scoring submission only
 }
 
 export interface ProblemData {
