@@ -1,6 +1,10 @@
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
-import { Submission, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import {
+  Submission,
+  SubmissionStatus,
+  type SubmissionDocument,
+} from '@libs/common-db/schemas/submission.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { resolveProblemName } from '@libs/common/helper/problem-name';
 import {
@@ -9,12 +13,21 @@ import {
   listReactionVideoObjects,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  REACTION_RENDER_JOB_NAME,
+  REACTION_RENDER_QUEUE,
+  reactionRenderJobId,
+  type ReactionRenderJobData,
+} from '@libs/common/queues/reaction-queue';
+import { InjectQueue } from '@nestjs/bullmq';
+import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
+import { Queue } from 'bullmq';
 import { Model, Types } from 'mongoose';
 
 import type { ReactionVideoListItemDto } from './dtos/reaction-video-list-item.dto';
+import type { RegenerateReactionsResponseDto } from './dtos/regenerate-reactions.dto';
 
 /** `reactions/<submissionId>.mp4` -> `<submissionId>` */
 function submissionIdFromKey(key: string): string | undefined {
@@ -31,7 +44,108 @@ export class ReactionService {
     @InjectModel(Participant.name) private readonly participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(Problem.name) private readonly problemModel: Model<ProblemDocument>,
+    @InjectQueue(REACTION_RENDER_QUEUE) private readonly reactionRenderQueue: Queue<ReactionRenderJobData>,
   ) {}
+
+  /**
+   * Re-render the reaction for a single submission, discarding whatever is
+   * stored. The renderer skips submissions that already carry a reaction URL and
+   * gives up once `renderRetries` hits the configured ceiling, so both are
+   * cleared before queueing — otherwise "regenerate" would silently no-op.
+   */
+  async regenerateSubmissionReaction(submissionId: string): Promise<RegenerateReactionsResponseDto> {
+    if (!Types.ObjectId.isValid(submissionId)) {
+      throw new BadRequestException(`Invalid submission id ${submissionId}`);
+    }
+
+    const submission = await this.submissionModel.findById(submissionId).select('submissionStatus').lean().exec();
+    if (!submission) {
+      throw new NotFoundException(`Submission ${submissionId} not found`);
+    }
+    if (submission.submissionStatus !== SubmissionStatus.AC) {
+      throw new BadRequestException(
+        `Submission ${submissionId} is ${submission.submissionStatus}; only accepted submissions get reactions`,
+      );
+    }
+
+    const queued = await this.enqueueRenders([submissionId]);
+    return {
+      queued,
+      alreadyQueued: 1 - queued,
+      message: queued
+        ? `Queued a fresh reaction render for submission ${submissionId}`
+        : `A reaction render for submission ${submissionId} is already pending`,
+    };
+  }
+
+  /**
+   * Re-render every accepted submission in a contest. Used to rebuild a batch
+   * of clips after the rank snapshots they overlay were corrected.
+   */
+  async regenerateContestReactions(contestCode: string): Promise<RegenerateReactionsResponseDto> {
+    const submissions = await this.submissionModel
+      .find({ contest_code: contestCode, submissionStatus: SubmissionStatus.AC })
+      .select('_id')
+      .lean()
+      .exec();
+
+    if (submissions.length === 0) {
+      return {
+        queued: 0,
+        alreadyQueued: 0,
+        message: `No accepted submissions to render for contest ${contestCode}`,
+      };
+    }
+
+    const ids = submissions.map((submission) => String(submission._id));
+    const queued = await this.enqueueRenders(ids);
+
+    return {
+      queued,
+      alreadyQueued: ids.length - queued,
+      message: `Queued ${queued} of ${ids.length} accepted submissions in ${contestCode} for a fresh reaction render`,
+    };
+  }
+
+  /**
+   * Clears the stored reaction + retry counter and puts each submission back on
+   * the render queue. Returns how many were actually enqueued; a submission
+   * whose job is still pending keeps that job rather than gaining a second one.
+   */
+  private async enqueueRenders(submissionIds: string[]): Promise<number> {
+    await this.submissionModel
+      .updateMany(
+        { _id: { $in: submissionIds.map((id) => new Types.ObjectId(id)) } },
+        { $unset: { 'data.reaction': '' }, $set: { 'data.renderRetries': 0 } },
+      )
+      .exec();
+
+    let queued = 0;
+    for (const submissionId of submissionIds) {
+      const jobId = reactionRenderJobId(submissionId);
+
+      // A finished job keeps its id reserved, which would make `add` a no-op;
+      // drop it so the resubmission actually takes.
+      const existing = await this.reactionRenderQueue.getJob(jobId);
+      if (existing) {
+        const state = await existing.getState();
+        if (state === 'completed' || state === 'failed') {
+          await existing.remove();
+        } else {
+          continue;
+        }
+      }
+
+      await this.reactionRenderQueue.add(
+        REACTION_RENDER_JOB_NAME,
+        { submissionId },
+        { jobId, removeOnComplete: true, removeOnFail: true },
+      );
+      queued++;
+    }
+
+    return queued;
+  }
 
   /**
    * Lists rendered reactions, enriched with the submission they came from so the

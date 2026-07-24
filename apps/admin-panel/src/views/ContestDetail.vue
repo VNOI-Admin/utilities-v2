@@ -58,6 +58,34 @@
               />
               <span>{{ resyncingContest ? 'RESYNCING...' : 'RESYNC ALL' }}</span>
             </button>
+            <!-- Recalculate submission data (rank change, score) from stored submissions -->
+            <button
+              @click="recalculateContestData"
+              :disabled="recalculatingData"
+              class="px-4 py-2 border border-mission-amber text-mission-amber hover:bg-mission-amber hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+              :class="{ 'opacity-50 cursor-not-allowed': recalculatingData }"
+            >
+              <Calculator
+                :size="16"
+                :stroke-width="2"
+                :class="{ 'animate-pulse': recalculatingData }"
+              />
+              <span>{{ recalculatingData ? 'RECALCULATING...' : 'REGEN DATA' }}</span>
+            </button>
+            <!-- Re-render every accepted submission's reaction video -->
+            <button
+              @click="regenerateAllReactions"
+              :disabled="regeneratingAllReactions"
+              class="px-4 py-2 border border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+              :class="{ 'opacity-50 cursor-not-allowed': regeneratingAllReactions }"
+            >
+              <Video
+                :size="16"
+                :stroke-width="2"
+                :class="{ 'animate-pulse': regeneratingAllReactions }"
+              />
+              <span>{{ regeneratingAllReactions ? 'QUEUEING...' : 'REGEN REACTIONS' }}</span>
+            </button>
             <!-- Delete button -->
             <button
               @click="showDeleteModal = true"
@@ -432,19 +460,49 @@
                     </div>
                     <div class="col-span-1 text-center font-mono data-value">{{ submission.data.score }}</div>
                     <div class="col-span-1 text-center font-mono text-gray-400">{{ submission.data.penalty }}</div>
+                    <!-- Always show both ends of the move: holding a place is a
+                         result too, and a blank cell reads as missing data. -->
                     <div class="col-span-2 text-center font-mono">
-                      <span v-if="submission.data.old_rank !== submission.data.new_rank">
-                        <span class="text-gray-500">{{ submission.data.old_rank }}</span>
-                        <ChevronRight :size="12" :stroke-width="2" class="inline mx-1" />
-                        <span :class="submission.data.new_rank < submission.data.old_rank ? 'text-mission-accent' : 'text-mission-red'">
-                          {{ submission.data.new_rank }}
-                        </span>
+                      <span class="text-gray-500">{{ submission.data.old_rank }}</span>
+                      <ChevronRight :size="12" :stroke-width="2" class="inline mx-1" />
+                      <span
+                        :class="submission.data.new_rank < submission.data.old_rank
+                          ? 'text-mission-accent'
+                          : submission.data.new_rank > submission.data.old_rank
+                            ? 'text-mission-red'
+                            : 'text-gray-500'"
+                      >
+                        {{ submission.data.new_rank }}
                       </span>
-                      <span v-else class="text-gray-500">—</span>
                     </div>
-                    <div class="col-span-1 text-center">
-                      <span v-if="submission.data.reaction" class="text-lg">{{ submission.data.reaction }}</span>
-                      <span v-else class="text-gray-600">—</span>
+                    <div class="col-span-1 flex items-center justify-center gap-1">
+                      <!-- Quick view: only meaningful once a clip exists. -->
+                      <button
+                        v-if="submission.data.reaction"
+                        @click="openReactionPreview(submission)"
+                        title="Play the rendered reaction"
+                        class="p-1 border border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent transition-all duration-300"
+                      >
+                        <Play :size="14" :stroke-width="2" />
+                      </button>
+                      <span v-else-if="submission.submissionStatus !== 'AC'" class="text-gray-600">—</span>
+                      <span v-else class="text-gray-600 font-mono">···</span>
+                      <!-- Regenerate: confirmed first, since it throws away the
+                           existing clip and re-renders from the raw feeds. -->
+                      <button
+                        v-if="submission.submissionStatus === 'AC'"
+                        @click="askRegenerateSubmissionReaction(submission)"
+                        :disabled="regeneratingReactionIds.has(submission._id)"
+                        title="Re-render this reaction"
+                        class="p-1 border border-white/20 text-gray-400 hover:border-mission-cyan hover:text-mission-cyan transition-all duration-300"
+                        :class="{ 'opacity-50 cursor-not-allowed': regeneratingReactionIds.has(submission._id) }"
+                      >
+                        <RotateCw
+                          :size="14"
+                          :stroke-width="2"
+                          :class="{ 'animate-spin': regeneratingReactionIds.has(submission._id) }"
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1240,6 +1298,132 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Quick view of a rendered reaction -->
+    <MissionModal
+      :show="previewSubmission !== null"
+      :title="previewSubmission ? `REACTION · ${previewSubmission.author} · ${problemName(previewSubmission.problem_code)}` : ''"
+      max-width="sm"
+      :show-actions="false"
+      @close="closeReactionPreview"
+    >
+      <div v-if="previewSubmission">
+        <video
+          :src="previewSubmission.data.reaction"
+          class="w-full rounded-lg bg-black border border-white/10"
+          controls
+          autoplay
+          playsinline
+        />
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs font-mono">
+          <dt class="tech-label">RANK CHANGE</dt>
+          <dd class="text-gray-300">
+            {{ previewSubmission.data.old_rank }} → {{ previewSubmission.data.new_rank }}
+          </dd>
+          <dt class="tech-label">SCORE</dt>
+          <dd class="text-gray-300">{{ previewSubmission.data.score }}</dd>
+          <dt class="tech-label">SUBMITTED</dt>
+          <dd class="text-gray-300">{{ formatFullDateTime(previewSubmission.submittedAt) }}</dd>
+        </dl>
+        <div class="flex gap-3 pt-4">
+          <a
+            :href="previewSubmission.data.reaction"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-primary flex-1 text-sm text-center"
+          >
+            OPEN
+          </a>
+        </div>
+      </div>
+    </MissionModal>
+
+    <!-- Confirmation for a single re-render -->
+    <MissionModal
+      :show="regenTarget !== null"
+      title="REGENERATE REACTION"
+      max-width="lg"
+      confirm-text="REGENERATE"
+      cancel-text="CANCEL"
+      loading-text="QUEUEING..."
+      :loading="regenTarget !== null && regeneratingReactionIds.has(regenTarget._id)"
+      @confirm="confirmRegenerateSubmissionReaction"
+      @close="regenTarget = null"
+    >
+      <div v-if="regenTarget" class="space-y-4">
+        <p class="text-sm text-gray-300">
+          Queue a fresh render for
+          <span class="font-mono text-mission-accent">{{ regenTarget.author }}</span> on
+          <span class="font-mono text-mission-cyan">{{ problemName(regenTarget.problem_code) }}</span>?
+        </p>
+        <ul class="space-y-2 text-sm text-gray-400 font-mono">
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>The stored clip is discarded and re-rendered from the raw feeds</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>It will use the current rank change {{ regenTarget.data.old_rank }} → {{ regenTarget.data.new_rank }}</span>
+          </li>
+        </ul>
+      </div>
+    </MissionModal>
+
+    <!-- Confirmation for the contest-wide re-render -->
+    <MissionModal
+      :show="showRegenAllConfirm"
+      title="REGENERATE ALL REACTIONS"
+      max-width="lg"
+      confirm-text="REGENERATE ALL"
+      cancel-text="CANCEL"
+      loading-text="QUEUEING..."
+      :loading="regeneratingAllReactions"
+      @confirm="confirmRegenerateAllReactions"
+      @close="showRegenAllConfirm = false"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-gray-300">
+          Queue a fresh render for every accepted submission in
+          <span class="font-mono text-mission-accent">{{ contest?.code }}</span>.
+        </p>
+        <ul class="space-y-2 text-sm text-gray-400 font-mono">
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>{{ acceptedSubmissionCount }} accepted submission(s) on this page's contest</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>Every stored clip is discarded; rendering is serialized and can take a while</span>
+          </li>
+        </ul>
+      </div>
+    </MissionModal>
+
+    <!-- On-screen record of what was queued, so the outcome outlives the toast -->
+    <Teleport to="body">
+      <div
+        v-if="reactionLog.length > 0"
+        class="fixed bottom-4 right-4 z-40 w-96 max-w-[calc(100vw-2rem)] mission-card bg-mission-gray border border-white/10"
+      >
+        <div class="flex items-center justify-between px-4 py-2 border-b border-white/10">
+          <span class="tech-label">REACTION ACTIVITY</span>
+          <button @click="reactionLog = []" class="text-gray-500 hover:text-mission-red transition-colors">
+            <X :size="14" :stroke-width="2" />
+          </button>
+        </div>
+        <div class="max-h-48 overflow-y-auto divide-y divide-white/5">
+          <div
+            v-for="entry in reactionLog"
+            :key="entry.id"
+            class="px-4 py-2 text-xs font-mono flex gap-2"
+            :class="entry.ok ? 'text-gray-300' : 'text-mission-red'"
+          >
+            <span class="text-gray-500 shrink-0">{{ entry.time }}</span>
+            <span>{{ entry.message }}</span>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -1258,11 +1442,12 @@ import {
   type RankingFormat,
 } from '~/common/ranking';
 import type { ContestEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
-import { internalApi } from '~/services/api';
+import { internalApi, internalClient } from '~/services/api';
 import type { UserEntity, ParticipantResponse } from '@libs/api/internal';
 import { resolveProblemName } from '~/utils/problemName';
 import { useToast } from 'vue-toastification';
-import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList, Trophy } from 'lucide-vue-next';
+import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList, Trophy, Calculator, Video, Play } from 'lucide-vue-next';
+import MissionModal from '~/components/MissionModal.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -1330,6 +1515,28 @@ const syncingParticipants = ref(false);
 // Resync state
 const resyncingContest = ref(false);
 const forceSyncingSubmissions = ref(false);
+const recalculatingData = ref(false);
+const regeneratingAllReactions = ref(false);
+// Per-row spinner state, so queueing one submission does not lock the others.
+const regeneratingReactionIds = ref(new Set<string>());
+const previewSubmission = ref<SubmissionEntity | null>(null);
+const regenTarget = ref<SubmissionEntity | null>(null);
+const showRegenAllConfirm = ref(false);
+// Toasts vanish; re-rendering is slow enough that the operator wants a record
+// of what they queued while it runs.
+const reactionLog = ref<{ id: number; time: string; message: string; ok: boolean }[]>([]);
+let reactionLogSeq = 0;
+
+const acceptedSubmissionCount = computed(
+  () => submissions.value.filter((submission) => submission.submissionStatus === 'AC').length,
+);
+
+function logReaction(message: string, ok = true) {
+  reactionLog.value = [
+    { id: ++reactionLogSeq, time: new Date().toLocaleTimeString(), message, ok },
+    ...reactionLog.value,
+  ].slice(0, 50);
+}
 
 // Submission state
 const submissionSearch = ref('');
@@ -1950,6 +2157,105 @@ async function forceSyncSubmissions() {
     console.error('Force-sync submissions error:', err);
   } finally {
     forceSyncingSubmissions.value = false;
+  }
+}
+
+/**
+ * Rebuild rank change / score on every stored submission plus the participant
+ * standings. Touches no external API, so it is the fix for data that was
+ * computed under older rules rather than data that is missing.
+ */
+async function recalculateContestData() {
+  if (!contest.value) return;
+
+  recalculatingData.value = true;
+
+  try {
+    const result = await internalApi.contest.recalculateContestData(contest.value.code);
+
+    await Promise.all([
+      loadSubmissions(),
+      loadParticipants(),
+    ]);
+
+    toast.success(result.message);
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Failed to recalculate contest data');
+    console.error('Recalculate contest data error:', err);
+  } finally {
+    recalculatingData.value = false;
+  }
+}
+
+function openReactionPreview(submission: SubmissionEntity) {
+  previewSubmission.value = submission;
+}
+
+function closeReactionPreview() {
+  previewSubmission.value = null;
+}
+
+function regenerateAllReactions() {
+  showRegenAllConfirm.value = true;
+}
+
+async function confirmRegenerateAllReactions() {
+  if (!contest.value) return;
+
+  regeneratingAllReactions.value = true;
+
+  try {
+    const { data } = await internalClient.post<{ queued: number; alreadyQueued: number; message: string }>(
+      `/reactions/contests/${contest.value.code}/regenerate`,
+    );
+    toast.success(data.message);
+    logReaction(data.message);
+    showRegenAllConfirm.value = false;
+    await loadSubmissions();
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Failed to queue reaction renders';
+    toast.error(message);
+    logReaction(message, false);
+    console.error('Regenerate reactions error:', err);
+  } finally {
+    regeneratingAllReactions.value = false;
+  }
+}
+
+function askRegenerateSubmissionReaction(submission: SubmissionEntity) {
+  if (regeneratingReactionIds.value.has(submission._id)) return;
+  regenTarget.value = submission;
+}
+
+async function confirmRegenerateSubmissionReaction() {
+  const submission = regenTarget.value;
+  if (!submission) return;
+
+  const submissionId = submission._id;
+  if (regeneratingReactionIds.value.has(submissionId)) return;
+
+  // Sets are not deeply reactive, so swap in a new one on each mutation.
+  regeneratingReactionIds.value = new Set(regeneratingReactionIds.value).add(submissionId);
+
+  try {
+    const { data } = await internalClient.post<{ queued: number; alreadyQueued: number; message: string }>(
+      `/reactions/submissions/${submissionId}/regenerate`,
+    );
+    toast.success(data.message);
+    logReaction(
+      `${submission.author} / ${problemName(submission.problem_code)} — ${data.message}`,
+    );
+    regenTarget.value = null;
+    await loadSubmissions();
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Failed to queue reaction render';
+    toast.error(message);
+    logReaction(`${submission.author} / ${problemName(submission.problem_code)} — ${message}`, false);
+    console.error('Regenerate submission reaction error:', err);
+  } finally {
+    const next = new Set(regeneratingReactionIds.value);
+    next.delete(submissionId);
+    regeneratingReactionIds.value = next;
   }
 }
 

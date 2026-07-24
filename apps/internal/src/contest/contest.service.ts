@@ -5,11 +5,8 @@ import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.s
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import {
   computeParticipantScore,
-  compareForRanking,
-  emptyAggregate,
-  type AggregateScore,
+  replaySubmissionRanks,
   type ProblemSubmissions,
-  type ScoringSubmission,
 } from '@libs/common-db/scoring/contest-scoring';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
@@ -18,7 +15,7 @@ import { Role } from '@libs/common/decorators/role.decorator';
 import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { ContestFilter } from './dtos/getContests.dto';
 import type { CreateContestDto } from './dtos/createContest.dto';
@@ -26,6 +23,7 @@ import type { UpdateContestDto } from './dtos/updateContest.dto';
 import type { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
 import { AddParticipantDto, AddParticipantMode, AddParticipantResponseDto } from './dtos/addParticipant.dto';
+import { RecalculateContestResponseDto } from './dtos/recalculateContest.dto';
 import { UserService } from '../user/user.service';
 import { CreateUserDto } from '../user/dtos/createUser.dto';
 
@@ -178,107 +176,101 @@ export class ContestService {
   /**
    * Recompute everything derived from submissions for a contest:
    * participant aggregate data, participant ranks (live + frozen), and each
-   * submission's old_rank/new_rank snapshot. Used when the ranking format
-   * changes so standings reflect the new rules right away.
+   * submission's rank/score snapshot. Used when the ranking format changes so
+   * standings reflect the new rules right away, and exposed to admins as a
+   * manual "regenerate submission data" action.
    */
-  private async fullRecalculate(contest: ContestDocument): Promise<void> {
+  private async fullRecalculate(contest: ContestDocument): Promise<number> {
     console.log(`Full recalculation triggered for contest ${contest.code} (format: ${contest.format})`);
     await this.recalculateParticipantData(contest);
     await this.updateParticipantRanks(contest);
-    await this.recalculateSubmissionRanks(contest);
+    const submissionsUpdated = await this.recalculateSubmissionRanks(contest);
     console.log(`Full recalculation completed for contest ${contest.code}`);
+    return submissionsUpdated;
   }
 
   /**
-   * Replay every submission in chronological order to compute the author's rank
-   * immediately before and after each submission, storing them as
-   * data.old_rank / data.new_rank. Ranks are computed live (freeze-agnostic)
-   * against the full participant field using the contest's current format.
+   * Admin-triggered rebuild of everything derived from the stored submissions.
+   * Touches no external API, so it is safe to run at any point in a contest to
+   * repair standings that were computed under older/buggy rules.
    */
-  private async recalculateSubmissionRanks(contest: ContestDocument): Promise<void> {
-    const format = contest.format || ContestFormat.ICPC;
-    // Live ranking snapshots ignore the freeze window (frozenAt omitted).
-    const config = {
-      format,
-      startTime: contest.start_time,
-      penaltyPerWrong: contest.penalty || 20,
-    };
+  async recalculateContestData(code: string): Promise<RecalculateContestResponseDto> {
+    const contest = await this.findOne(code);
+    const submissionsUpdated = await this.fullRecalculate(contest);
+    const participantsUpdated = await this.participantModel.countDocuments({ contest: code });
 
-    const submissions = await this.submissionModel
-      .find({ contest_code: contest.code })
-      .sort({ submittedAt: 1, _id: 1 })
-      .select('_id author problem_code submittedAt submissionStatus points')
-      .exec();
+    return {
+      submissionsUpdated,
+      participantsUpdated,
+      message: `Recalculated ${submissionsUpdated} submissions and ${participantsUpdated} participants for ${code}`,
+    };
+  }
+
+  /**
+   * Replay every submission in chronological order to compute the author's
+   * scoreboard position immediately before and after each submission, storing
+   * them as data.old_rank / data.new_rank, and refresh data.score/data.penalty
+   * from the submission itself.
+   *
+   * Ranks are computed live (freeze-agnostic) against the full participant
+   * field using the contest's current format.
+   */
+  private async recalculateSubmissionRanks(contest: ContestDocument): Promise<number> {
+    const [submissions, participants] = await Promise.all([
+      this.submissionModel
+        .find({ contest_code: contest.code })
+        .sort({ submittedAt: 1, _id: 1 })
+        .select('_id author problem_code submittedAt submissionStatus points')
+        .lean()
+        .exec(),
+      this.participantModel.find({ contest: contest.code }).select('username').lean().exec(),
+    ]);
 
     if (submissions.length === 0) {
-      return;
+      return 0;
     }
 
-    interface AuthorState {
-      problems: Map<string, ScoringSubmission[]>;
-      agg: AggregateScore;
-    }
+    const ranks = replaySubmissionRanks(
+      submissions.map((submission) => ({
+        id: String(submission._id),
+        author: submission.author,
+        problemCode: submission.problem_code,
+        status: submission.submissionStatus,
+        submittedAt: submission.submittedAt,
+        points: submission.points ?? undefined,
+      })),
+      participants.map((participant) => participant.username),
+      {
+        format: contest.format || ContestFormat.ICPC,
+        startTime: contest.start_time,
+        penaltyPerWrong: contest.penalty || 20,
+      },
+    );
 
-    const states = new Map<string, AuthorState>();
+    // The per-submission score/penalty columns describe the submission itself,
+    // so they are rebuilt here too: submissions stored before these fields were
+    // written otherwise keep showing a hardcoded 0.
+    const pointsById = new Map(submissions.map((s) => [String(s._id), s.points ?? 0]));
+    const penaltyById = new Map(
+      submissions.map((s) => [
+        String(s._id),
+        Math.floor((s.submittedAt.getTime() - contest.start_time.getTime()) / 60000),
+      ]),
+    );
 
-    // Seed all registered participants so ranks reflect the full field, even
-    // before an author's first submission.
-    const participants = await this.participantModel
-      .find({ contest: contest.code })
-      .select('username')
-      .lean()
-      .exec();
-    for (const participant of participants) {
-      states.set(participant.username, { problems: new Map(), agg: emptyAggregate() });
-    }
-
-    // Rank = 1 + number of participants ranked strictly above this aggregate.
-    const rankOf = (agg: AggregateScore): number => {
-      let better = 0;
-      for (const state of states.values()) {
-        if (compareForRanking(state.agg, agg, format) < 0) {
-          better++;
-        }
-      }
-      return better + 1;
-    };
-
-    const bulkOps: any[] = [];
-
-    for (const sub of submissions) {
-      let state = states.get(sub.author);
-      if (!state) {
-        // A submission from a user not in the participant list; still track it.
-        state = { problems: new Map(), agg: emptyAggregate() };
-        states.set(sub.author, state);
-      }
-
-      const oldRank = rankOf(state.agg);
-
-      // Apply this submission to the author's per-problem history.
-      const problemSubs = state.problems.get(sub.problem_code) ?? [];
-      problemSubs.push({
-        status: sub.submissionStatus,
-        submittedAt: sub.submittedAt,
-        points: sub.points ?? undefined,
-      });
-      state.problems.set(sub.problem_code, problemSubs);
-
-      // Recompute the author's live aggregate from all submissions so far.
-      const problemsArr: ProblemSubmissions[] = Array.from(state.problems.entries()).map(
-        ([problemCode, submissionsList]) => ({ problemCode, submissions: submissionsList }),
-      );
-      state.agg = computeParticipantScore(problemsArr, config);
-
-      const newRank = rankOf(state.agg);
-
-      bulkOps.push({
-        updateOne: {
-          filter: { _id: sub._id },
-          update: { $set: { 'data.old_rank': oldRank, 'data.new_rank': newRank } },
+    const bulkOps = ranks.map((rank) => ({
+      updateOne: {
+        filter: { _id: new Types.ObjectId(rank.id) },
+        update: {
+          $set: {
+            'data.old_rank': rank.oldRank,
+            'data.new_rank': rank.newRank,
+            'data.score': pointsById.get(rank.id) ?? 0,
+            'data.penalty': penaltyById.get(rank.id) ?? 0,
+          },
         },
-      });
-    }
+      },
+    }));
 
     // Write in chunks to keep individual bulk operations bounded.
     const CHUNK_SIZE = 1000;
@@ -289,6 +281,7 @@ export class ContestService {
     console.log(
       `Recalculated old/new ranks for ${bulkOps.length} submissions in contest ${contest.code}`,
     );
+    return bulkOps.length;
   }
 
   async delete(code: string): Promise<{ success: boolean; deletedCounts: { problems: number; submissions: number; participants: number } }> {
@@ -977,6 +970,7 @@ export class ContestService {
                 problem_code: this.stripContestPrefix(vnojSub.problem_code, contest.code),
                 external_id: vnojSub.id,
                 points: vnojSub.points,
+                'data.score': vnojSub.points ?? 0,
                 'data.penalty': penaltyMinutes,
               },
               $setOnInsert: {
@@ -999,6 +993,11 @@ export class ContestService {
 
       // Update participant ranks
       await this.updateParticipantRanks(contest);
+
+      // Backfilled submissions land in the middle of the timeline, which shifts
+      // the standings every later submission was ranked against, so the
+      // snapshots are replayed rather than left as they were.
+      await this.recalculateSubmissionRanks(contest);
 
       return {
         totalFetched: vnojSubmissions.length,
@@ -1129,10 +1128,12 @@ export class ContestService {
     try {
       console.log(`Updating participant ranks for contest ${contestCode} (format: ${format})`);
 
+      // Username breaks any remaining tie so the order is reproducible and
+      // matches the replay behind the per-submission rank snapshots.
       const liveSort: Record<string, 1 | -1> =
         format === ContestFormat.VNOJ
-          ? { score: -1, cumtime: 1, tiebreaker: 1 }
-          : { solvedCount: -1, totalPenalty: 1 };
+          ? { score: -1, cumtime: 1, tiebreaker: 1, username: 1 }
+          : { solvedCount: -1, totalPenalty: 1, username: 1 };
 
       // Fetch all participants for the contest, sorted by the format's rules
       const participants = await this.participantModel
@@ -1162,7 +1163,7 @@ export class ContestService {
       if (format === ContestFormat.VNOJ && contest.frozen_at) {
         const frozenParticipants = await this.participantModel
           .find({ contest: contestCode })
-          .sort({ frozenScore: -1, frozenCumtime: 1, frozenTiebreaker: 1 })
+          .sort({ frozenScore: -1, frozenCumtime: 1, frozenTiebreaker: 1, username: 1 })
           .exec();
 
         const frozenOps = frozenParticipants.map((participant, index) => ({

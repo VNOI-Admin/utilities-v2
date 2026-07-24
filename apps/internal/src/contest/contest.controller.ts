@@ -22,6 +22,7 @@ import { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { ContestFilter, GetContestsDto } from './dtos/getContests.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
 import { AddParticipantDto, AddParticipantResponseDto } from './dtos/addParticipant.dto';
+import { RecalculateContestResponseDto } from './dtos/recalculateContest.dto';
 
 @ApiTags('Contest')
 @ApiBearerAuth()
@@ -128,6 +129,16 @@ export class ContestController {
   @ApiOperation({ summary: 'Force-sync all submissions from VNOJ API and fill any missing submissions' })
   async forceSyncSubmissions(@Param('code') code: string) {
     return this.contestService.forceSyncSubmissions(code);
+  }
+
+  @Post(':code/recalculate')
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Recalculate submission data (rank change, score) and participant standings from stored submissions',
+  })
+  @ApiOkResponse({ type: RecalculateContestResponseDto })
+  async recalculateContestData(@Param('code') code: string) {
+    return this.contestService.recalculateContestData(code);
   }
 
   @Post(':code/participants')

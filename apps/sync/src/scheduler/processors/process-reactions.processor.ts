@@ -6,7 +6,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Job, Queue } from 'bullmq';
 import { Model } from 'mongoose';
 
-import { QUEUE_NAMES, REACTION_RENDER_JOB_NAME, type ReactionRenderJobData } from '../constants';
+import {
+  QUEUE_NAMES,
+  REACTION_RENDER_JOB_NAME,
+  reactionRenderJobId,
+  type ReactionRenderJobData,
+} from '../constants';
 
 @Processor(QUEUE_NAMES.PROCESS_REACTIONS)
 export class ProcessReactionsProcessor extends WorkerHost {
@@ -51,7 +56,7 @@ export class ProcessReactionsProcessor extends WorkerHost {
 
       for (const submission of submissions) {
         const submissionId = String(submission._id);
-        const jobId = `reaction-${submissionId}`;
+        const jobId = reactionRenderJobId(submissionId);
         const retries = submission.data?.renderRetries ?? 0;
         const existing = await this.reactionRenderQueue.getJob(jobId);
 

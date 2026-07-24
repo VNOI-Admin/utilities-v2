@@ -1,9 +1,10 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { ReactionVideoListItemDto } from './dtos/reaction-video-list-item.dto';
+import { RegenerateReactionsResponseDto } from './dtos/regenerate-reactions.dto';
 import { ReactionService } from './reaction.service';
 
 @ApiTags('Reactions')
@@ -24,5 +25,27 @@ export class ReactionController {
   @Get()
   async listRenderedVideos(): Promise<ReactionVideoListItemDto[]> {
     return this.reactionService.listRenderedVideos();
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Re-render the reaction video for every accepted submission in a contest' })
+  @ApiResponse({ status: 201, type: RegenerateReactionsResponseDto })
+  @Post('contests/:code/regenerate')
+  async regenerateContestReactions(@Param('code') code: string): Promise<RegenerateReactionsResponseDto> {
+    return this.reactionService.regenerateContestReactions(code);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Re-render the reaction video for a single submission' })
+  @ApiResponse({ status: 201, type: RegenerateReactionsResponseDto })
+  @Post('submissions/:submissionId/regenerate')
+  async regenerateSubmissionReaction(
+    @Param('submissionId') submissionId: string,
+  ): Promise<RegenerateReactionsResponseDto> {
+    return this.reactionService.regenerateSubmissionReaction(submissionId);
   }
 }

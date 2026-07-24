@@ -221,3 +221,123 @@ export function computeParticipantScore(
 
   return live;
 }
+
+/**
+ * Order two participants exactly the way the scoreboard does: by the format's
+ * ranking rules, then by username so that tied participants still get a stable,
+ * reproducible order. Without the username tiebreak the database sort and the
+ * in-memory replay could disagree on who occupies which of two tied rows.
+ */
+export function compareForScoreboard(
+  a: { agg: AggregateScore; username: string },
+  b: { agg: AggregateScore; username: string },
+  format: ContestFormat,
+): number {
+  const byRank = compareForRanking(a.agg, b.agg, format);
+  if (byRank !== 0) return byRank;
+  return a.username < b.username ? -1 : a.username > b.username ? 1 : 0;
+}
+
+/** One submission as consumed by the rank replay. */
+export interface RankReplaySubmission {
+  id: string;
+  author: string;
+  problemCode: string;
+  status: string;
+  submittedAt: Date;
+  points?: number;
+}
+
+/** The author's scoreboard position immediately before and after a submission. */
+export interface RankReplayResult {
+  id: string;
+  oldRank: number;
+  newRank: number;
+}
+
+/**
+ * Replay every submission in chronological order and report the author's
+ * scoreboard position immediately before and after each one.
+ *
+ * Ranks are *scoreboard positions* (1..N, every participant on their own row),
+ * not competition ranks that share a number between tied participants. This is
+ * deliberate: with shared ranks every participant who has not scored yet sits on
+ * the same row, so a submission that lifts someone from the bottom of the field
+ * into the top ten reports "no change" — the whole point of the snapshot is to
+ * capture that jump. Ordering matches `compareForScoreboard`, so these numbers
+ * line up with the ranks written onto the participant documents.
+ *
+ * Every submission is replayed, not just accepted ones: any verdict that moves
+ * points (a partial in VNOJ format, a wrong try adding penalty in ICPC format)
+ * can move the author and therefore everyone ranked around them.
+ */
+export function replaySubmissionRanks(
+  submissions: RankReplaySubmission[],
+  participantUsernames: string[],
+  config: ScoringConfig,
+): RankReplayResult[] {
+  const { format } = config;
+  // Snapshots are freeze-agnostic: they describe the live standings at the
+  // moment of the submission, not what a frozen scoreboard would have shown.
+  const liveConfig: ScoringConfig = { ...config, frozenAt: null };
+
+  interface AuthorState {
+    username: string;
+    problems: Map<string, ScoringSubmission[]>;
+    agg: AggregateScore;
+  }
+
+  const states = new Map<string, AuthorState>();
+  const stateOf = (username: string): AuthorState => {
+    let state = states.get(username);
+    if (!state) {
+      state = { username, problems: new Map(), agg: emptyAggregate() };
+      states.set(username, state);
+    }
+    return state;
+  };
+
+  // Seed the whole registered field so positions are counted against every
+  // participant, not only those who have submitted so far.
+  for (const username of participantUsernames) {
+    stateOf(username);
+  }
+
+  const positionOf = (self: AuthorState): number => {
+    let ahead = 0;
+    for (const other of states.values()) {
+      if (other === self) continue;
+      if (compareForScoreboard(other, self, format) < 0) ahead++;
+    }
+    return ahead + 1;
+  };
+
+  const ordered = [...submissions].sort(
+    (a, b) => a.submittedAt.getTime() - b.submittedAt.getTime(),
+  );
+
+  return ordered.map((submission) => {
+    // An author missing from the participant list still gets tracked, otherwise
+    // their submissions would rank against a field they are not part of.
+    const state = stateOf(submission.author);
+
+    const oldRank = positionOf(state);
+
+    const problemSubs = state.problems.get(submission.problemCode) ?? [];
+    problemSubs.push({
+      status: submission.status,
+      submittedAt: submission.submittedAt,
+      points: submission.points,
+    });
+    state.problems.set(submission.problemCode, problemSubs);
+
+    const problems: ProblemSubmissions[] = Array.from(state.problems.entries()).map(
+      ([problemCode, submissionsList]) => ({ problemCode, submissions: submissionsList }),
+    );
+    state.agg = computeParticipantScore(problems, liveConfig);
+
+    const newRank = positionOf(state);
+
+    return { id: submission.id, oldRank, newRank };
+  });
+}

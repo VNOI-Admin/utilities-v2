@@ -1697,6 +1697,31 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * No description
      *
      * @tags Contest
+     * @name RecalculateContestData
+     * @summary Recalculate submission data (rank change, score) and participant standings from stored submissions
+     * @request POST:/contests/{code}/recalculate
+     * @secure
+     */
+    recalculateContestData: (code: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          submissionsUpdated: number;
+          participantsUpdated: number;
+          message: string;
+        },
+        any
+      >({
+        path: `/contests/${code}/recalculate`,
+        method: 'POST',
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
      * @name RemoveParticipant
      * @summary Remove participant from contest
      * @request DELETE:/contests/participants/{participantId}

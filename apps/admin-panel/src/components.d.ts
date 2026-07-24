@@ -41,6 +41,7 @@ declare module 'vue' {
     OverlayFooter: typeof import('./components/overlay/OverlayFooter.vue')['default']
     PageHeader: typeof import('./components/PageHeader.vue')['default']
     PathLayer: typeof import('./components/floor-plan/layers/PathLayer.vue')['default']
+    Play: typeof import('lucide-vue-next')['Play']
     PropertiesPanel: typeof import('./components/floor-plan/panels/PropertiesPanel.vue')['default']
     RankingConfigPanel: typeof import('./components/overlay-controller/RankingConfigPanel.vue')['default']
     RankingDisplay: typeof import('./components/overlay/RankingDisplay.vue')['default']
