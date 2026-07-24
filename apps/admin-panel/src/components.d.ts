@@ -46,6 +46,7 @@ declare module 'vue' {
     RankingConfigPanel: typeof import('./components/overlay-controller/RankingConfigPanel.vue')['default']
     RankingDisplay: typeof import('./components/overlay/RankingDisplay.vue')['default']
     RankingView: typeof import('./components/overlay/RankingView.vue')['default']
+    ReactionFeed: typeof import('./components/ReactionFeed.vue')['default']
     RefreshButton: typeof import('./components/RefreshButton.vue')['default']
     RoleSelectionStep: typeof import('./components/batch-user/RoleSelectionStep.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -63,6 +64,7 @@ declare module 'vue' {
     TeamInfoFloat: typeof import('./components/overlay/TeamInfoFloat.vue')['default']
     ToggleButton: typeof import('./components/ToggleButton.vue')['default']
     VideoPlayer: typeof import('./components/VideoPlayer.vue')['default']
+    ViewModeToggle: typeof import('./components/ViewModeToggle.vue')['default']
     WallObject: typeof import('./components/floor-plan/objects/WallObject.vue')['default']
   }
 }

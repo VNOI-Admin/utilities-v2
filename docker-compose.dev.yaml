@@ -1,0 +1,68 @@
+# Local development dependencies: MongoDB + Redis.
+# Brings up only the datastores the services need, so you can run the apps on
+# the host with `yarn dev` / `yarn dev:main` against them.
+#
+#   docker compose -f docker-compose.dev.yaml up -d      # start
+#   docker compose -f docker-compose.dev.yaml down       # stop (keep data)
+#   docker compose -f docker-compose.dev.yaml down -v    # stop + wipe data
+#
+# Matches the host-facing defaults in .env.sample:
+#   COMMON_DB_URI="mongodb://localhost:27017/user"
+#   REDIS_HOST="localhost"  REDIS_PORT="6379"  REDIS_PASSWORD="redis123"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: utilities_dev_mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo_dev_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7
+    container_name: utilities_dev_redis
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "redis123"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  wg_portal:
+    image: wgportal/wg-portal:v2
+    container_name: utilities_wg-portal
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    env_file:
+      - .env
+    environment:
+      WG_PORTAL_CORE_IMPORT_EXISTING: "true"
+      WG_PORTAL_CORE_RESTORE_STATE: "true"
+      WG_PORTAL_WEB_LISTENING_ADDRESS: ":8888"
+      WG_PORTAL_ADVANCED_CONFIG_STORAGE_PATH: "/etc/wireguard"
+      WG_PORTAL_DATABASE_TYPE: "sqlite"
+      WG_PORTAL_DATABASE_DSN: "/app/data/sqlite.db"
+    ports:
+      - "127.0.0.1:8888:8888"
+    volumes:
+      - ./data/wg-portal:/app/data
+      - /etc/wireguard:/etc/wireguard
+
+volumes:
+  mongo_dev_data:
+  redis_dev_data:

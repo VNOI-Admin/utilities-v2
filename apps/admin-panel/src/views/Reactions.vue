@@ -1,10 +1,21 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4">
+  <div
+    :class="
+      isFeed
+        ? 'h-[calc(100vh-3.5rem)] flex flex-col bg-mission-black overflow-hidden'
+        : 'min-h-screen bg-mission-black grid-background'
+    "
+  >
+    <!-- Grid header: full mission-control chrome. -->
+    <div
+      v-if="!isFeed"
+      class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4"
+    >
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <PageHeader title="REACTION_VIDEOS" subtitle="RENDERED TEAM REACTIONS / S3" />
         <div class="flex items-center gap-4">
           <StatCounter label="CLIPS:" :value="filteredItems.length" />
+          <ViewModeToggle v-model="viewMode" />
           <RefreshButton :loading="loading" @click="loadList" />
         </div>
       </div>
@@ -15,7 +26,56 @@
       </div>
     </div>
 
-    <div class="p-4 md:p-8">
+    <!-- Feed header: single compact row so the clip keeps the vertical space. -->
+    <div
+      v-else
+      class="shrink-0 border-b border-white/10 bg-mission-dark/80 backdrop-blur px-4 md:px-6 py-2.5 flex items-center gap-3 flex-wrap"
+    >
+      <h1 class="text-lg font-display font-bold text-glow flex items-center gap-2 shrink-0">
+        <span class="text-mission-accent">█</span>
+        REACTION_FEED
+      </h1>
+      <StatCounter label="CLIPS:" :value="filteredItems.length" value-class="text-sm" />
+      <SearchInput
+        v-model="query"
+        placeholder="SEARCH..."
+        container-class="flex-1 min-w-[160px] max-w-xs"
+        input-class="py-2 text-sm"
+      />
+      <FilterButtonGroup
+        v-if="verdicts.length > 2"
+        v-model="verdictFilter"
+        :options="verdicts"
+        class="hidden lg:flex"
+      />
+      <ToggleButton v-model="autoAdvance" label="AUTO-NEXT" :show-indicator="true" />
+      <ViewModeToggle v-model="viewMode" />
+      <RefreshButton :loading="loading" button-class="!px-4 !py-2 text-xs" @click="loadList" />
+    </div>
+
+    <!-- Feed body. -->
+    <template v-if="isFeed">
+      <div
+        v-if="errorMessage"
+        class="m-4 mission-card p-6 border border-mission-amber/40 bg-mission-amber/5 text-mission-amber font-mono text-sm"
+      >
+        {{ errorMessage }}
+      </div>
+      <div v-else-if="loading && items.length === 0" class="flex-1 grid place-items-center">
+        <LoadingSpinner />
+      </div>
+      <ReactionFeed
+        v-else
+        :items="filteredItems"
+        :initial-key="feedStartKey"
+        :auto-advance="autoAdvance"
+        class="flex-1 min-h-0"
+        @update:active-key="feedStartKey = $event"
+      />
+    </template>
+
+    <!-- Grid body. -->
+    <div v-else class="p-4 md:p-8">
       <!-- Loading skeleton mirrors the grid so the layout does not jump. -->
       <div v-if="loading && items.length === 0" :class="gridClass">
         <div v-for="i in 10" :key="i" class="animate-pulse">
@@ -100,13 +160,13 @@
               class="shrink-0 w-9 h-9 rounded-full grid place-items-center text-[11px] font-bold font-mono border border-white/10 bg-mission-gray text-mission-cyan"
               :title="item.group || 'No group'"
             >
-              {{ monogram(item) }}
+              {{ reactionMonogram(item) }}
             </div>
             <div class="min-w-0">
               <h3
                 class="text-sm font-medium text-white leading-snug line-clamp-2 group-hover:text-mission-accent transition-colors"
               >
-                {{ title(item) }}
+                {{ reactionTitle(item) }}
               </h3>
               <p class="text-xs text-gray-500 font-mono mt-1 truncate">
                 {{ item.group || item.author || '—' }}
@@ -124,7 +184,7 @@
 
     <MissionModal
       :show="selected !== null"
-      :title="selected ? title(selected) : ''"
+      :title="selected ? reactionTitle(selected) : ''"
       max-width="sm"
       :show-actions="false"
       @close="closePlayer"
@@ -144,6 +204,9 @@
           </div>
         </dl>
         <div class="flex gap-3 pt-4">
+          <button type="button" class="btn-secondary flex-1 text-sm" @click="playInFeed(selected)">
+            IN FEED
+          </button>
           <button type="button" class="btn-secondary flex-1 text-sm" @click="copyUrl(selected.url)">
             COPY URL
           </button>
@@ -162,34 +225,36 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { Play } from 'lucide-vue-next';
+import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import MissionModal from '~/components/MissionModal.vue';
+import ReactionFeed from '~/components/ReactionFeed.vue';
+import ViewModeToggle from '~/components/ViewModeToggle.vue';
 import { internalClient } from '~/services/api';
+import type { ReactionVideoItem } from '~/types/reaction';
+import {
+  formatBytes,
+  formatDateTime,
+  formatDuration,
+  rankClass,
+  rankDelta,
+  reactionMonogram,
+  reactionTitle,
+  relativeTime,
+  verdictClass,
+} from '~/utils/reaction';
 
-interface ReactionVideoItem {
-  key: string;
-  url: string;
-  lastModified?: string;
-  size?: number;
-  submissionId?: string;
-  teamName?: string;
-  group?: string;
-  author?: string;
-  problemCode?: string;
-  problemDisplayName?: string;
-  contestCode?: string;
-  status?: string;
-  rankBefore?: number;
-  rankAfter?: number;
-  submittedAt?: string;
-}
+type ViewMode = 'GRID' | 'FEED';
 
 const gridClass =
   'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-4 gap-y-6';
 
+const route = useRoute();
+const router = useRouter();
 const toast = useToast();
+
 const loading = ref(false);
 const items = ref<ReactionVideoItem[]>([]);
 const errorMessage = ref('');
@@ -197,6 +262,11 @@ const query = ref('');
 const verdictFilter = ref('ALL');
 const durations = ref<Record<string, string>>({});
 const selected = ref<ReactionVideoItem | null>(null);
+const viewMode = ref<ViewMode>(route.query.view === 'feed' ? 'FEED' : 'GRID');
+const autoAdvance = ref(false);
+const feedStartKey = ref('');
+
+const isFeed = computed((): boolean => viewMode.value === 'FEED');
 
 const sortedItems = computed((): ReactionVideoItem[] =>
   items.value.slice().sort((a, b) => {
@@ -233,68 +303,6 @@ const filteredItems = computed((): ReactionVideoItem[] => {
       .some((field) => String(field).toLowerCase().includes(needle));
   });
 });
-
-function title(item: ReactionVideoItem): string {
-  const problem = item.problemDisplayName || item.problemCode;
-  if (problem && item.teamName) {
-    return `${item.teamName} solves ${problem}`;
-  }
-  if (item.teamName) {
-    return item.teamName;
-  }
-  return item.submissionId ?? item.key;
-}
-
-function monogram(item: ReactionVideoItem): string {
-  const source = item.group || item.teamName || item.author || '?';
-  const words = source.trim().split(/\s+/).filter(Boolean);
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
-}
-
-function rankDelta(item: ReactionVideoItem): string {
-  const { rankBefore, rankAfter } = item;
-  if (!rankAfter || rankAfter <= 0) {
-    return '';
-  }
-  if (!rankBefore || rankBefore <= 0 || rankBefore === rankAfter) {
-    return `#${rankAfter}`;
-  }
-  const arrow = rankAfter < rankBefore ? '▲' : '▼';
-  return `#${rankAfter} ${arrow}${Math.abs(rankBefore - rankAfter)}`;
-}
-
-function rankClass(item: ReactionVideoItem): string {
-  const { rankBefore, rankAfter } = item;
-  if (!rankBefore || !rankAfter || rankBefore === rankAfter) {
-    return 'text-gray-500';
-  }
-  return rankAfter < rankBefore ? 'text-mission-accent' : 'text-mission-red';
-}
-
-function verdictClass(status: string): string {
-  switch (status.toUpperCase()) {
-    case 'AC':
-      return 'bg-mission-accent/15 border-mission-accent/60 text-mission-accent';
-    case 'PAC':
-      return 'bg-mission-cyan/15 border-mission-cyan/60 text-mission-cyan';
-    case 'WA':
-    case 'RTE':
-    case 'RE':
-    case 'IR':
-      return 'bg-mission-red/15 border-mission-red/60 text-mission-red';
-    case 'TLE':
-    case 'MLE':
-    case 'OLE':
-    case 'SC':
-    case 'CE':
-      return 'bg-mission-amber/15 border-mission-amber/60 text-mission-amber';
-    default:
-      return 'bg-white/10 border-white/30 text-gray-300';
-  }
-}
 
 function details(item: ReactionVideoItem): { label: string; value: string }[] {
   return [
@@ -338,63 +346,11 @@ function closePlayer(): void {
   selected.value = null;
 }
 
-function formatDuration(seconds: number): string {
-  const total = Math.round(seconds);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-function relativeTime(iso?: string): string {
-  if (!iso) {
-    return '—';
-  }
-  const then = Date.parse(iso);
-  if (Number.isNaN(then)) {
-    return iso;
-  }
-  const seconds = Math.max(0, (Date.now() - then) / 1000);
-  const units: [number, string][] = [
-    [60, 'second'],
-    [3600, 'minute'],
-    [86400, 'hour'],
-    [2592000, 'day'],
-  ];
-  if (seconds < 60) {
-    return 'just now';
-  }
-  for (let i = 1; i < units.length; ++i) {
-    if (seconds < units[i][0]) {
-      const value = Math.floor(seconds / units[i - 1][0]);
-      return `${value} ${units[i][1]}${value === 1 ? '' : 's'} ago`;
-    }
-  }
-  const days = Math.floor(seconds / 86400);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
-}
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime())
-    ? iso
-    : d.toLocaleString(undefined, {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-}
-
-function formatBytes(n: number | undefined): string {
-  if (n === undefined || n === null) {
-    return '—';
-  }
-  if (n < 1024) {
-    return `${n} B`;
-  }
-  if (n < 1024 * 1024) {
-    return `${(n / 1024).toFixed(1)} KB`;
-  }
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+/** Hand the clip that is open in the modal over to the feed. */
+function playInFeed(item: ReactionVideoItem): void {
+  feedStartKey.value = item.key;
+  selected.value = null;
+  viewMode.value = 'FEED';
 }
 
 async function copyUrl(url: string): Promise<void> {
@@ -425,6 +381,11 @@ async function loadList(): Promise<void> {
     loading.value = false;
   }
 }
+
+// Keep the mode in the URL so a feed session survives a reload and can be shared.
+watch(viewMode, (mode) => {
+  void router.replace({ query: { ...route.query, view: mode === 'FEED' ? 'feed' : undefined } });
+});
 
 onMounted(() => {
   void loadList();
