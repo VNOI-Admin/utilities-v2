@@ -268,12 +268,22 @@ const feedStartKey = ref('');
 
 const isFeed = computed((): boolean => viewMode.value === 'FEED');
 
+/**
+ * Ordering key: when the submission actually happened, not the S3 object's
+ * Last-Modified. Last-Modified is when the file was *uploaded*, so re-rendering
+ * a clip rewrites it and jumps that video to the top even though its moment in
+ * the contest hasn't changed. `lastModified` only stands in for objects whose
+ * submission could not be resolved.
+ */
+function clipTime(item: ReactionVideoItem): number {
+  const iso = item.submittedAt ?? item.lastModified;
+  const parsed = iso ? Date.parse(iso) : Number.NaN;
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+// Newest clip first.
 const sortedItems = computed((): ReactionVideoItem[] =>
-  items.value.slice().sort((a, b) => {
-    const ta = a.lastModified ? Date.parse(a.lastModified) : 0;
-    const tb = b.lastModified ? Date.parse(b.lastModified) : 0;
-    return tb - ta;
-  }),
+  items.value.slice().sort((a, b) => clipTime(b) - clipTime(a)),
 );
 
 const verdicts = computed((): string[] => [
