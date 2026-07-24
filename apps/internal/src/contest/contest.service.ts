@@ -26,6 +26,7 @@ import { ContestFilter } from './dtos/getContests.dto';
 import type { CreateContestDto } from './dtos/createContest.dto';
 import type { UpdateContestDto } from './dtos/updateContest.dto';
 import type { LinkParticipantDto } from './dtos/linkParticipant.dto';
+import type { UpdateProblemDto } from './dtos/updateProblem.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
 import { AddParticipantDto, AddParticipantMode, AddParticipantResponseDto } from './dtos/addParticipant.dto';
 import { RecalculateContestResponseDto } from './dtos/recalculateContest.dto';
@@ -462,22 +463,50 @@ export class ContestService {
   }
 
   /**
-   * Sets (or clears) the manual display-name override for a single problem.
-   * An empty/whitespace-only value unsets the override so the code is shown again.
+   * Sets (or clears) the manual overrides for a single problem.
+   *
+   * A true partial update: only fields present on the DTO are touched, so
+   * saving the assumed runtime cannot silently drop the display name (or the
+   * other way round). Clearing is explicit — an empty/whitespace-only
+   * `displayName`, or a null `assumedRuntimeSeconds`, unsets that field.
    */
-  async updateProblem(
-    contestCode: string,
-    problemCode: string,
-    displayName?: string,
-  ): Promise<ProblemDocument> {
-    const trimmed = displayName?.trim();
-    const update = trimmed
-      ? { $set: { displayName: trimmed } }
-      : { $unset: { displayName: '' } };
+  async updateProblem(contestCode: string, problemCode: string, dto: UpdateProblemDto): Promise<ProblemDocument> {
+    const $set: Record<string, unknown> = {};
+    const $unset: Record<string, ''> = {};
 
-    const problem = await this.problemModel
-      .findOneAndUpdate({ contest: contestCode, code: problemCode }, update, { new: true })
-      .exec();
+    if (dto.displayName !== undefined) {
+      const trimmed = dto.displayName.trim();
+      if (trimmed) {
+        $set.displayName = trimmed;
+      } else {
+        $unset.displayName = '';
+      }
+    }
+
+    if (dto.assumedRuntimeSeconds !== undefined) {
+      if (dto.assumedRuntimeSeconds === null) {
+        $unset.assumedRuntimeSeconds = '';
+      } else {
+        $set.assumedRuntimeSeconds = dto.assumedRuntimeSeconds;
+      }
+    }
+
+    const update: Record<string, unknown> = {};
+    if (Object.keys($set).length > 0) {
+      update.$set = $set;
+    }
+    if (Object.keys($unset).length > 0) {
+      update.$unset = $unset;
+    }
+
+    // An update document with no atomic operators is rejected by the driver, so
+    // a body that names no known field is a plain read rather than a write.
+    const problem =
+      Object.keys(update).length > 0
+        ? await this.problemModel
+            .findOneAndUpdate({ contest: contestCode, code: problemCode }, update, { new: true })
+            .exec()
+        : await this.problemModel.findOne({ contest: contestCode, code: problemCode }).exec();
 
     if (!problem) {
       throw new NotFoundException(

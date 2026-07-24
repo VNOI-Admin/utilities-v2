@@ -1,8 +1,9 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+import { ReactionTimingResponseDto, UpdateReactionTimingDto } from './dtos/reaction-timing.dto';
 import { ReactionVideoListItemDto } from './dtos/reaction-video-list-item.dto';
 import { RegenerateReactionsResponseDto } from './dtos/regenerate-reactions.dto';
 import { ReactionService } from './reaction.service';
@@ -25,6 +26,28 @@ export class ReactionController {
   @Get()
   async listRenderedVideos(): Promise<ReactionVideoListItemDto[]> {
     return this.reactionService.listRenderedVideos();
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Effective reaction timing, with the range metadata the settings page renders from',
+  })
+  @ApiResponse({ status: 200, type: ReactionTimingResponseDto })
+  @Get('timing')
+  async getTiming(): Promise<ReactionTimingResponseDto> {
+    return this.reactionService.getTiming();
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Store reaction timing overrides; returns the new effective timing' })
+  @ApiResponse({ status: 201, type: ReactionTimingResponseDto })
+  @Post('timing')
+  async updateTiming(@Body() body: UpdateReactionTimingDto): Promise<ReactionTimingResponseDto> {
+    return this.reactionService.updateTiming(body?.values);
   }
 
   @ApiBearerAuth()

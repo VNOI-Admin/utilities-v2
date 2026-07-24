@@ -647,6 +647,39 @@
                     </div>
                   </div>
 
+                  <!-- Assumed judging runtime. judgedAt records when judging
+                       started, so the reaction reveal is anchored to
+                       judgedAt + this + buffer. -->
+                  <div class="mb-4">
+                    <label class="tech-label block mb-1">ASSUMED RUNTIME (SEC)</label>
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="problemRuntimeDrafts[problem._id]"
+                        type="number"
+                        min="0"
+                        max="3600"
+                        step="0.5"
+                        :placeholder="String(DEFAULT_ASSUMED_RUNTIME_SECONDS)"
+                        class="flex-1 min-w-0 bg-mission-dark border border-white/10 px-2 py-1 font-mono text-xs text-white focus:border-mission-accent focus:outline-none"
+                        @keyup.enter="saveProblemRuntime(problem)"
+                      />
+                      <button
+                        @click="saveProblemRuntime(problem)"
+                        :disabled="savingRuntimeId === problem._id || !runtimeChanged(problem)"
+                        class="px-3 py-1 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
+                        :class="savingRuntimeId === problem._id || !runtimeChanged(problem)
+                          ? 'border-white/10 text-gray-600 cursor-not-allowed'
+                          : 'border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark'"
+                      >
+                        {{ savingRuntimeId === problem._id ? '...' : 'SAVE' }}
+                      </button>
+                    </div>
+                    <p class="mt-1 text-[10px] font-mono text-gray-500">
+                      Delays the verdict reveal to match when judging actually finishes.
+                      Blank = default ({{ DEFAULT_ASSUMED_RUNTIME_SECONDS }}s); enter 0 for no delay.
+                    </p>
+                  </div>
+
                   <div class="space-y-2 text-xs">
                     <div class="flex items-center justify-between">
                       <span class="tech-label">SUBMISSIONS</span>
@@ -1510,6 +1543,17 @@ const availableUsers = ref<UserEntity[]>([]);
 // Draft display-name values per problem (keyed by _id) for the Problems tab editor.
 const problemNameDrafts = ref<Record<string, string>>({});
 const savingProblemId = ref<string | null>(null);
+// Draft assumed-runtime values per problem. Kept as strings so a cleared field
+// is distinguishable from an explicit 0.
+const problemRuntimeDrafts = ref<Record<string, string>>({});
+const savingRuntimeId = ref<string | null>(null);
+/**
+ * Display-only mirror of DEFAULT_ASSUMED_RUNTIME_SECONDS in
+ * `@libs/common/helper/reaction-timing`, which cannot be imported here — it
+ * transitively pulls in node:zlib. The server owns the real fallback; this only
+ * drives the placeholder and hint.
+ */
+const DEFAULT_ASSUMED_RUNTIME_SECONDS = 3;
 const savingFormat = ref(false);
 const formatSelectValue = ref<'ICPC' | 'VNOJ'>('ICPC');
 const pendingFormat = ref<'ICPC' | 'VNOJ' | null>(null);
@@ -1890,6 +1934,14 @@ async function loadProblems() {
     problemNameDrafts.value = Object.fromEntries(
       (data as ProblemEntity[]).map((problem) => [problem._id, problem.displayName ?? '']),
     );
+    problemRuntimeDrafts.value = Object.fromEntries(
+      (data as ProblemEntity[]).map((problem) => [
+        problem._id,
+        problem.assumedRuntimeSeconds === undefined || problem.assumedRuntimeSeconds === null
+          ? ''
+          : String(problem.assumedRuntimeSeconds),
+      ]),
+    );
   } catch (err: any) {
     toast.error('Failed to load problems');
     console.error('Load problems error:', err);
@@ -1921,6 +1973,54 @@ async function saveProblemName(problem: ProblemEntity) {
     console.error('Update problem name error:', err);
   } finally {
     savingProblemId.value = null;
+  }
+}
+
+/** Current stored runtime rendered the same way the draft is, for comparison. */
+function storedRuntimeText(problem: ProblemEntity): string {
+  return problem.assumedRuntimeSeconds === undefined || problem.assumedRuntimeSeconds === null
+    ? ''
+    : String(problem.assumedRuntimeSeconds);
+}
+
+function runtimeChanged(problem: ProblemEntity): boolean {
+  return (problemRuntimeDrafts.value[problem._id] ?? '').trim() !== storedRuntimeText(problem);
+}
+
+async function saveProblemRuntime(problem: ProblemEntity) {
+  if (!contest.value) return;
+  const draft = (problemRuntimeDrafts.value[problem._id] ?? '').trim();
+  if (draft === storedRuntimeText(problem)) return;
+
+  // Blank clears the override; anything else must be a non-negative number.
+  const parsed = draft === '' ? null : Number(draft);
+  if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
+    toast.error('Assumed runtime must be a non-negative number of seconds');
+    return;
+  }
+
+  savingRuntimeId.value = problem._id;
+  try {
+    await internalApi.contest.updateProblem(contest.value.code, problem.code, {
+      assumedRuntimeSeconds: parsed,
+    });
+    // Reflect the change locally without a full reload.
+    const updated = problems.value.map((p) =>
+      p._id === problem._id ? { ...p, assumedRuntimeSeconds: parsed ?? undefined } : p,
+    );
+    problems.value = updated;
+    contestsStore.setProblems(updated);
+    problemRuntimeDrafts.value[problem._id] = parsed === null ? '' : String(parsed);
+    toast.success(
+      parsed === null
+        ? `Cleared assumed runtime for ${problem.code}`
+        : `${problem.code} assumed runtime set to ${parsed}s`,
+    );
+  } catch (err: any) {
+    toast.error('Failed to update assumed runtime');
+    console.error('Update assumed runtime error:', err);
+  } finally {
+    savingRuntimeId.value = null;
   }
 }
 

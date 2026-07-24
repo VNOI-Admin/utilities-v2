@@ -1,6 +1,7 @@
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
 import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
+import { SystemConfig, SystemConfigSchema } from '@libs/common-db/schemas/systemConfig.schema';
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { REACTION_RENDER_QUEUE } from '@libs/common/queues/reaction-queue';
 import { BullModule } from '@nestjs/bullmq';
@@ -30,6 +31,7 @@ import { ReactionService } from './reaction.service';
       { name: Submission.name, schema: SubmissionSchema },
       { name: Participant.name, schema: ParticipantSchema },
       { name: Problem.name, schema: ProblemSchema },
+      { name: SystemConfig.name, schema: SystemConfigSchema },
     ]),
   ],
   controllers: [ReactionController],

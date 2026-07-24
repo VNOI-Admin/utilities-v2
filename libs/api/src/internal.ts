@@ -1613,7 +1613,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
     updateProblem: (
       code: string,
       problemCode: string,
-      data: { displayName?: string },
+      data: { displayName?: string; assumedRuntimeSeconds?: number | null },
       params: RequestParams = {},
     ) =>
       this.request<any, any>({

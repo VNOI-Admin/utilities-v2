@@ -1,31 +1,46 @@
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
+import { Submission, type SubmissionDocument, SubmissionStatus } from '@libs/common-db/schemas/submission.schema';
 import {
-  Submission,
-  SubmissionStatus,
-  type SubmissionDocument,
-} from '@libs/common-db/schemas/submission.schema';
+  REACTION_TIMING_CONFIG_KEY,
+  SystemConfig,
+  type SystemConfigDocument,
+} from '@libs/common-db/schemas/systemConfig.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { resolveProblemName } from '@libs/common/helper/problem-name';
 import {
   ReactionS3ConfigError,
   createReactionS3Client,
+  deleteReactionVideos,
   listReactionVideoObjects,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
 import {
+  type FieldSpec,
+  REACTION_TIMING_FIELDS,
+  type ReactionTimingConfig,
+  resolveReactionTiming,
+} from '@libs/common/helper/reaction-timing';
+import {
   REACTION_RENDER_JOB_NAME,
   REACTION_RENDER_QUEUE,
-  reactionRenderJobId,
   type ReactionRenderJobData,
+  reactionRenderJobId,
 } from '@libs/common/queues/reaction-queue';
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Queue } from 'bullmq';
 import { Model, Types } from 'mongoose';
 
+import type { ReactionTimingResponseDto } from './dtos/reaction-timing.dto';
 import type { ReactionVideoListItemDto } from './dtos/reaction-video-list-item.dto';
 import type { RegenerateReactionsResponseDto } from './dtos/regenerate-reactions.dto';
 
@@ -38,14 +53,97 @@ function submissionIdFromKey(key: string): string | undefined {
 
 @Injectable()
 export class ReactionService {
+  private readonly logger = new Logger(ReactionService.name);
+
   constructor(
     private readonly configService: ConfigService,
     @InjectModel(Submission.name) private readonly submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private readonly participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(Problem.name) private readonly problemModel: Model<ProblemDocument>,
+    @InjectModel(SystemConfig.name) private readonly systemConfigModel: Model<SystemConfigDocument>,
     @InjectQueue(REACTION_RENDER_QUEUE) private readonly reactionRenderQueue: Queue<ReactionRenderJobData>,
   ) {}
+
+  /**
+   * Effective reaction timing plus the metadata the settings page renders from,
+   * so the field ranges live only on the server and the operator sees the value
+   * actually in force — including anything still coming from env.
+   */
+  async getTiming(): Promise<ReactionTimingResponseDto> {
+    const stored = await this.readStoredTiming();
+    const values = resolveReactionTiming(stored, (key) => this.configService.get<string>(key));
+
+    const fields = (Object.entries(REACTION_TIMING_FIELDS) as [keyof ReactionTimingConfig, FieldSpec][]).map(
+      ([key, spec]) => {
+        const hasSetting = stored?.[key] !== undefined && stored?.[key] !== null && stored?.[key] !== '';
+        const hasEnv = Boolean(spec.env && this.configService.get<string>(spec.env)?.trim());
+        return {
+          key,
+          value: values[key],
+          default: spec.default,
+          min: spec.min,
+          max: spec.max,
+          integer: Boolean(spec.integer),
+          source: hasSetting ? ('setting' as const) : hasEnv ? ('env' as const) : ('default' as const),
+          env: spec.env,
+        };
+      },
+    );
+
+    return { values, fields };
+  }
+
+  /**
+   * Stores timing overrides. Only known keys are kept and finite numbers stored;
+   * an explicit null clears a field so it falls back to env/default. Values are
+   * persisted as given and clamped on read, so tightening a bound later still
+   * applies to values stored under the old one.
+   */
+  async updateTiming(values: Record<string, number | null> | undefined): Promise<ReactionTimingResponseDto> {
+    const stored = (await this.readStoredTiming()) ?? {};
+
+    // Carry existing overrides forward, dropping any that are no longer a known
+    // field or no longer parse, so a partial save cannot resurrect stale junk.
+    const next: Record<string, number> = {};
+    for (const [key, raw] of Object.entries(stored)) {
+      if (!(key in REACTION_TIMING_FIELDS)) {
+        continue;
+      }
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed)) {
+        next[key] = parsed;
+      }
+    }
+
+    for (const [key, raw] of Object.entries(values ?? {})) {
+      if (!(key in REACTION_TIMING_FIELDS)) {
+        continue;
+      }
+      if (raw === null || raw === undefined || (raw as unknown) === '') {
+        delete next[key];
+        continue;
+      }
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed)) {
+        throw new BadRequestException(`Timing field ${key} must be a number, got ${JSON.stringify(raw)}`);
+      }
+      next[key] = parsed;
+    }
+
+    await this.systemConfigModel
+      .updateOne({ key: REACTION_TIMING_CONFIG_KEY }, { value: next }, { upsert: true })
+      .exec();
+
+    return this.getTiming();
+  }
+
+  /** The raw stored object, or undefined when nothing has been saved yet. */
+  private async readStoredTiming(): Promise<Record<string, unknown> | undefined> {
+    const doc = await this.systemConfigModel.findOne({ key: REACTION_TIMING_CONFIG_KEY }).lean().exec();
+    const value = doc?.value;
+    return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
+  }
 
   /**
    * Re-render the reaction for a single submission, discarding whatever is
@@ -108,11 +206,19 @@ export class ReactionService {
   }
 
   /**
-   * Clears the stored reaction + retry counter and puts each submission back on
-   * the render queue. Returns how many were actually enqueued; a submission
-   * whose job is still pending keeps that job rather than gaining a second one.
+   * Deletes the stored reaction video(s) from S3, clears the stored reaction +
+   * retry counter, and puts each submission back on the render queue. Returns how
+   * many were actually enqueued; a submission whose job is still pending keeps
+   * that job rather than gaining a second one.
+   *
+   * The S3 object is deleted first so a re-render that later fails leaves nothing
+   * behind rather than a stale clip the DB no longer points at. A successful
+   * render overwrites the same key regardless, so deletion is best-effort: a
+   * missing S3 config or a delete error is logged and the re-render proceeds.
    */
   private async enqueueRenders(submissionIds: string[]): Promise<number> {
+    await this.deleteStoredVideos(submissionIds);
+
     await this.submissionModel
       .updateMany(
         { _id: { $in: submissionIds.map((id) => new Types.ObjectId(id)) } },
@@ -145,6 +251,33 @@ export class ReactionService {
     }
 
     return queued;
+  }
+
+  /**
+   * Removes the stored reaction video(s) for the given submissions from S3 ahead
+   * of a re-render. Best-effort: without S3 configured (or on a delete failure)
+   * it logs and returns, since the fresh render overwrites the same key anyway.
+   */
+  private async deleteStoredVideos(submissionIds: string[]): Promise<void> {
+    let config: ReturnType<typeof readReactionS3Env>;
+    try {
+      config = readReactionS3Env((key) => this.configService.get<string>(key));
+    } catch (error) {
+      if (error instanceof ReactionS3ConfigError) {
+        this.logger.warn(`Skipping reaction video deletion before re-render: ${error.message}`);
+        return;
+      }
+      throw error;
+    }
+
+    try {
+      const client = createReactionS3Client(config);
+      await deleteReactionVideos(client, config, submissionIds);
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete reaction video(s) before re-render: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**

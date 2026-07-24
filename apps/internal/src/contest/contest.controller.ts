@@ -1,28 +1,18 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
-import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
+import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ContestService } from './contest.service';
+import { AddParticipantDto, AddParticipantResponseDto } from './dtos/addParticipant.dto';
 import { CreateContestDto } from './dtos/createContest.dto';
-import { UpdateContestDto } from './dtos/updateContest.dto';
-import { UpdateProblemDto } from './dtos/updateProblem.dto';
-import { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { ContestFilter, GetContestsDto } from './dtos/getContests.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
-import { AddParticipantDto, AddParticipantResponseDto } from './dtos/addParticipant.dto';
+import { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { RecalculateContestResponseDto } from './dtos/recalculateContest.dto';
+import { UpdateContestDto } from './dtos/updateContest.dto';
+import { UpdateProblemDto } from './dtos/updateProblem.dto';
 
 @ApiTags('Contest')
 @ApiBearerAuth()
@@ -94,13 +84,13 @@ export class ContestController {
 
   @Patch(':code/problems/:problemCode')
   @RequiredRoles(Role.ADMIN)
-  @ApiOperation({ summary: 'Update a problem (e.g. set its display name)' })
+  @ApiOperation({ summary: 'Update a problem (display name, assumed judging runtime)' })
   async updateProblem(
     @Param('code') code: string,
     @Param('problemCode') problemCode: string,
     @Body() dto: UpdateProblemDto,
   ) {
-    return this.contestService.updateProblem(code, problemCode, dto.displayName);
+    return this.contestService.updateProblem(code, problemCode, dto);
   }
 
   @Patch('participants/:participantId/link-user')

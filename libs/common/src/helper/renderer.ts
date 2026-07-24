@@ -7,7 +7,6 @@ import * as path from 'node:path';
 import { type DecodedImage, type Rgba, Surface, decodePng, parseColor } from './png';
 import {
   BANNER,
-  BLINK_DURATION,
   CANVAS,
   FONT_SIZE,
   FRAME,
@@ -15,11 +14,11 @@ import {
   PENDING_COLOR,
   PLACE_PILL,
   SCREEN_CARD,
-  TIMELINE,
   WEBCAM_CARD,
   readableForeground,
   verdictColor,
 } from './reaction-theme';
+import { type ReactionRevealTiming, resolveRevealTiming } from './reaction-timing';
 import { ellipsizeText, fitFontSize, measureText, wrapText } from './text-metrics';
 
 export type Params = {
@@ -45,6 +44,15 @@ export type Params = {
    * pending phase is skipped entirely.
    */
   verdictAtSeconds?: number;
+  /**
+   * Overrides for the verdict reveal timing (hold delay, blink, rank count-up,
+   * pending dots). Any field left out falls back to its built-in default, and
+   * every field is clamped to a safe range. `revealDelaySeconds` is additionally
+   * clamped down at render time so the whole reveal still fits inside the clip —
+   * a short slice keeps whatever room it has rather than losing the verdict off
+   * the end. Only applies when there is a pending phase.
+   */
+  revealTiming?: Partial<ReactionRevealTiming>;
   /** Contest elapsed seconds at clip t=0; drives the ticking clock. */
   clockStartSeconds?: number;
 };
@@ -65,6 +73,13 @@ export type Configuration = {
     footer: string;
   };
 };
+
+/**
+ * Seconds the settled verdict must remain on screen after the blink finishes.
+ * Together with the blink it forms the tail the delayed reveal is clamped to fit
+ * inside the clip, so a delayed flip is never cut off mid-animation.
+ */
+const REVEAL_MIN_HOLD = 0.5;
 
 export type RenderOptions = {
   webcamHasAudio?: boolean;
@@ -394,8 +409,8 @@ export async function render(config: Configuration, params: Params, options?: Re
 
   const resolved = verdictColor(params.status);
   const hasPendingPhase = params.verdictAtSeconds !== undefined && params.verdictAtSeconds > 0;
-  const verdictAt = hasPendingPhase ? (params.verdictAtSeconds as number) : 0;
-  const settleAt = hasPendingPhase ? verdictAt + BLINK_DURATION : 0;
+  const reveal = resolveRevealTiming(params.revealTiming);
+  const blinkDuration = reveal.blinkHalfPeriod * reveal.blinkCount;
 
   const workDir = await fs.mkdtemp(path.join(os.tmpdir(), `reaction-render-${randomUUID()}-`));
 
@@ -408,6 +423,20 @@ export async function render(config: Configuration, params: Params, options?: Re
       loadImage(ffmpeg, params.university.logoSrc, 256, 256),
       probeDurationSeconds(params.webcamSrc),
     ]);
+
+    // Hold the reveal a few seconds past the real judged instant so the flip
+    // lands on the streamer's visible reaction rather than ahead of it. The
+    // delay is clamped against the probed clip length: the blink and a short
+    // settle hold must finish before the clip ends, otherwise the reveal would
+    // fall off the end of a short slice and the banner would stay pending
+    // forever. A slice too short even for the undelayed reveal collapses the
+    // delay to zero, preserving the prior behaviour.
+    const rawVerdictAt = hasPendingPhase ? (params.verdictAtSeconds as number) : 0;
+    const revealTail = blinkDuration + REVEAL_MIN_HOLD;
+    const maxDelay = Math.max(0, duration - rawVerdictAt - revealTail);
+    const revealDelay = hasPendingPhase ? Math.min(reveal.revealDelaySeconds, maxDelay) : 0;
+    const verdictAt = hasPendingPhase ? rawVerdictAt + revealDelay : 0;
+    const settleAt = hasPendingPhase ? verdictAt + blinkDuration : 0;
 
     const frame = paintFrameLayer(config, background, brandLogo);
     const bannerPending = paintBannerLayer(PENDING_COLOR, crest);
@@ -470,9 +499,9 @@ export async function render(config: Configuration, params: Params, options?: Re
     const resultIntervals: Interval[] = [];
     if (hasPendingPhase) {
       pendingIntervals.push([0, verdictAt]);
-      for (let i = 0; i < TIMELINE.blinkCount; ++i) {
-        const from = verdictAt + i * TIMELINE.blinkHalfPeriod;
-        const to = from + TIMELINE.blinkHalfPeriod;
+      for (let i = 0; i < reveal.blinkCount; ++i) {
+        const from = verdictAt + i * reveal.blinkHalfPeriod;
+        const to = from + reveal.blinkHalfPeriod;
         (i % 2 === 0 ? resultIntervals : pendingIntervals).push([from, to]);
       }
       resultIntervals.push([settleAt, null]);
@@ -631,10 +660,10 @@ export async function render(config: Configuration, params: Params, options?: Re
       // Dots keep cycling through the blink, so the slot is never empty before
       // the verdict letters take over at settle.
       const dots = ['.', '..', '...'];
-      const cycles = Math.ceil(settleAt / TIMELINE.dotPeriod);
+      const cycles = Math.ceil(settleAt / reveal.dotPeriod);
       for (let i = 0; i < cycles; ++i) {
-        const from = i * TIMELINE.dotPeriod;
-        const to = Math.min(from + TIMELINE.dotPeriod, settleAt);
+        const from = i * reveal.dotPeriod;
+        const to = Math.min(from + reveal.dotPeriod, settleAt);
         if (to <= from) {
           break;
         }
@@ -673,7 +702,7 @@ export async function render(config: Configuration, params: Params, options?: Re
 
     const placeCx = PLACE_PILL.right - (place.surface.width - 40) / 2;
     const placeTextY = `${Math.round(PLACE_PILL.y + (PLACE_PILL.height - FONT_SIZE.place) / 2)}`;
-    const placeTexts = rankCountSteps(params.rank, verdictAt, hasPendingPhase).map((step) =>
+    const placeTexts = rankCountSteps(params.rank, verdictAt, hasPendingPhase, reveal.rankCountDuration).map((step) =>
       drawText({
         text: `${ordinal(step.value)} place`,
         fontPath: fonts.bold,
@@ -752,7 +781,12 @@ type RankStep = { value: number; enable: string };
  * Discrete frames of the rank count-up. The pill holds the old rank until the
  * judge finishes, ticks to the new one while the banner blinks, then stays.
  */
-function rankCountSteps(rank: Params['rank'], verdictAt: number, hasPendingPhase: boolean): RankStep[] {
+function rankCountSteps(
+  rank: Params['rank'],
+  verdictAt: number,
+  hasPendingPhase: boolean,
+  rankCountDuration: number,
+): RankStep[] {
   const { before, after } = rank;
   const target = after > 0 ? after : before;
   if (!(before > 0) || !(after > 0) || before === after) {
@@ -764,7 +798,7 @@ function rankCountSteps(rank: Params['rank'], verdictAt: number, hasPendingPhase
   }
 
   const total = Math.min(10, Math.abs(before - after));
-  const step = TIMELINE.rankCountDuration / total;
+  const step = rankCountDuration / total;
   const steps: RankStep[] = [{ value: before, enable: intervalsExpr([[0, verdictAt]]) }];
 
   for (let i = 1; i <= total; ++i) {

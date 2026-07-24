@@ -5,11 +5,17 @@ import type { S3Client } from '@aws-sdk/client-s3';
 import { RemoteControlApi } from '@libs/api/remote-control';
 import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
+import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import {
   RemoteControlScript,
   type RemoteControlScriptDocument,
 } from '@libs/common-db/schemas/remoteControlScript.schema';
 import { Submission, type SubmissionDocument, SubmissionStatus } from '@libs/common-db/schemas/submission.schema';
+import {
+  REACTION_TIMING_CONFIG_KEY,
+  SystemConfig,
+  type SystemConfigDocument,
+} from '@libs/common-db/schemas/systemConfig.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import {
   ReactionRenderConfigError,
@@ -26,6 +32,11 @@ import {
   putReactionVideo,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
+import {
+  DEFAULT_ASSUMED_RUNTIME_SECONDS,
+  resolveReactionTiming,
+  revealTimingFrom,
+} from '@libs/common/helper/reaction-timing';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -49,6 +60,8 @@ export class ReactionRenderProcessor extends WorkerHost {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(RemoteControlScript.name) private scriptModel: Model<RemoteControlScriptDocument>,
     @InjectModel(Contest.name) private contestModel: Model<ContestDocument>,
+    @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
+    @InjectModel(SystemConfig.name) private systemConfigModel: Model<SystemConfigDocument>,
     private readonly configService: ConfigService,
   ) {
     super();
@@ -141,25 +154,37 @@ export class ReactionRenderProcessor extends WorkerHost {
         `[${submissionId}] Mapped ${submission.author} -> user ${user.username} (group=${user.group ?? 'none'})`,
       );
 
+      // Operator-tunable from the admin settings page, falling back to env then
+      // the built-in defaults, so a contest can be retimed without a redeploy.
+      const timing = await this.loadReactionTiming();
+
+      // judgedAt is when judging *started*, not when it finished, so the verdict
+      // only surfaces to the contestant around judgedAt + the problem's assumed
+      // runtime. Anchoring on judgedAt alone is what made the banner flip before
+      // the on-screen reaction.
+      const assumedRuntimeSec = await this.loadAssumedRuntimeSeconds(submission.contest_code, submission.problem_code);
+
       // Feed window: BEFORE seconds ahead of the submission, through the whole
-      // judging gap, then AFTER seconds past the verdict. judgedAt is always
+      // judging gap, then AFTER seconds past the *estimated verdict reveal* —
+      // judge finish plus the buffer — so the tail is measured from what the
+      // viewer actually sees, not from when judging began. judgedAt is always
       // present for AC; submittedAt only backs the tail if it somehow is not.
       const submittedSec = submission.submittedAt.getTime() / 1000;
       const judgedSec = submission.judgedAt ? submission.judgedAt.getTime() / 1000 : undefined;
-      const beforeSec = Number(this.configService.get('REACTION_BEFORE_SECONDS') ?? 10);
-      const afterSec = Number(this.configService.get('REACTION_AFTER_SECONDS') ?? 15);
-      const startUnix = submittedSec - beforeSec;
-      const endUnix = (judgedSec ?? submittedSec) + afterSec;
+      const judgeFinishedSec = judgedSec !== undefined ? judgedSec + assumedRuntimeSec : undefined;
+      const startUnix = submittedSec - timing.beforeSeconds;
+      const endUnix = (judgeFinishedSec ?? submittedSec) + timing.revealDelaySeconds + timing.afterSeconds;
 
       // Never throws: users without a group fall back to the VNOI brand logo.
       const universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) =>
         this.logger.warn(`${msg} (submission ${submissionId})`),
       );
 
-      // The banner holds "pending" amber until the judge actually finished.
-      // Only judgedAt gives us that instant; without it we skip the pending
-      // phase rather than inventing one.
-      const verdictAtSeconds = judgedSec !== undefined ? judgedSec - startUnix : undefined;
+      // The banner holds "pending" amber until judging is estimated to have
+      // finished. Without judgedAt there is no instant to anchor to, so the
+      // pending phase is skipped rather than invented. The renderer adds the
+      // buffer (`revealDelaySeconds`) on top of this.
+      const verdictAtSeconds = judgeFinishedSec !== undefined ? judgeFinishedSec - startUnix : undefined;
 
       const contest = await this.contestModel
         .findOne({ code: submission.contest_code })
@@ -171,6 +196,7 @@ export class ReactionRenderProcessor extends WorkerHost {
       const paramsPartial = buildReactionParamsPartial(submission, user, universityLogoSrc, {
         verdictAtSeconds,
         clockStartSeconds,
+        revealTiming: revealTimingFrom(timing),
       });
 
       const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reaction-slices-'));
@@ -180,7 +206,9 @@ export class ReactionRenderProcessor extends WorkerHost {
       try {
         this.logger.log(
           `[${submissionId}] Extracting stream slices from ${user.username} ` +
-            `(window ${startUnix.toFixed(3)} -> ${endUnix.toFixed(3)}, ${(endUnix - startUnix).toFixed(1)}s)`,
+            `(window ${startUnix.toFixed(3)} -> ${endUnix.toFixed(3)}, ${(endUnix - startUnix).toFixed(1)}s; ` +
+            `assumedRuntime=${assumedRuntimeSec}s, buffer=${timing.revealDelaySeconds}s, ` +
+            `reveal at t=${verdictAtSeconds !== undefined ? (verdictAtSeconds + timing.revealDelaySeconds).toFixed(1) : 'n/a'}s)`,
         );
         await this.extractStreamSlices(user, startUnix, endUnix, webcamPath, screenPath);
 
@@ -205,6 +233,52 @@ export class ReactionRenderProcessor extends WorkerHost {
         error instanceof Error ? error.stack : undefined,
       );
     }
+  }
+
+  /**
+   * The problem's manually-set assumed judging runtime, used to turn `judgedAt`
+   * (judge start) into an estimated judge-finish time. Falls back to
+   * `DEFAULT_ASSUMED_RUNTIME_SECONDS` when the problem has no value set, is
+   * missing, or cannot be read — an explicit 0 is honoured as 0.
+   */
+  private async loadAssumedRuntimeSeconds(contestCode: string, problemCode: string): Promise<number> {
+    try {
+      const problem = await this.problemModel
+        .findOne({ contest: contestCode, code: problemCode })
+        .select('assumedRuntimeSeconds')
+        .lean()
+        .exec();
+      const raw = problem?.assumedRuntimeSeconds;
+      const value = Number(raw);
+      return raw !== undefined && raw !== null && Number.isFinite(value) && value >= 0
+        ? value
+        : DEFAULT_ASSUMED_RUNTIME_SECONDS;
+    } catch (error) {
+      this.logger.warn(
+        `Could not read assumed runtime for ${contestCode}/${problemCode}, ` +
+          `assuming ${DEFAULT_ASSUMED_RUNTIME_SECONDS}s: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return DEFAULT_ASSUMED_RUNTIME_SECONDS;
+    }
+  }
+
+  /**
+   * Reads the operator-set timing from the settings store, falling back to env
+   * then the built-in defaults. Read per job rather than cached so a change made
+   * mid-contest takes effect on the next render without restarting the worker.
+   * A DB hiccup degrades to env/defaults rather than failing the render.
+   */
+  private async loadReactionTiming(): Promise<ReturnType<typeof resolveReactionTiming>> {
+    let stored: unknown;
+    try {
+      stored = (await this.systemConfigModel.findOne({ key: REACTION_TIMING_CONFIG_KEY }).lean().exec())?.value;
+    } catch (error) {
+      this.logger.warn(
+        `Could not read ${REACTION_TIMING_CONFIG_KEY} settings, using env/defaults: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    return resolveReactionTiming(stored, (key) => this.configService.get<string>(key));
   }
 
   private async extractStreamSlices(

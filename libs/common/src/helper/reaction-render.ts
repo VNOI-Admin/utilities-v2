@@ -1,6 +1,7 @@
 import { constants, accessSync } from 'node:fs';
 import * as path from 'node:path';
 
+import type { ReactionRevealTiming } from './reaction-timing';
 import type { Configuration, Params } from './renderer';
 import { escapeDrawtext, render } from './renderer';
 import { probeHasAudio } from './renderer-audio';
@@ -175,6 +176,11 @@ export type ReactionTiming = {
   verdictAtSeconds?: number;
   /** Contest elapsed seconds at clip t=0, for the ticking clock. */
   clockStartSeconds?: number;
+  /**
+   * Operator-tunable reveal timing (hold delay, blink, rank count-up, dots),
+   * resolved from settings/env by the caller. Omit to use the built-in defaults.
+   */
+  revealTiming?: Partial<ReactionRevealTiming>;
 };
 
 /** `Ho Chi Minh City University` -> `HoChiMinhCityUniversity` */
@@ -209,6 +215,7 @@ export function buildReactionParamsPartial(
     status: submission.submissionStatus ?? 'AC',
     verdictAtSeconds: timing?.verdictAtSeconds,
     clockStartSeconds: timing?.clockStartSeconds,
+    revealTiming: timing?.revealTiming,
   };
 }
 

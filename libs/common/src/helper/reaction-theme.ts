@@ -133,6 +133,16 @@ export const TIMELINE = {
   blinkCount: 8,
   /** Rank counts up while the banner is blinking. */
   rankCountDuration: 1.2,
+  /**
+   * Safety buffer on the estimated judge-finish time, in seconds.
+   *
+   * `judgedAt` is when judging *started*, so the verdict really surfaces around
+   * `judgedAt + Problem.assumedRuntimeSeconds`. The caller folds that runtime
+   * into `verdictAtSeconds`; this buffer is added on top to absorb the residual
+   * slop (stream/server clock drift, a problem running slower than assumed) so
+   * the banner never flips before the contestant has visibly reacted.
+   */
+  revealDelay: 1,
 } as const;
 
 export const BLINK_DURATION = TIMELINE.blinkHalfPeriod * TIMELINE.blinkCount;

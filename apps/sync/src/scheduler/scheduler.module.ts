@@ -4,6 +4,7 @@ import { Participant, ParticipantSchema } from '@libs/common-db/schemas/particip
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
 import { RemoteControlScript, RemoteControlScriptSchema } from '@libs/common-db/schemas/remoteControlScript.schema';
 import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
+import { SystemConfig, SystemConfigSchema } from '@libs/common-db/schemas/systemConfig.schema';
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
@@ -50,6 +51,7 @@ import { SchedulerService } from './scheduler.service';
       { name: Participant.name, schema: ParticipantSchema },
       { name: Problem.name, schema: ProblemSchema },
       { name: RemoteControlScript.name, schema: RemoteControlScriptSchema },
+      { name: SystemConfig.name, schema: SystemConfigSchema },
     ]),
     VNOJApiModule.forRootAsync(),
   ],

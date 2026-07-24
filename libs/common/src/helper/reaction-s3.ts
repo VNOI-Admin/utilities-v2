@@ -1,4 +1,4 @@
-import { ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 export class ReactionS3ConfigError extends Error {
   override readonly name = 'ReactionS3ConfigError';
@@ -108,6 +108,39 @@ export async function listReactionVideoObjects(
   } while (continuationToken);
 
   return out;
+}
+
+/**
+ * Full object keys a submission's reaction could be stored under, across every
+ * known extension. The current renderer only emits `.mp4`, but older objects may
+ * still be `.webm`, so a delete has to sweep both.
+ */
+export function reactionVideoKeysForSubmission(config: ReactionS3Config, submissionId: string): string[] {
+  const prefix = reactionS3ListPrefix(config);
+  return REACTION_VIDEO_EXTENSIONS.map((ext) => `${prefix}${submissionId}${ext}`);
+}
+
+/**
+ * Deletes the stored reaction video(s) for the given submission ids, across every
+ * known extension. S3 deletes are idempotent — absent keys are a no-op — so this
+ * is safe to call before a re-render whether or not a clip currently exists.
+ * Batched to S3's 1000-key-per-request limit.
+ */
+export async function deleteReactionVideos(
+  client: S3Client,
+  config: ReactionS3Config,
+  submissionIds: string[],
+): Promise<void> {
+  const keys = submissionIds.flatMap((id) => reactionVideoKeysForSubmission(config, id));
+  for (let i = 0; i < keys.length; i += 1000) {
+    const chunk = keys.slice(i, i + 1000);
+    await client.send(
+      new DeleteObjectsCommand({
+        Bucket: config.bucket,
+        Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
+  }
 }
 
 /**
