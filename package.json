@@ -109,10 +109,10 @@
       "<rootDir>/libs/"
     ],
     "moduleNameMapper": {
-      "^@app/api(|/.*)$": "<rootDir>/libs/api/src/$1",
-      "^@app/common(|/.*)$": "<rootDir>/libs/common/src/$1",
-      "^@app/common-db(|/.*)$": "<rootDir>/libs/common-db/src/$1",
-      "^@app/utils(|/.*)$": "<rootDir>/libs/utils/src/$1"
+      "^@libs/api(|/.*)$": "<rootDir>/libs/api/src/$1",
+      "^@libs/common(|/.*)$": "<rootDir>/libs/common/src/$1",
+      "^@libs/common-db(|/.*)$": "<rootDir>/libs/common-db/src/$1",
+      "^@libs/utils(|/.*)$": "<rootDir>/libs/utils/src/$1"
     }
   },
   "lint-staged": {
