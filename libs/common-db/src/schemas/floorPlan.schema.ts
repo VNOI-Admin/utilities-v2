@@ -148,7 +148,6 @@ export class FloorPlan {
 export const FloorPlanSchema = SchemaFactory.createForClass(FloorPlan);
 
 // Indexes
-FloorPlanSchema.index({ code: 1 });
 FloorPlanSchema.index({ isActive: 1 });
 
 // Pre-save hook for timestamps

@@ -24,8 +24,6 @@ export class RemoteControlScript {
 
 export const RemoteControlScriptSchema = SchemaFactory.createForClass(RemoteControlScript);
 
-RemoteControlScriptSchema.index({ name: 1 }, { unique: true });
-
 RemoteControlScriptSchema.pre('validate', function (next) {
   if (this.isModified('content')) {
     this.hash = createHash('sha256').update(this.content).digest('hex');
