@@ -1,5 +1,5 @@
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
+import { Controller, Get, Headers, Param, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { VpnConfig } from './entities/vpnConfig.entity';
@@ -45,7 +45,7 @@ export class VpnController {
     type: VpnConfig,
   })
   @Get('guest')
-  async getWireGuardGuestConfig(@Request() req: any) {
-    return await this.vpnService.getWireGuardGuestConfig();
+  async getWireGuardGuestConfig(@Headers('x-guest-token') token: string | undefined) {
+    return await this.vpnService.getWireGuardGuestConfig(token);
   }
 }
