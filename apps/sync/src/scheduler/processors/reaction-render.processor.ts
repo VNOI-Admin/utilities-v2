@@ -151,11 +151,9 @@ export class ReactionRenderProcessor extends WorkerHost {
       );
 
       const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reaction-slices-'));
-      const webcamPath = path.join(workDir, 'webcam.mkv');
-      const screenPath = path.join(workDir, 'screen.mkv');
 
       try {
-        await this.extractStreamSlices(user.username, startUnix, endUnix, webcamPath, screenPath);
+        const { webcamPath, screenPath } = await this.extractStreamSlices(user.username, startUnix, endUnix, workDir);
 
         const webm = await renderReactionWebmFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
         this.logger.log(`Rendered reaction WebM (${webm.length} bytes) for submission ${submissionId}`);
@@ -180,9 +178,8 @@ export class ReactionRenderProcessor extends WorkerHost {
     username: string,
     startUnix: number,
     endUnix: number,
-    webcamPath: string,
-    screenPath: string,
-  ): Promise<void> {
+    workDir: string,
+  ): Promise<{ webcamPath?: string; screenPath?: string }> {
     const handle = await this.remoteControlService.runRemoteScript({
       scriptName: EXTRACT_STREAM_SLICES_SCRIPT,
       targets: [username],
@@ -202,14 +199,18 @@ export class ReactionRenderProcessor extends WorkerHost {
       throw new Error(`Slice extraction failed for ${username}: ${result.log ?? result.status}`);
     }
 
-    const webcam = result.files.find((file) => file.key === 'webcam');
-    const screen = result.files.find((file) => file.key === 'screen');
-    if (!webcam || !screen) throw new Error(`Slice extraction did not return webcam and screen files for ${username}`);
-
-    await Promise.all([
-      fs.writeFile(webcamPath, webcam.buffer),
-      fs.writeFile(screenPath, screen.buffer),
-    ]);
+    const save = async (key: 'webcam' | 'screen') => {
+      const file = result.files.find((f) => f.key === key);
+      if (!file) return undefined;
+      const filePath = path.join(workDir, `${key}.mkv`);
+      await fs.writeFile(filePath, file.buffer);
+      return filePath;
+    };
+    const [webcamPath, screenPath] = await Promise.all([save('webcam'), save('screen')]);
+    if (!webcamPath && !screenPath) {
+      throw new Error(`Slice extraction returned neither webcam nor screen for ${username}`);
+    }
+    return { webcamPath, screenPath };
   }
 
   private withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {

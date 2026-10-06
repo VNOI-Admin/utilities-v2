@@ -45,6 +45,8 @@ const canRun = font !== undefined && spawnSync('ffmpeg', ['-version']).status ==
   });
 
   it.each([
+    ['screen only', { screenSrc: 'clip.mkv' }],
+    ['webcam only', { webcamSrc: 'clip.mkv' }],
     ['both', { webcamSrc: 'clip.mkv', screenSrc: 'clip.mkv' }],
   ])(
     'renders the clip length with %s',
