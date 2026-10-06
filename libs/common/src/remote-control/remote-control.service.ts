@@ -701,6 +701,8 @@ export class RemoteControlService implements OnModuleInit {
       if (!currentRunDoc) return null;
 
       const previousStatus = currentRunDoc.status;
+      // Agent updates can arrive out of order; a late "running" must not reopen a finished run.
+      if (this.isFinalStatus(previousStatus) && !this.isFinalStatus(input.status)) return currentRunDoc.toObject();
 
       const updatedRunDoc = await this.runModel.findOneAndUpdate({ jobId, target, status: previousStatus }, update, {
         new: true,
