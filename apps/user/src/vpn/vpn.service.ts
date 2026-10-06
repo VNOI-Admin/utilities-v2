@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'crypto';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import type { OnModuleInit } from '@nestjs/common';
 import { BadRequestException, ForbiddenException, Injectable, ServiceUnavailableException } from '@nestjs/common';
@@ -40,7 +41,14 @@ export class VpnService implements OnModuleInit {
     });
   }
 
-  async getWireGuardGuestConfig(): Promise<VpnConfig> {
+  async getWireGuardGuestConfig(token: string | undefined): Promise<VpnConfig> {
+    // Machines ask before anyone logs in, so a provisioning token set on the guest machines is the only credential.
+    const expected = this.configService.get<string>('GUEST_VPN_TOKEN');
+    const digest = (value: string) => createHash('sha256').update(value).digest();
+    if (!expected || !token || !timingSafeEqual(digest(token), digest(expected))) {
+      throw new ForbiddenException('Invalid guest provisioning token');
+    }
+
     const now = new Date();
 
     // Atomically find a free guest account and mark it active
