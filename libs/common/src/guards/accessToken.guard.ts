@@ -51,8 +51,6 @@ export class AccessTokenGuard implements CanActivate {
         throw new UnauthorizedException('User not found');
       }
 
-      request['user'] = payload;
-
       // check if user.role is in roles from context reflector
       const roles = this.reflector.get<string[]>('roles', context.getHandler()) || [];
 
@@ -63,6 +61,9 @@ export class AccessTokenGuard implements CanActivate {
       if (!isAdmin && !isPublic && !isMatchedRole) {
         throw new UnauthorizedException('User not authorized to access this resource');
       }
+
+      // Set only after the role check: with AccessTokenOptional, later guards trust request.user.
+      request['user'] = payload;
     } catch (e) {
       if (isOptional) return true;
       throw new UnauthorizedException('Unauthorized');
