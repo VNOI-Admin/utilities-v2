@@ -225,12 +225,14 @@ export async function render(
     '-map', '[outv]',
     '-map', '[outa]',
 
-    // VP9 video encoding
-    '-c:v', 'libx264',
-    '-crf', '23',
+    // VP9 video encoding (WebM only carries VP8/VP9/AV1)
+    '-c:v', 'libvpx-vp9',
+    '-crf', '32',
+    '-b:v', '0',
 
     // Video encoding speed control
-    '-preset', 'veryfast',
+    '-deadline', 'realtime',
+    '-cpu-used', '8',
     '-threads', '1',
 
     // OPUS audio encoding
@@ -238,8 +240,6 @@ export async function render(
     '-b:a', '128k',
 
     // Write to stdout
-    '-movflags',
-    '+faststart',
     '-f', 'webm',
     '-',
   ];
