@@ -6,9 +6,9 @@ monitoring, remote control of contest machines, overlays and printing.
 | App | Port | What it does |
 |---|---|---|
 | `admin-panel` | 8000 | Vue admin UI |
-| `user` | 8001 | User-facing API: VPN config, machine reports, remote-control agent endpoints |
+| `user` | 8001 | User-facing API: VPN config, machine reports |
 | `auth` | 8002 | Login and token refresh |
-| `internal` | 8003 | Admin API: users, VPN sync, remote control, overlays, reactions |
+| `internal` | 8003 | Admin API: users, VPN sync, remote control (including the machine agents' endpoints), overlays, reactions |
 | `printing` | 8004 | Print queue |
 | `sync` | 8005 | Contest data sync from VNOJ |
 
@@ -39,7 +39,6 @@ The NestJS services serve Swagger UI at `/docs`.
    - Set `JWT_ACCESS_TOKEN_SECRET` and `JWT_REFRESH_TOKEN_SECRET` to random strings, for example from
      `openssl rand -hex 32`.
    - Set `SECURE_COOKIES="false"` so login cookies work over plain HTTP.
-   - Set `REDIS_PASSWORD=""`: the compose Redis has no password.
    - Leave the WireGuard, wg-portal, VNOJ and S3 values as they are unless you work on those features (see below).
 
 3. Start MongoDB and Redis:
@@ -86,6 +85,7 @@ These need outside services. Without them the rest still runs, and the affected 
 yarn jest                      # all specs
 yarn jest apps/user/src/vpn    # one folder
 npx biome check apps libs
+scripts/test-nginx.sh          # nginx templates, in Docker
 ```
 
 ## Docker
