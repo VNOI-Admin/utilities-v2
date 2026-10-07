@@ -185,20 +185,21 @@ export function buildReactionParamsPartial(
 }
 
 /**
- * Probes both slice files for audio, then renders a WebM via `render()`.
+ * Probes the slice files for audio, then renders a WebM via `render()`.
  * No intermediate temp files — audio absence is handled in the filter graph.
+ * Either slice may be missing, not both.
  */
 export async function renderReactionWebmFromSlicePaths(
   envLoaded: ReactionRenderEnvLoaded,
-  webcamSrc: string,
-  screenSrc: string,
+  webcamSrc: string | undefined,
+  screenSrc: string | undefined,
   paramsPartial: Omit<Params, 'webcamSrc' | 'screenSrc'>,
 ): Promise<Buffer> {
   const config = getDefaultReactionConfiguration(envLoaded);
 
   const [webcamHasAudio, screenHasAudio] = await Promise.all([
-    probeHasAudio(webcamSrc),
-    probeHasAudio(screenSrc),
+    webcamSrc ? probeHasAudio(webcamSrc) : false,
+    screenSrc ? probeHasAudio(screenSrc) : false,
   ]);
 
   const params: Params = {
