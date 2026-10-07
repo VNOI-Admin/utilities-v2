@@ -33,14 +33,14 @@ export class AuthService {
       throw new BadRequestException('Invalid credentials');
     }
 
-    if (!user.isActive) {
-      throw new ForbiddenException('Access denied');
-    }
-
     const passwordValid = await argon2.verify(user.password, data.password);
 
     if (!passwordValid) {
       throw new BadRequestException('Invalid credentials');
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException('Access denied');
     }
 
     await this.ensureContestantLoginIsOpen(user.role);

@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash, createHmac } from 'crypto';
 import { createReadStream } from 'fs';
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import * as path from 'path';
@@ -31,6 +31,11 @@ import type { CreateRemoteControlJobDto } from './dtos/createJob.dto';
 import type { GetRemoteControlJobRunsDto } from './dtos/getJobRuns.dto';
 import type { GetRemoteControlJobsDto } from './dtos/getJobs.dto';
 import type { RefreshRemoteControlJobDto } from './dtos/refreshJob.dto';
+
+interface Agent {
+  ip: string;
+  privateKey: string;
+}
 
 interface AgentJobPayload {
   scriptName: string;
@@ -302,12 +307,12 @@ export class RemoteControlService implements OnModuleInit {
     if (!job) throw new NotFoundException('Job not found');
 
     this.validateTargets(job.targets, dto.targets);
-    const ipMap = await this.resolveVpnIps(dto.targets);
+    const agents = await this.resolveAgents(dto.targets);
 
     const results = await Promise.all(
       dto.targets.map(async (target) => {
-        const ip = ipMap.get(target);
-        if (!ip)
+        const agent = agents.get(target);
+        if (!agent)
           return {
             target,
             accepted: false,
@@ -315,7 +320,7 @@ export class RemoteControlService implements OnModuleInit {
           };
 
         try {
-          await this.agentPost(ip, `/jobs/${jobId}/cancel`, {});
+          await this.agentPost(agent, `/jobs/${jobId}/cancel`, {});
           return { target, accepted: true, message: 'cancel requested' };
         } catch (error) {
           return { target, accepted: false, message: getErrorMessage(error) };
@@ -334,15 +339,15 @@ export class RemoteControlService implements OnModuleInit {
     if (!job) throw new NotFoundException('Job not found');
 
     this.validateTargets(job.targets, dto.targets);
-    const ipMap = await this.resolveVpnIps(dto.targets);
+    const agents = await this.resolveAgents(dto.targets);
 
     // Async mode: request agents to push updates back
     if (dto.mode === 'async') {
       await Promise.allSettled(
         dto.targets.map(async (target) => {
-          const ip = ipMap.get(target);
-          if (ip)
-            await this.agentPost(ip, `/jobs/${jobId}/report`, {
+          const agent = agents.get(target);
+          if (agent)
+            await this.agentPost(agent, `/jobs/${jobId}/report`, {
               includeLog: dto.includeLog,
             });
         }),
@@ -352,7 +357,7 @@ export class RemoteControlService implements OnModuleInit {
 
     // Sync mode: pull status from agents and update DB
     await Promise.allSettled(
-      dto.targets.map((target) => this.syncRunFromAgent(jobId, target, ipMap.get(target), dto.includeLog)),
+      dto.targets.map((target) => this.syncRunFromAgent(jobId, target, agents.get(target), dto.includeLog)),
     );
 
     const runs = await this.runModel
@@ -472,19 +477,33 @@ export class RemoteControlService implements OnModuleInit {
     return { job: job.toObject(), done };
   }
 
-  private agentPost(ip: string, path: string, body: object) {
+  // The agent runs jobs as root and only accepts requests signed with a key derived from the
+  // machine's WireGuard private key (see remote-control-agent.py in the image builder).
+  private signAgentRequest(agent: Agent, method: string, path: string, body: Buffer) {
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const key = createHmac('sha256', Buffer.from(agent.privateKey, 'base64')).update('vnoi-remote-control').digest();
+    const digest = createHash('sha256').update(body).digest('hex');
+    const signature = createHmac('sha256', key).update(`${timestamp}\n${method}\n${path}\n${digest}`).digest('hex');
+    return { 'X-Vnoi-Timestamp': timestamp, 'X-Vnoi-Signature': signature };
+  }
+
+  private agentPost(agent: Agent, path: string, body: object) {
+    const data = Buffer.from(JSON.stringify(body));
     return firstValueFrom(
-      this.http.post(`http://${ip}:${this.agentPort}${path}`, body, {
+      this.http.post(`http://${agent.ip}:${this.agentPort}${path}`, data, {
         timeout: HTTP_TIMEOUT_MS,
+        headers: { 'Content-Type': 'application/json', ...this.signAgentRequest(agent, 'POST', path, data) },
       }),
     );
   }
 
-  private agentGet<T>(ip: string, path: string, params: Record<string, string> = {}) {
+  private agentGet<T>(agent: Agent, path: string, params: Record<string, string> = {}) {
+    const query = new URLSearchParams(params).toString();
+    const pathWithQuery = query ? `${path}?${query}` : path;
     return firstValueFrom(
-      this.http.get<T>(`http://${ip}:${this.agentPort}${path}`, {
+      this.http.get<T>(`http://${agent.ip}:${this.agentPort}${pathWithQuery}`, {
         timeout: HTTP_TIMEOUT_MS,
-        params,
+        headers: this.signAgentRequest(agent, 'GET', pathWithQuery, Buffer.alloc(0)),
       }),
     );
   }
@@ -495,18 +514,18 @@ export class RemoteControlService implements OnModuleInit {
     payload: AgentJobPayload,
     files: RemoteControlRuntimeFile[] = [],
   ) {
-    const ipMap = await this.resolveVpnIps(targets);
+    const agents = await this.resolveAgents(targets);
 
     for (let index = 0; index < targets.length; index += DISPATCH_CONCURRENCY) {
       const batch = targets.slice(index, index + DISPATCH_CONCURRENCY);
       await Promise.allSettled(
         batch.map(async (target) => {
-          const ip = ipMap.get(target);
-          if (!ip) {
+          const agent = agents.get(target);
+          if (!agent) {
             return this.failRun(jobId, target, 'target vpn ip not found');
           }
           try {
-            await this.postRunToAgent(ip, jobId, payload, files);
+            await this.postRunToAgent(agent, jobId, payload, files);
           } catch (error) {
             await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
           }
@@ -515,7 +534,12 @@ export class RemoteControlService implements OnModuleInit {
     }
   }
 
-  private postRunToAgent(ip: string, jobId: string, payload: AgentJobPayload, files: RemoteControlRuntimeFile[]) {
+  private async postRunToAgent(
+    agent: Agent,
+    jobId: string,
+    payload: AgentJobPayload,
+    files: RemoteControlRuntimeFile[],
+  ) {
     const form = new FormData();
     form.append('payload', JSON.stringify(payload));
 
@@ -528,9 +552,17 @@ export class RemoteControlService implements OnModuleInit {
       form.append('files', blob, file.filename);
     }
 
+    // Serialize the form first: the signature covers the exact body bytes.
+    const encoded = new Request('http://agent', { method: 'POST', body: form });
+    const data = Buffer.from(await encoded.arrayBuffer());
+    const path = `/jobs/${jobId}/run`;
     return firstValueFrom(
-      this.http.post(`http://${ip}:${this.agentPort}/jobs/${jobId}/run`, form, {
+      this.http.post(`http://${agent.ip}:${this.agentPort}${path}`, data, {
         timeout: 0,
+        headers: {
+          'Content-Type': encoded.headers.get('content-type')!,
+          ...this.signAgentRequest(agent, 'POST', path, data),
+        },
       }),
     );
   }
@@ -650,18 +682,18 @@ export class RemoteControlService implements OnModuleInit {
     });
   }
 
-  private async syncRunFromAgent(jobId: string, target: string, ip: string | undefined, includeLog: boolean) {
-    if (!ip) return;
+  private async syncRunFromAgent(jobId: string, target: string, agent: Agent | undefined, includeLog: boolean) {
+    if (!agent) return;
 
     try {
-      const { data: agent } = await this.agentGet<AgentJobStatus>(ip, `/jobs/${jobId}`, {
+      const { data: status } = await this.agentGet<AgentJobStatus>(agent, `/jobs/${jobId}`, {
         includeLog: String(includeLog),
       });
 
       await this.updateRun(jobId, target, {
-        exitCode: agent.exitCode ?? undefined,
-        status: agent.status as RemoteJobRunStatus,
-        log: includeLog ? agent.log : undefined,
+        exitCode: status.exitCode ?? undefined,
+        status: status.status as RemoteJobRunStatus,
+        log: includeLog ? status.log : undefined,
       });
     } catch (error) {
       console.warn(
@@ -701,6 +733,8 @@ export class RemoteControlService implements OnModuleInit {
       if (!currentRunDoc) return null;
 
       const previousStatus = currentRunDoc.status;
+      // Agent updates can arrive out of order; a late "running" must not reopen a finished run.
+      if (this.isFinalStatus(previousStatus) && !this.isFinalStatus(input.status)) return currentRunDoc.toObject();
 
       const updatedRunDoc = await this.runModel.findOneAndUpdate({ jobId, target, status: previousStatus }, update, {
         new: true,
@@ -730,13 +764,13 @@ export class RemoteControlService implements OnModuleInit {
     });
   }
 
-  private async resolveVpnIps(targets: string[]): Promise<Map<string, string>> {
+  private async resolveAgents(targets: string[]): Promise<Map<string, Agent>> {
     const users = await this.userModel
-      .find({ username: { $in: targets }, vpnIpAddress: { $ne: null } })
-      .select('username vpnIpAddress')
+      .find({ username: { $in: targets }, vpnIpAddress: { $ne: null }, 'keyPair.privateKey': { $ne: null } })
+      .select('username vpnIpAddress keyPair.privateKey')
       .lean();
 
-    return new Map(users.map((u) => [u.username, u.vpnIpAddress!]));
+    return new Map(users.map((u) => [u.username, { ip: u.vpnIpAddress!, privateKey: u.keyPair.privateKey! }]));
   }
 
   private validateTargets(allowed: string[], requested: string[]) {

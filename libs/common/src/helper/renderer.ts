@@ -12,8 +12,8 @@ const statusColor = {
 } as const;
 
 export type Params = {
-  webcamSrc: string;
-  screenSrc: string;
+  webcamSrc?: string;
+  screenSrc?: string;
   teamName: string;
   university: {
     name: string;
@@ -110,15 +110,15 @@ export type RenderOptions = {
   screenHasAudio?: boolean;
 };
 
-function buildAudioFilter(webcamHasAudio: boolean, screenHasAudio: boolean): string {
-  if (webcamHasAudio && screenHasAudio) {
-    return '[0:a][1:a]amix=inputs=2:normalize=0[outa]';
+function buildAudioFilter(webcamAudioIn: number | null, screenAudioIn: number | null): string {
+  if (webcamAudioIn !== null && screenAudioIn !== null) {
+    return `[${webcamAudioIn}:a][${screenAudioIn}:a]amix=inputs=2:normalize=0[outa]`;
   }
-  if (webcamHasAudio) {
-    return '[0:a]anull[outa]';
+  if (webcamAudioIn !== null) {
+    return `[${webcamAudioIn}:a]anull[outa]`;
   }
-  if (screenHasAudio) {
-    return '[1:a]anull[outa]';
+  if (screenAudioIn !== null) {
+    return `[${screenAudioIn}:a]anull[outa]`;
   }
   return 'anullsrc=channel_layout=stereo:sample_rate=48000[outa]';
 }
@@ -140,6 +140,17 @@ export async function render(
 
   const prefix = 'bg';
 
+  const inputs: string[] = [];
+  const webcamIn = params.webcamSrc ? inputs.push(params.webcamSrc) - 1 : null;
+  const screenIn = params.screenSrc ? inputs.push(params.screenSrc) - 1 : null;
+  if (webcamIn === null && screenIn === null) throw new Error('Need a webcam or a screen source.');
+  const backgroundIn = inputs.push(config.backgroundSrc) - 1;
+  const logoIn = inputs.push(config.logoSrc) - 1;
+  const uniLogoIn = inputs.push(params.university.logoSrc) - 1;
+
+  const webcamAudio = webcamIn !== null && (options?.webcamHasAudio ?? true);
+  const screenAudio = screenIn !== null && (options?.screenHasAudio ?? true);
+
   const bannerY = y1 + smallH + config.padding;
   const bannerH = y2 - config.padding - bannerY;
 
@@ -153,21 +164,29 @@ export async function render(
 
   const filter = [
     // top video
-    `[0:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[top-video]`,
+    ...(webcamIn === null
+      ? []
+      : [
+          `[${webcamIn}:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[top-video]`,
+        ]),
 
     // bottom video
-    `[1:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[bottom-video]`,
+    ...(screenIn === null
+      ? []
+      : [
+          `[${screenIn}:v]setpts=PTS-STARTPTS,scale=${smallW}:${smallH}:force_original_aspect_ratio=disable,setsar=1[bottom-video]`,
+        ]),
 
     // background: cover (scale increase) then center crop to OUT_WxOUT_H
-    `[2:v]scale=${config.width}:${config.height}:force_original_aspect_ratio=increase,crop=${config.width}:${config.height}:(in_w-${config.width})/2:(in_h-${config.height})/2,setsar=1[${prefix}]`,
+    `[${backgroundIn}:v]scale=${config.width}:${config.height}:force_original_aspect_ratio=increase,crop=${config.width}:${config.height}:(in_w-${config.width})/2:(in_h-${config.height})/2,setsar=1[${prefix}]`,
 
     // logo: cover (scale increase) then center crop to OUT_WxOUT_H
-    `[3:v]scale=${config.fontSize.base}:${config.fontSize.base}:force_original_aspect_ratio=decrease,setsar=1[logo]`,
+    `[${logoIn}:v]scale=${config.fontSize.base}:${config.fontSize.base}:force_original_aspect_ratio=decrease,setsar=1[logo]`,
 
     // uni logo
-    `[4:v]scale=${uniLogoSize}:${uniLogoSize}:force_original_aspect_ratio=decrease,setsar=1[uni-logo]`,
+    `[${uniLogoIn}:v]scale=${uniLogoSize}:${uniLogoSize}:force_original_aspect_ratio=decrease,setsar=1[uni-logo]`,
 
-    buildAudioFilter(options?.webcamHasAudio ?? true, options?.screenHasAudio ?? true),
+    buildAudioFilter(webcamAudio ? webcamIn : null, screenAudio ? screenIn : null),
 
     composeFilters(
       [
@@ -205,19 +224,15 @@ export async function render(
         `drawtext=fontfile=${config.fontPath}:text='${params.problem}':fontcolor=${config.style.banner.foreground}:fontsize=${config.fontSize.problem}:x=${config.width - 2 * config.padding}-(${config.fontSize.problem}+text_w) / 2:y=${bannerY}+(${bannerH}-text_h)/2:y_align=font`,
 
         // videos
-        `[top-video]overlay=${config.padding}:${y1}:format=yuv420`,
-        `[bottom-video]overlay=${config.padding}:${y2}:format=yuv420`,
+        ...(webcamIn === null ? [] : [`[top-video]overlay=${config.padding}:${y1}:format=yuv420`]),
+        ...(screenIn === null ? [] : [`[bottom-video]overlay=${config.padding}:${y2}:format=yuv420`]),
       ],
       prefix,
     ),
   ].join('; ');
 
   const args = [
-    '-i', params.webcamSrc,
-    '-i', params.screenSrc,
-    '-i', config.backgroundSrc,
-    '-i', config.logoSrc,
-    '-i', params.university.logoSrc,
+    ...inputs.flatMap((input) => ['-i', input]),
 
     // Apply the filters
     '-filter_complex', filter,
@@ -225,12 +240,14 @@ export async function render(
     '-map', '[outv]',
     '-map', '[outa]',
 
-    // VP9 video encoding
-    '-c:v', 'libx264',
-    '-crf', '23',
+    // VP9 video encoding (WebM only carries VP8/VP9/AV1)
+    '-c:v', 'libvpx-vp9',
+    '-crf', '32',
+    '-b:v', '0',
 
     // Video encoding speed control
-    '-preset', 'veryfast',
+    '-deadline', 'realtime',
+    '-cpu-used', '8',
     '-threads', '1',
 
     // OPUS audio encoding
@@ -238,14 +255,10 @@ export async function render(
     '-b:a', '128k',
 
     // Write to stdout
-    '-movflags',
-    '+faststart',
     '-f', 'webm',
     '-',
   ];
 
-  const webcamAudio = options?.webcamHasAudio ?? true;
-  const screenAudio = options?.screenHasAudio ?? true;
   if (!webcamAudio && !screenAudio) {
     // anullsrc generates infinite audio; cap output at video length
     args.splice(args.indexOf('-f'), 0, '-shortest');

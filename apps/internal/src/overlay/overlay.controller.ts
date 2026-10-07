@@ -1,6 +1,6 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MultiUserStreamDto } from './dtos/multi-user-stream.dto';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
@@ -39,6 +39,17 @@ export class OverlayController {
   @Get('/source/:username')
   getStreamSourceByUsername(@Param('username') username: string) {
     return this.overlayService.getStreamSourceByUsername(username);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN, Role.COACH)
+  @ApiOperation({ summary: 'nginx auth_request check for /stream-source/<ip>/ (X-Original-URI)' })
+  @ApiResponse({ status: 204 })
+  @HttpCode(204)
+  @Get('/stream-access')
+  authorizeStreamAccess(@Headers('x-original-uri') originalUri = '') {
+    return this.overlayService.assertStreamTarget(originalUri);
   }
 
   @ApiBearerAuth()

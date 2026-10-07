@@ -2,7 +2,8 @@ import { OverlayLayout, OverlayLayoutDocument } from '@libs/common-db/schemas/ov
 import { User, UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Submission, SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { Participant, ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
-import { Injectable } from '@nestjs/common';
+import { Role } from '@libs/common/decorators/role.decorator';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -51,6 +52,13 @@ export class OverlayService {
     private readonly configService: ConfigService,
   ) {
     this.livestreamProxy = this.configService.get('LIVESTREAM_PROXY_URL') ?? '';
+  }
+
+  async assertStreamTarget(originalUri: string) {
+    const ip = /^\/stream-source\/(\d+\.\d+\.\d+\.\d+)\//.exec(originalUri)?.[1];
+    if (!ip || !(await this.userModel.exists({ vpnIpAddress: ip, role: Role.CONTESTANT }))) {
+      throw new ForbiddenException('Not a contestant stream');
+    }
   }
 
   async getCurrentLayout() {
