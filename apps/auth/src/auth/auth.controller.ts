@@ -110,7 +110,7 @@ export class AuthController {
 
     const accessTokenExpiresIn = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME');
     const refreshTokenExpiresIn = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME');
-    const secureCookies = this.configService.get<string>('SECURE_COOKIES') === 'true';
+    const secureCookies = (this.configService.get<string>('SECURE_COOKIES') ?? 'true') === 'true';
 
     const accessTokenMaxAge = accessTokenExpiresIn ? ms(accessTokenExpiresIn) : undefined;
     const refreshTokenMaxAge = refreshTokenExpiresIn ? ms(refreshTokenExpiresIn) : undefined;

@@ -112,6 +112,15 @@ export class AuthService {
       throw new BadRequestException('Access denied');
     }
 
+    // Refresh must enforce the same user-state controls as login, otherwise
+    // deactivation and the contestant login lock only take effect after the
+    // refresh token expires (7d by default).
+    if (!user.isActive) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    await this.ensureContestantLoginIsOpen(user.role);
+
     const refreshTokenValid = await argon2.verify(user.refreshToken, refreshToken);
 
     if (!refreshTokenValid) {

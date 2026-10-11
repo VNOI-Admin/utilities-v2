@@ -47,7 +47,9 @@ export class AccessTokenGuard implements CanActivate {
 
       const user = await this.userModel.findOne({ username: payload.sub }).lean();
 
-      if (!user) {
+      // An access token from a deactivated account must die within its own
+      // (15m) lifetime, not survive until the refresh token expires.
+      if (!user || !user.isActive) {
         throw new UnauthorizedException('User not found');
       }
 
