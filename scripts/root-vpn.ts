@@ -52,7 +52,7 @@ PersistentKeepalive = ${process.env.WG_PERSISTENT_KEEPALIVE}
   }
 
   // write wireGuardConfig to file
-  writeFileSync('wg0.conf', wireGuardConfig);
+  writeFileSync('wg0.conf', wireGuardConfig, { mode: 0o600 });
 
   console.log('WireGuard configuration written to wg0.conf');
   console.log('Use root-vpn.sh with root privileges to finish the setup.');
