@@ -15,8 +15,14 @@ import { Model } from 'mongoose';
 import type { AuthDto } from './dtos/auth.dto';
 import { TokensEntity } from './entities/tokens.entity';
 
+// Verified against when the username does not exist, so the login response
+// takes the same argon2 work regardless of whether the account exists.
+const DUMMY_PASSWORD_FOR_TIMING = 'vnoi-timing-equalizer';
+
 @Injectable()
 export class AuthService {
+  private readonly dummyHash: string;
+
   constructor(
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
@@ -24,18 +30,21 @@ export class AuthService {
     private systemConfigModel: Model<SystemConfigDocument>,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) {}
+  ) {
+    this.dummyHash = argon2.hashSync(DUMMY_PASSWORD_FOR_TIMING);
+  }
 
   async login(data: AuthDto): Promise<TokensEntity> {
     const user = await this.userModel.findOne({ username: data.username }).lean();
 
-    if (!user) {
-      throw new BadRequestException('Invalid credentials');
-    }
+    // Always run exactly one argon2 verification: returning early for an
+    // unknown username would leak account existence through response latency.
+    const passwordValid = await argon2.verify(
+      user?.password ?? this.dummyHash,
+      data.password,
+    );
 
-    const passwordValid = await argon2.verify(user.password, data.password);
-
-    if (!passwordValid) {
+    if (!user || !passwordValid) {
       throw new BadRequestException('Invalid credentials');
     }
 
