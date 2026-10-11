@@ -70,6 +70,18 @@ export class PrintingService implements OnModuleInit {
       throw new BadRequestException('User not found');
     }
 
+    // Per-user rate limit: the endpoint is reachable by every VPN-attached
+    // principal (IPAddressGuard with no role restriction, and guest configs
+    // are claimable), each job prints up to 5 pages, and nothing else bounds
+    // submission volume - paper, printer queues and Mongo all take the hit.
+    const recentJobs = await this.printJobModel.countDocuments({
+      username: user.username,
+      requestedAt: { $gte: new Date(Date.now() - 60_000) },
+    });
+    if (recentJobs >= 3) {
+      throw new BadRequestException('Too many print jobs; try again in a minute.');
+    }
+
     try {
       await this.verifyPrintContent(file.buffer);
 
