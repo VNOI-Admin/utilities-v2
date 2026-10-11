@@ -155,7 +155,7 @@ export class VpnSyncService {
       return null;
     }
 
-    const disabled = user.role !== Role.GUEST && !user.isActive;
+    const disabled = !user.isActive;
 
     return {
       username: user.username,
