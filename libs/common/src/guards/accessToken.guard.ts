@@ -49,7 +49,9 @@ export class AccessTokenGuard implements CanActivate {
 
       // An access token from a deactivated account must die within its own
       // (15m) lifetime, not survive until the refresh token expires.
-      if (!user || !user.isActive) {
+      // Explicit false only: lean objects without the field (schema default
+      // is true) must not be rejected.
+      if (!user || user.isActive === false) {
         throw new UnauthorizedException('User not found');
       }
 
