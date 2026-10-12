@@ -1,6 +1,5 @@
-import { createHash, createHmac } from 'crypto';
+import { createHash } from 'crypto';
 import { createReadStream } from 'fs';
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import * as path from 'path';
 import {
   RemoteControlScript,
@@ -22,9 +21,11 @@ import { HttpService } from '@nestjs/axios';
 import { BadRequestException, Injectable, type MessageEvent, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
+import { mkdir, readFile, readdir, writeFile } from 'fs/promises';
 import { Model } from 'mongoose';
 import { type Observable, Subject, finalize, firstValueFrom } from 'rxjs';
 import * as uuid from 'uuid';
+import { deriveAgentAuthKey, signAgentAuth } from './agent-auth';
 import type { AgentJobUpdateDto } from './dtos/agentJobUpdate.dto';
 import type { CancelRemoteControlJobDto } from './dtos/cancelJob.dto';
 import type { CreateRemoteControlJobDto } from './dtos/createJob.dto';
@@ -481,10 +482,8 @@ export class RemoteControlService implements OnModuleInit {
   // machine's WireGuard private key (see remote-control-agent.py in the image builder).
   private signAgentRequest(agent: Agent, method: string, path: string, body: Buffer) {
     const timestamp = Math.floor(Date.now() / 1000).toString();
-    const key = createHmac('sha256', Buffer.from(agent.privateKey, 'base64')).update('vnoi-remote-control').digest();
-    const digest = createHash('sha256').update(body).digest('hex');
-    const signature = createHmac('sha256', key).update(`${timestamp}\n${method}\n${path}\n${digest}`).digest('hex');
-    return { 'X-Vnoi-Timestamp': timestamp, 'X-Vnoi-Signature': signature };
+    const key = deriveAgentAuthKey(agent.privateKey);
+    return { 'X-Vnoi-Timestamp': timestamp, 'X-Vnoi-Signature': signAgentAuth(key, timestamp, method, path, body) };
   }
 
   private agentPost(agent: Agent, path: string, body: object) {
