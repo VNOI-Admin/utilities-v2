@@ -111,7 +111,7 @@ export class PrintingController {
     @Query('authKey') authKey: string,
   ) {
     if (!authKey || !(await this.printingService.checkPrintClientAuth(clientId, authKey))) {
-      console.log('Unauthorized', authKey, clientId);
+      // Do not log the submitted authKey: it is a long-lived print-client credential.
       throw new UnauthorizedException('Unauthorized');
     }
 
