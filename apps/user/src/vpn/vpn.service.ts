@@ -38,6 +38,7 @@ export class VpnService implements OnModuleInit {
 
     return new VpnConfig({
       config: await this.generateWireGuardUserConfig(user as UserDocument),
+      apiKey: user.apiKey ?? null,
     });
   }
 
@@ -79,6 +80,7 @@ export class VpnService implements OnModuleInit {
 
     return new VpnConfig({
       config: await this.generateWireGuardUserConfig(user as UserDocument),
+      apiKey: null,
     });
   }
 

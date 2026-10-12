@@ -7,7 +7,16 @@ export class VpnConfig {
   @ApiProperty()
   readonly config: string;
 
+  @Expose()
+  @ApiProperty({
+    required: false,
+    nullable: true,
+    description: 'VNOJ API key the machine injects as the Authorization bearer on the contest site proxy',
+  })
+  readonly apiKey: string | null;
+
   constructor(data: ConstructorType<VpnConfig>) {
     this.config = data.config;
+    this.apiKey = data.apiKey ?? null;
   }
 }
