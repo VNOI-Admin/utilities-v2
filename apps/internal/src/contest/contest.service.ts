@@ -71,6 +71,18 @@ export class ContestService {
     return contest;
   }
 
+  async findCurrent(): Promise<ContestDocument> {
+    const now = new Date();
+    const contest = await this.contestModel
+      .findOne({ start_time: { $lte: now }, end_time: { $gte: now } })
+      .sort({ start_time: -1 })
+      .exec();
+    if (!contest) {
+      throw new NotFoundException('No ongoing contest');
+    }
+    return contest;
+  }
+
   async create(createContestDto: CreateContestDto): Promise<ContestDocument> {
     try {
       // Fetch contest metadata from VNOJ API

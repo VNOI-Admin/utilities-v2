@@ -10,7 +10,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { AccessTokenOptional } from '@libs/common/decorators/accessTokenOptional.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
 
@@ -34,6 +36,15 @@ export class ContestController {
   @ApiOperation({ summary: 'Get all contests' })
   async findAll(@Query() query: GetContestsDto) {
     return this.contestService.findAll(query.filter || ContestFilter.ALL);
+  }
+
+  @Get('current')
+  @AccessTokenOptional()
+  @UseGuards(AccessTokenGuard, IPAddressGuard)
+  @RequiredRoles(Role.CONTESTANT)
+  @ApiOperation({ summary: 'Get the currently ongoing contest (machine-facing)' })
+  async findCurrent() {
+    return this.contestService.findCurrent();
   }
 
   @Get(':code')
