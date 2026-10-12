@@ -35,6 +35,8 @@ export interface CreateUserDto {
   username: string;
   fullName: string;
   password: string;
+  /** VNOJ API key (48 chars, base64url alphabet) used to sign the contestant into the judge */
+  apiKey?: string;
   /** @default "contestant" */
   role: 'contestant' | 'coach' | 'admin' | 'guest';
   isActive?: boolean;
@@ -48,6 +50,8 @@ export interface BatchUserItemDto {
   fullName: string;
   /** Password for the user */
   password: string;
+  /** VNOJ API key used to sign the user into the judge */
+  apiKey?: string;
   /** Group name (will auto-create if not exists) */
   groupName?: string;
 }
@@ -93,6 +97,8 @@ export interface BulkDeleteUsersResponseDto {
 export interface UpdateUserDto {
   password?: string;
   fullName?: string;
+  /** VNOJ API key (48 chars, base64url alphabet) used to sign the contestant into the judge */
+  apiKey?: string;
   /** @default "contestant" */
   role?: 'contestant' | 'coach' | 'admin' | 'guest';
   group?: string;

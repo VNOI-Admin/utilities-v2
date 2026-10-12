@@ -11,6 +11,8 @@
 
 export interface VpnConfig {
   config: string;
+  /** VNOJ API key the machine injects as the Authorization bearer on the contest site proxy */
+  apiKey?: string | null;
 }
 
 import type { AxiosInstance, AxiosRequestConfig, HeadersDefaults, ResponseType } from 'axios';
