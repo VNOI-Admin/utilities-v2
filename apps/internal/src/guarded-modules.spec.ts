@@ -1,3 +1,4 @@
+import { LuksRecovery } from '@libs/common-db/schemas/luksRecovery.schema';
 import { RemoteControlScript } from '@libs/common-db/schemas/remoteControlScript.schema';
 import { RemoteJob } from '@libs/common-db/schemas/remoteJob.schema';
 import { RemoteJobRun } from '@libs/common-db/schemas/remoteJobRun.schema';
@@ -8,12 +9,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 
+import { MachineModule } from './machine/machine.module';
 import { SystemConfigModule } from './config/system-config.module';
 import { RemoteControlModule } from './remote-control/remote-control.module';
 
-const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun];
+const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun, LuksRecovery];
 
-describe.each([SystemConfigModule, RemoteControlModule])('%p', (feature) => {
+describe.each([SystemConfigModule, RemoteControlModule, MachineModule])('%p', (feature) => {
   it('resolves the guards on its controller', async () => {
     let builder = Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true }), JwtModule.register({ global: true }), feature],
