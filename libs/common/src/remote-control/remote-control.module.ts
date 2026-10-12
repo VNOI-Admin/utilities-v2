@@ -6,6 +6,7 @@ import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RemoteControlService } from './remote-control.service';
+import { SecurityReportService } from './security-report.service';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { RemoteControlService } from './remote-control.service';
       { name: User.name, schema: UserSchema },
     ]),
   ],
-  providers: [RemoteControlService],
-  exports: [RemoteControlService],
+  providers: [RemoteControlService, SecurityReportService],
+  exports: [RemoteControlService, SecurityReportService],
 })
 export class RemoteControlCoreModule {}

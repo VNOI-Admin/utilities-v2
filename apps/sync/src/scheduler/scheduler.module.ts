@@ -1,10 +1,10 @@
-import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
+import { VNOJApiModule } from '@libs/api/vnoj-api.module';
 import { Contest, ContestSchema } from '@libs/common-db/schemas/contest.schema';
-import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
 import { Participant, ParticipantSchema } from '@libs/common-db/schemas/participant.schema';
 import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
+import { Submission, SubmissionSchema } from '@libs/common-db/schemas/submission.schema';
+import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { RemoteControlCoreModule } from '@libs/common/remote-control/remote-control.module';
-import { VNOJApiModule } from '@libs/api/vnoj-api.module';
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,9 +12,10 @@ import { MongooseModule } from '@nestjs/mongoose';
 
 import { QUEUE_NAMES } from './constants';
 import { PingUsersProcessor } from './processors/ping-users.processor';
-import { SyncSubmissionsProcessor } from './processors/sync-submissions.processor';
 import { ProcessReactionsProcessor } from './processors/process-reactions.processor';
 import { ReactionRenderProcessor } from './processors/reaction-render.processor';
+import { SecurityReportProcessor } from './processors/security-report.processor';
+import { SyncSubmissionsProcessor } from './processors/sync-submissions.processor';
 import { SchedulerService } from './scheduler.service';
 
 @Module({
@@ -43,6 +44,9 @@ import { SchedulerService } from './scheduler.service';
       {
         name: QUEUE_NAMES.REACTION_RENDER,
       },
+      {
+        name: QUEUE_NAMES.SECURITY_REPORT,
+      },
     ),
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
@@ -59,6 +63,7 @@ import { SchedulerService } from './scheduler.service';
     SyncSubmissionsProcessor,
     ProcessReactionsProcessor,
     ReactionRenderProcessor,
+    SecurityReportProcessor,
   ],
 })
 export class SchedulerModule {}
