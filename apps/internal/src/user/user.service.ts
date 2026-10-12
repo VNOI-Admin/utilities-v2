@@ -197,11 +197,19 @@ export class UserService implements OnModuleInit {
     }
 
     user.fullName = updateUserDto.fullName ?? user.fullName;
+    const deactivating = updateUserDto.isActive === false;
     user.isActive = updateUserDto.isActive ?? user.isActive;
 
     // Hash password if it's being updated
     if (updateUserDto.password) {
       user.password = await argon2.hash(updateUserDto.password);
+    }
+
+    // Deactivation and password rotation must kill existing sessions: the
+    // stored refresh-token hash is the only thing refreshTokens() checks, so
+    // leaving it in place keeps a banned user minting access tokens.
+    if (deactivating || updateUserDto.password) {
+      user.refreshToken = undefined;
     }
 
     // If role is being changed, reassign VPN IP and generate new key pair
