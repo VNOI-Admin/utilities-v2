@@ -4,7 +4,7 @@
 set -e
 
 # Copy ./wg0.conf to /etc/wireguard/wg0.conf
-install ./wg0.conf /etc/wireguard/wg0.conf
+install -m 600 ./wg0.conf /etc/wireguard/wg0.conf
 
 # Enable and start the WireGuard service
 systemctl enable --now wg-quick@wg0
