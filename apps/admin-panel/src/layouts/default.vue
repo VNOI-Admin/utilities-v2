@@ -119,6 +119,7 @@ import {
   LogOut,
   Map,
   Menu,
+  MonitorCheck,
   Monitor,
   Play,
   Printer,
@@ -223,6 +224,12 @@ const allMenuItems = [
     label: 'Jobs',
     path: '/remote-control/jobs',
     iconComponent: ListChecks,
+    roles: ['admin']
+  },
+  {
+    label: 'Machines',
+    path: '/machines',
+    iconComponent: MonitorCheck,
     roles: ['admin']
   },
   {
