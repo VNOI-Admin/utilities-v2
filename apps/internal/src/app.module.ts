@@ -10,6 +10,7 @@ import { ContestModule } from './contest/contest.module';
 import { FloorPlanModule } from './floor-plan/floor-plan.module';
 import { GroupModule } from './group/group.module';
 import { GuestModule } from './guest/guest.module';
+import { MachinesModule } from './machines/machines.module';
 import { OverlayModule } from './overlay/overlay.module';
 import { PrintingModule } from './printing/printing.module';
 import { ReactionModule } from './reaction/reaction.module';
@@ -34,6 +35,7 @@ import { UserModule } from './user/user.module';
     FloorPlanModule,
     RemoteControlModule,
     SystemConfigModule,
+    MachinesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

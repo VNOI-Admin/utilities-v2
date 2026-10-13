@@ -1,3 +1,5 @@
+import { Machine } from '@libs/common-db/schemas/machine.schema';
+import { MachineNonce } from '@libs/common-db/schemas/machineNonce.schema';
 import { RemoteControlScript } from '@libs/common-db/schemas/remoteControlScript.schema';
 import { RemoteJob } from '@libs/common-db/schemas/remoteJob.schema';
 import { RemoteJobRun } from '@libs/common-db/schemas/remoteJobRun.schema';
@@ -9,11 +11,12 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 
 import { SystemConfigModule } from './config/system-config.module';
+import { MachinesModule } from './machines/machines.module';
 import { RemoteControlModule } from './remote-control/remote-control.module';
 
-const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun];
+const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun, Machine, MachineNonce];
 
-describe.each([SystemConfigModule, RemoteControlModule])('%p', (feature) => {
+describe.each([SystemConfigModule, RemoteControlModule, MachinesModule])('%p', (feature) => {
   it('resolves the guards on its controller', async () => {
     let builder = Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true }), JwtModule.register({ global: true }), feature],
