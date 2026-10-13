@@ -1,11 +1,16 @@
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
+import { MachineAuthModule } from '@libs/common/machine/machine-auth.module';
 import { RemoteControlCoreModule } from '@libs/common/remote-control/remote-control.module';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RemoteControlController } from './remote-control.controller';
 
 @Module({
-  imports: [RemoteControlCoreModule, MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
+  imports: [
+    RemoteControlCoreModule,
+    MachineAuthModule,
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+  ],
   controllers: [RemoteControlController],
   exports: [RemoteControlCoreModule],
 })
