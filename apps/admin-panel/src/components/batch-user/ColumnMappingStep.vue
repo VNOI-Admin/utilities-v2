@@ -69,6 +69,26 @@
         </div>
       </div>
 
+      <!-- API Key (Optional) -->
+      <div class="flex items-center gap-4">
+        <div class="w-40 flex items-center gap-2">
+          <span class="tech-label text-gray-400">VNOJ API KEY</span>
+          <CheckCircle
+            v-if="mapping.apiKey"
+            :size="16"
+            class="text-gray-400"
+          />
+        </div>
+        <div class="flex-1">
+          <MissionSelect
+            v-model="mapping.apiKey"
+            :options="(optionalHeaderOptions as any)"
+            placeholder="Select column (optional)..."
+            :searchable="true"
+          />
+        </div>
+      </div>
+
       <!-- Group (Optional) -->
       <div class="flex items-center gap-4">
         <div class="w-40 flex items-center gap-2">
@@ -137,6 +157,15 @@
         <div class="flex items-center gap-2">
           <span
             class="w-2 h-2 rounded-full"
+            :class="mapping.apiKey ? 'bg-gray-400' : 'bg-gray-600'"
+          ></span>
+          <span class="text-gray-400">
+            VNOJ API key: {{ mapping.apiKey || 'Not mapped (optional)' }}
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span
+            class="w-2 h-2 rounded-full"
             :class="mapping.group ? 'bg-gray-400' : 'bg-gray-600'"
           ></span>
           <span class="text-gray-400">
@@ -180,6 +209,7 @@ const autoMappedCount = computed(() => {
   if (mapping.value.username) count++;
   if (mapping.value.fullName) count++;
   if (mapping.value.password) count++;
+  if (mapping.value.apiKey) count++;
   if (mapping.value.group) count++;
   return count;
 });
@@ -191,6 +221,7 @@ function autoMapColumns() {
     username: ['username', 'user', 'user_name', 'userid', 'user_id', 'login'],
     fullName: ['fullname', 'full_name', 'name', 'display_name', 'displayname', 'full name'],
     password: ['password', 'pass', 'pwd'],
+    apiKey: ['apikey', 'api_key', 'vnojapikey', 'vnoj_api_key', 'vnojkey'],
     group: ['group', 'group_name', 'groupname', 'team', 'organization', 'org'],
   };
 
@@ -216,6 +247,7 @@ watch(
       username: null,
       fullName: null,
       password: null,
+      apiKey: null,
       group: null,
     };
     autoMapColumns();

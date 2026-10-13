@@ -157,6 +157,7 @@ export interface ColumnMapping {
   username: string | null;
   fullName: string | null;
   password: string | null;
+  apiKey: string | null;
   group: string | null;
 }
 
@@ -165,6 +166,7 @@ export interface PreviewUser {
   username: string;
   fullName: string;
   password: string;
+  apiKey?: string;
   group?: string;
   isValid: boolean;
   errors: string[];
@@ -209,6 +211,7 @@ const columnMapping = ref<ColumnMapping>({
   username: null,
   fullName: null,
   password: null,
+  apiKey: null,
   group: null,
 });
 
@@ -262,6 +265,7 @@ function resetState() {
     username: null,
     fullName: null,
     password: null,
+    apiKey: null,
     group: null,
   };
   previewData.value = [];
@@ -287,6 +291,7 @@ async function handleCreateUsers() {
         username: u.username,
         fullName: u.fullName,
         password: u.password,
+        apiKey: u.apiKey || undefined,
         groupName: u.group || undefined,
       })),
     });

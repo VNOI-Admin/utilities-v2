@@ -50,6 +50,10 @@ export class User {
   @Prop({ type: String, default: null })
   vpnIpAddress!: string | null;
 
+  // VNOJ API key (Bearer) handed to the contestant machine with the VPN config.
+  @Prop({ type: String, default: null })
+  apiKey!: string | null;
+
   @Prop({ required: true, default: true })
   isActive!: boolean;
 

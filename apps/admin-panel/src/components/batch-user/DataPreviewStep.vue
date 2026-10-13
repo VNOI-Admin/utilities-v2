@@ -44,6 +44,9 @@
                 PASSWORD
               </th>
               <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider">
+                VNOJ API KEY
+              </th>
+              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider">
                 GROUP
               </th>
             </tr>
@@ -89,6 +92,9 @@
               </td>
               <td class="px-3 py-2 font-mono text-gray-500">
                 {{ user.password ? '••••••••' : '—' }}
+              </td>
+              <td class="px-3 py-2 font-mono text-gray-500 truncate max-w-[120px]" :title="user.apiKey">
+                {{ user.apiKey ? user.apiKey.slice(0, 6) + '…' : '—' }}
               </td>
               <td class="px-3 py-2 text-gray-400 truncate max-w-[150px]">
                 <span v-if="user.group" class="flex items-center gap-1">
@@ -163,6 +169,7 @@ function validateRow(row: string[], rowIndex: number, seenUsernames: Set<string>
   const username = getValue(row, 'username');
   const fullName = getValue(row, 'fullName');
   const password = getValue(row, 'password');
+  const apiKey = getValue(row, 'apiKey');
   const group = getValue(row, 'group');
 
   const errors: string[] = [];
@@ -177,6 +184,11 @@ function validateRow(row: string[], rowIndex: number, seenUsernames: Set<string>
     errors.push('Username contains invalid characters');
   }
 
+  // VNOJ APIMiddleware only accepts '[A-Za-z0-9_-]{48}' bearers
+  if (apiKey && !/^[A-Za-z0-9_-]{48}$/.test(apiKey)) {
+    errors.push('VNOJ API key must be 48 characters (letters, digits, _ and -)');
+  }
+
   // Duplicate check within batch
   if (username && seenUsernames.has(username.toLowerCase())) {
     errors.push('Duplicate username in file');
@@ -187,6 +199,7 @@ function validateRow(row: string[], rowIndex: number, seenUsernames: Set<string>
     username,
     fullName,
     password,
+    apiKey: apiKey || undefined,
     group: group || undefined,
     isValid: errors.length === 0,
     errors,
