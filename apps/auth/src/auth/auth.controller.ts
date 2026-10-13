@@ -1,5 +1,6 @@
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { RefreshTokenGuard } from '@libs/common/guards/refreshToken.guard';
+import { MachineAuthService } from '@libs/common/machine/machine-auth.service';
 import {
   Body,
   ClassSerializerInterceptor,
@@ -30,6 +31,7 @@ export class AuthController {
   constructor(
     private configService: ConfigService,
     private authService: AuthService,
+    private machineAuth: MachineAuthService,
   ) {}
 
   @ApiOperation({ summary: 'Login using credentials' })
@@ -39,8 +41,9 @@ export class AuthController {
     type: TokensEntity,
   })
   @Post('login')
-  async login(@Body() data: AuthDto, @Res() response: Response) {
-    const tokens = await this.authService.login(data);
+  async login(@Body() data: AuthDto, @Req() req: Request, @Res() response: Response) {
+    const machineOk = !this.machineAuth.required() || !!(await this.machineAuth.approvedMachine(req));
+    const tokens = await this.authService.login(data, machineOk);
     const accessTokenExpiresIn = this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION_TIME');
     const refreshTokenExpiresIn = this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION_TIME');
     const secureCookies = (this.configService.get<string>('SECURE_COOKIES') ?? 'true') === 'true';
