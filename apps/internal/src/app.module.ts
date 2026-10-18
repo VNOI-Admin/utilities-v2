@@ -7,6 +7,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SystemConfigModule } from './config/system-config.module';
 import { ContestModule } from './contest/contest.module';
+import { FirewallProbeModule } from './firewall-probe/firewall-probe.module';
 import { FloorPlanModule } from './floor-plan/floor-plan.module';
 import { GroupModule } from './group/group.module';
 import { GuestModule } from './guest/guest.module';
@@ -33,6 +34,7 @@ import { UserModule } from './user/user.module';
     PrintingModule,
     ReactionModule,
     FloorPlanModule,
+    FirewallProbeModule,
     RemoteControlModule,
     MachineModule,
     SystemConfigModule,

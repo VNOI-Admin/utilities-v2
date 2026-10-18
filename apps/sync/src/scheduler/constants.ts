@@ -6,6 +6,8 @@ export const QUEUE_NAMES = {
   REACTION_RENDER: 'reaction-render',
   /** Pulls the integrity/audit report from every machine through the remote-control agent. */
   SECURITY_REPORT: 'security-report',
+  /** Probes every machine's firewall from central, without asking the machine anything. */
+  FIREWALL_PROBE: 'firewall-probe',
 } as const;
 
 export const REACTION_RENDER_JOB_NAME = 'render-reaction' as const;

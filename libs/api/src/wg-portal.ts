@@ -37,6 +37,18 @@ export type WgPortalPeer = {
   Filename?: string;
 };
 
+// Reported by the WireGuard server itself, so it is independent of anything the peer claims.
+export type WgPortalPeerMetrics = {
+  PeerIdentifier: string;
+  IsPingable: boolean;
+  LastPing: string | null;
+  BytesReceived: number;
+  BytesTransmitted: number;
+  LastHandshake: string | null;
+  Endpoint: string;
+  LastSessionStart: string | null;
+};
+
 type WgPortalApiConfig = {
   baseURL: string;
   username: string;
@@ -75,6 +87,13 @@ export class WgPortalApi {
 
   async updatePeer(peerId: string, peer: WgPortalPeer): Promise<WgPortalPeer> {
     const response = await this.instance.put<WgPortalPeer>(`/peer/by-id/${encodeURIComponent(peerId)}`, peer);
+    return response.data;
+  }
+
+  async getPeerMetrics(peerId: string): Promise<WgPortalPeerMetrics> {
+    const response = await this.instance.get<WgPortalPeerMetrics>(
+      `/metrics/by-peer/${encodeURIComponent(peerId)}`,
+    );
     return response.data;
   }
 
