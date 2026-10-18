@@ -1,5 +1,6 @@
 import { FloorPlanSchema } from './floorPlan.schema';
 import { MachineNonceSchema } from './machineNonce.schema';
+import { LuksRecoverySchema } from './luksRecovery.schema';
 import { RemoteControlScriptSchema } from './remoteControlScript.schema';
 
 const indexesOn = (schema: { indexes(): [Record<string, unknown>, unknown][] }, field: string) =>
@@ -11,4 +12,6 @@ describe('schema indexes', () => {
     expect(indexesOn(RemoteControlScriptSchema, 'name')).toHaveLength(1));
   it('expires MachineNonce documents at expiresAt', () =>
     expect(indexesOn(MachineNonceSchema, 'expiresAt')).toEqual([[{ expiresAt: 1 }, expect.objectContaining({ expireAfterSeconds: 0 })]]));
+  it('declares LuksRecovery.username once', () =>
+    expect(indexesOn(LuksRecoverySchema, 'username')).toHaveLength(1));
 });

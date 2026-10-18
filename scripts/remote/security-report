@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -uo pipefail
+# Fleet security report pulled by central: tails of the store logs plus the tamper
+# marker, printed to the job log (central truncates it to 64KB per run).
+LINES="${1:-128}"
+
+report_log() {
+    local path="$1"
+    echo "=== tail -n $LINES $path"
+    if [ -f "$path" ]; then
+        tail -n "$LINES" "$path" || echo "(unreadable)"
+    else
+        echo "(missing)"
+    fi
+}
+
+report_log /opt/vnoi/store/log/aide.log
+report_log /opt/vnoi/store/log/audit.log
+
+echo "=== integrity-dirty"
+if [ -e /opt/vnoi/run/integrity-dirty ]; then
+    echo "present"
+else
+    echo "absent"
+fi
