@@ -79,6 +79,10 @@ services:
     container_name: utilities_sync
     networks:
       - utilities_network
+    # wg_portal runs on the host network; the scheduled firewall probe reads peer
+    # handshakes from it the same way the internal service does.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - .docker.env
     ports:

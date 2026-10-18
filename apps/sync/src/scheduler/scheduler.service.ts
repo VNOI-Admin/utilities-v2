@@ -15,6 +15,7 @@ export class SchedulerService implements OnModuleInit {
     @InjectQueue(QUEUE_NAMES.SYNC_SUBMISSIONS) private syncSubmissionsQueue: Queue,
     @InjectQueue(QUEUE_NAMES.PROCESS_REACTIONS) private processReactionsQueue: Queue,
     @InjectQueue(QUEUE_NAMES.SECURITY_REPORT) private securityReportQueue: Queue,
+    @InjectQueue(QUEUE_NAMES.FIREWALL_PROBE) private firewallProbeQueue: Queue,
     private configService: ConfigService,
   ) {}
 
@@ -81,6 +82,24 @@ export class SchedulerService implements OnModuleInit {
         },
       );
       this.logger.log(`Security report job scheduled with cron '${securityReportCron}'`);
+    }
+
+    // Opt-in: out-of-band firewall probe from central. Each sweep opens a handful of
+    // TCP connections per machine, so keep the cadence coarse (e.g. every 10 minutes).
+    const firewallProbeCron = this.configService.get<string>('FIREWALL_PROBE_CRON');
+    if (firewallProbeCron) {
+      await this.firewallProbeQueue.add(
+        'run-firewall-probe',
+        {},
+        {
+          repeat: {
+            pattern: firewallProbeCron,
+          },
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      );
+      this.logger.log(`Firewall probe job scheduled with cron '${firewallProbeCron}'`);
     }
   }
 }

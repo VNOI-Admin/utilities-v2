@@ -1,3 +1,4 @@
+import { FirewallProbeResult } from '@libs/common-db/schemas/firewallProbe.schema';
 import { RemoteControlScript } from '@libs/common-db/schemas/remoteControlScript.schema';
 import { RemoteJob } from '@libs/common-db/schemas/remoteJob.schema';
 import { RemoteJobRun } from '@libs/common-db/schemas/remoteJobRun.schema';
@@ -9,11 +10,12 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
 
 import { SystemConfigModule } from './config/system-config.module';
+import { FirewallProbeModule } from './firewall-probe/firewall-probe.module';
 import { RemoteControlModule } from './remote-control/remote-control.module';
 
-const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun];
+const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun, FirewallProbeResult];
 
-describe.each([SystemConfigModule, RemoteControlModule])('%p', (feature) => {
+describe.each([SystemConfigModule, RemoteControlModule, FirewallProbeModule])('%p', (feature) => {
   it('resolves the guards on its controller', async () => {
     let builder = Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true }), JwtModule.register({ global: true }), feature],
