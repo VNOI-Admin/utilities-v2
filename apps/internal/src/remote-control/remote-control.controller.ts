@@ -2,6 +2,15 @@ import { AccessTokenOptional } from '@libs/common/decorators/accessTokenOptional
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
+import { AgentJobUpdateDto } from '@libs/common/remote-control/dtos/agentJobUpdate.dto';
+import { CancelRemoteControlJobDto } from '@libs/common/remote-control/dtos/cancelJob.dto';
+import { CreateRemoteControlJobDto } from '@libs/common/remote-control/dtos/createJob.dto';
+import { GetRemoteControlJobRunsDto } from '@libs/common/remote-control/dtos/getJobRuns.dto';
+import { GetRemoteControlJobsDto } from '@libs/common/remote-control/dtos/getJobs.dto';
+import { RefreshRemoteControlJobDto } from '@libs/common/remote-control/dtos/refreshJob.dto';
+import { RunSecurityReportDto } from '@libs/common/remote-control/dtos/runSecurityReport.dto';
+import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
+import { SecurityReportService } from '@libs/common/remote-control/security-report.service';
 import {
   BadRequestException,
   Body,
@@ -29,13 +38,6 @@ import { type ClassConstructor, plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import type { Response } from 'express';
 import type { Observable } from 'rxjs';
-import { AgentJobUpdateDto } from '@libs/common/remote-control/dtos/agentJobUpdate.dto';
-import { CancelRemoteControlJobDto } from '@libs/common/remote-control/dtos/cancelJob.dto';
-import { CreateRemoteControlJobDto } from '@libs/common/remote-control/dtos/createJob.dto';
-import { GetRemoteControlJobRunsDto } from '@libs/common/remote-control/dtos/getJobRuns.dto';
-import { GetRemoteControlJobsDto } from '@libs/common/remote-control/dtos/getJobs.dto';
-import { RefreshRemoteControlJobDto } from '@libs/common/remote-control/dtos/refreshJob.dto';
-import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
 import { CreateRemoteControlScriptDto } from './dtos/createScript.dto';
 import { UpdateRemoteControlScriptDto } from './dtos/updateScript.dto';
 import { RemoteControlScriptEntity, RemoteControlScriptSummaryEntity } from './entities/remoteControlScript.entity';
@@ -49,7 +51,10 @@ import { RemoteJobRunEntity } from './entities/remoteJobRun.entity';
 @UseInterceptors(ClassSerializerInterceptor)
 @SerializeOptions({ excludeExtraneousValues: true })
 export class RemoteControlController {
-  constructor(private readonly service: RemoteControlService) {}
+  constructor(
+    private readonly service: RemoteControlService,
+    private readonly securityReportService: SecurityReportService,
+  ) {}
 
   private parsePayload<T extends object>(payload: string, name: string, dtoClass: ClassConstructor<T>): T {
     let parsed: unknown;
@@ -157,6 +162,25 @@ export class RemoteControlController {
   ) {
     const dto = this.parsePayload(payload, 'payload', CreateRemoteControlJobDto);
     const job = await this.service.createJob(req.user?.sub, dto, this.service.mapUploadedFiles(files));
+    return new RemoteJobEntity(job as any);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Run the security report job (aide/audit log tails, integrity-dirty marker) on demand',
+  })
+  @ApiResponse({ status: 200, type: RemoteJobEntity, description: 'Job dispatched' })
+  @ApiResponse({
+    status: 200,
+    schema: { properties: { started: { type: 'boolean' }, reason: { type: 'string' } } },
+    description: 'Nothing to run',
+  })
+  @Post('/security-report')
+  async runSecurityReport(@Request() req: any, @Body() dto: RunSecurityReportDto) {
+    const job = await this.securityReportService.runSecurityReport(req.user?.sub ?? 'admin', dto.targets);
+    if (!job) return { started: false, reason: 'No eligible target machines' };
     return new RemoteJobEntity(job as any);
   }
 
