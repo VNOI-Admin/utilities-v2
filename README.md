@@ -99,4 +99,4 @@ cp .docker.env.sample .docker.env   # then fill in the secrets
 docker compose up -d
 ```
 
-`config/nginx/` holds the nginx templates for the public API, admin and judge hosts.
+`config/nginx/` holds the nginx templates for the public API and admin hosts.

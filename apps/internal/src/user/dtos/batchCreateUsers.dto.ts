@@ -1,7 +1,9 @@
 import { Role } from '@libs/common/decorators/role.decorator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsEnum, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsEnum, IsOptional, IsString, Matches, ValidateNested } from 'class-validator';
+
+import { API_KEY_PATTERN } from './createUser.dto';
 
 export class BatchUserItemDto {
   @ApiProperty({ required: true, description: 'Username for the new user' })
@@ -15,6 +17,11 @@ export class BatchUserItemDto {
   @ApiProperty({ required: true, description: 'Password for the user' })
   @IsString()
   password!: string;
+
+  @ApiProperty({ required: false, description: 'VNOJ API key used to sign the user into the judge' })
+  @IsOptional()
+  @Matches(API_KEY_PATTERN, { message: 'apiKey must be a 48-character VNOJ API key' })
+  apiKey?: string;
 
   @ApiProperty({ required: false, description: 'Group name (will auto-create if not exists)' })
   @IsOptional()

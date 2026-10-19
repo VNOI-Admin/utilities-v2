@@ -176,6 +176,7 @@ export class UserService implements OnModuleInit {
         fullName: createUserDto.fullName,
         password: hashedPassword,
         role: createUserDto.role,
+        apiKey: createUserDto.apiKey ?? null,
         vpnIpAddress,
         keyPair,
         machineUsage: new MachineUsage(),
@@ -197,6 +198,7 @@ export class UserService implements OnModuleInit {
     }
 
     user.fullName = updateUserDto.fullName ?? user.fullName;
+    user.apiKey = updateUserDto.apiKey ?? user.apiKey;
     const deactivating = updateUserDto.isActive === false;
     user.isActive = updateUserDto.isActive ?? user.isActive;
 
@@ -410,6 +412,7 @@ export class UserService implements OnModuleInit {
           fullName: userItem.fullName,
           password: hashedPassword,
           role: dto.role,
+          apiKey: userItem.apiKey ?? null,
           vpnIpAddress,
           keyPair,
           machineUsage: new MachineUsage(),
