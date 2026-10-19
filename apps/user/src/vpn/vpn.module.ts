@@ -1,4 +1,5 @@
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
+import { MachineAuthModule } from '@libs/common/machine/machine-auth.module';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -10,6 +11,7 @@ import { VpnService } from './vpn.service';
   imports: [
     JwtModule.register({}),
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MachineAuthModule,
   ],
   providers: [VpnService],
   controllers: [VpnController],

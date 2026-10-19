@@ -5,6 +5,7 @@ import {
 } from '@libs/common-db/schemas/systemConfig.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Role } from '@libs/common/decorators/role.decorator';
+import { MACHINE_BOUND_ROLES } from '@libs/common/machine/machine-auth';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -32,7 +33,7 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async login(data: AuthDto): Promise<TokensEntity> {
+  async login(data: AuthDto, machineOk: boolean): Promise<TokensEntity> {
     const user = await this.userModel.findOne({ username: data.username }).lean();
 
     // Always run exactly one argon2 verification: returning early for an
@@ -47,6 +48,10 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new ForbiddenException('Access denied');
+    }
+
+    if (!machineOk && MACHINE_BOUND_ROLES.includes(user.role)) {
+      throw new ForbiddenException('machine not approved');
     }
 
     await this.ensureContestantLoginIsOpen(user.role);

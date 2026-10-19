@@ -1,5 +1,6 @@
 import { SystemConfig, SystemConfigSchema } from '@libs/common-db/schemas/systemConfig.schema';
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
+import { MachineAuthModule } from '@libs/common/machine/machine-auth.module';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
@@ -12,6 +13,7 @@ import { AuthService } from './auth.service';
       { name: User.name, schema: UserSchema },
       { name: SystemConfig.name, schema: SystemConfigSchema },
     ]),
+    MachineAuthModule,
   ],
   controllers: [AuthController],
   providers: [AuthService],

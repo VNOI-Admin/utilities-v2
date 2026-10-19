@@ -20,6 +20,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOperation, ApiProduces, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
+import { MachineGuard } from '@libs/common/guards/machine.guard';
 import { FileUploadDto } from './dtos/fileUpload.dto';
 import { UpdatePrintJobStatusDto } from './dtos/updatePrintJobStatus.dto';
 import { PrintJobEntity } from './entities/PrintJob.entity';
@@ -33,7 +34,7 @@ export class PrintingController {
   constructor(private readonly printingService: PrintingService) {}
 
   // User endpoint: Submit print job via IP authentication
-  @UseGuards(IPAddressGuard)
+  @UseGuards(IPAddressGuard, MachineGuard)
   @ApiOperation({ summary: 'Send print job' })
   @ApiBody({
     description: 'Print job',

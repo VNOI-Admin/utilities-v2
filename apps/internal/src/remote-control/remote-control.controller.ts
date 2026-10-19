@@ -2,6 +2,7 @@ import { AccessTokenOptional } from '@libs/common/decorators/accessTokenOptional
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
+import { MachineGuard } from '@libs/common/guards/machine.guard';
 import { AgentJobUpdateDto } from '@libs/common/remote-control/dtos/agentJobUpdate.dto';
 import { CancelRemoteControlJobDto } from '@libs/common/remote-control/dtos/cancelJob.dto';
 import { CreateRemoteControlJobDto } from '@libs/common/remote-control/dtos/createJob.dto';
@@ -97,7 +98,7 @@ export class RemoteControlController {
 
   @ApiBearerAuth()
   @AccessTokenOptional()
-  @UseGuards(AccessTokenGuard, IPAddressGuard)
+  @UseGuards(AccessTokenGuard, IPAddressGuard, MachineGuard)
   @RequiredRoles(Role.ADMIN, Role.CONTESTANT)
   @ApiOperation({ summary: 'Get script by name' })
   @ApiResponse({ status: 200, type: RemoteControlScriptEntity })
@@ -290,7 +291,7 @@ export class RemoteControlController {
     return this.service.subscribe(jobId);
   }
 
-  @UseGuards(IPAddressGuard)
+  @UseGuards(IPAddressGuard, MachineGuard)
   @RequiredRoles(Role.CONTESTANT)
   @ApiOperation({ summary: 'Post job updates (status/log)' })
   @ApiConsumes('multipart/form-data')

@@ -13,6 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swa
 import { AccessTokenOptional } from '@libs/common/decorators/accessTokenOptional.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
+import { MachineGuard } from '@libs/common/guards/machine.guard';
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
 
@@ -40,7 +41,7 @@ export class ContestController {
 
   @Get('current')
   @AccessTokenOptional()
-  @UseGuards(AccessTokenGuard, IPAddressGuard)
+  @UseGuards(AccessTokenGuard, IPAddressGuard, MachineGuard)
   @RequiredRoles(Role.CONTESTANT)
   @ApiOperation({ summary: 'Get the currently ongoing contest (machine-facing)' })
   async findCurrent() {

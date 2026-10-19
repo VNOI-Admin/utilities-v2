@@ -1,5 +1,7 @@
 import { FirewallProbeResult } from '@libs/common-db/schemas/firewallProbe.schema';
 import { LuksRecovery } from '@libs/common-db/schemas/luksRecovery.schema';
+import { Machine } from '@libs/common-db/schemas/machine.schema';
+import { MachineNonce } from '@libs/common-db/schemas/machineNonce.schema';
 import { RemoteControlScript } from '@libs/common-db/schemas/remoteControlScript.schema';
 import { RemoteJob } from '@libs/common-db/schemas/remoteJob.schema';
 import { RemoteJobRun } from '@libs/common-db/schemas/remoteJobRun.schema';
@@ -13,11 +15,12 @@ import { Test } from '@nestjs/testing';
 import { MachineModule } from './machine/machine.module';
 import { SystemConfigModule } from './config/system-config.module';
 import { FirewallProbeModule } from './firewall-probe/firewall-probe.module';
+import { MachinesModule } from './machines/machines.module';
 import { RemoteControlModule } from './remote-control/remote-control.module';
 
-const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun, LuksRecovery, FirewallProbeResult];
+const models = [User, SystemConfig, RemoteControlScript, RemoteJob, RemoteJobRun, LuksRecovery, FirewallProbeResult, Machine, MachineNonce];
 
-describe.each([SystemConfigModule, RemoteControlModule, MachineModule, FirewallProbeModule])('%p', (feature) => {
+describe.each([SystemConfigModule, RemoteControlModule, MachineModule, FirewallProbeModule, MachinesModule])('%p', (feature) => {
   it('resolves the guards on its controller', async () => {
     let builder = Test.createTestingModule({
       imports: [ConfigModule.forRoot({ isGlobal: true }), JwtModule.register({ global: true }), feature],

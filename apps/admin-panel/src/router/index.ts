@@ -115,6 +115,12 @@ const router = createRouter({
       meta: { requiresAuth: true, allowedRoles: ['admin'], layout: 'overlay' },
     },
     {
+      path: '/machines',
+      name: 'Machines',
+      component: () => import('~/views/Machines.vue'),
+      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+    },
+    {
       path: '/floor-plans',
       name: 'FloorPlans',
       component: () => import('~/views/FloorPlans.vue'),

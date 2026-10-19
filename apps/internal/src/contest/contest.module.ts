@@ -5,6 +5,7 @@ import { Problem, ProblemSchema } from '@libs/common-db/schemas/problem.schema';
 import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { Group, GroupSchema } from '@libs/common-db/schemas/group.schema';
 import { VNOJApiModule } from '@libs/api/vnoj-api.module';
+import { MachineAuthModule } from '@libs/common/machine/machine-auth.module';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
@@ -24,6 +25,7 @@ import { UserModule } from '../user/user.module';
     ]),
     VNOJApiModule.forRootAsync(),
     UserModule,
+    MachineAuthModule,
   ],
   controllers: [ContestController],
   providers: [ContestService],

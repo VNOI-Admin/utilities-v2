@@ -1,4 +1,5 @@
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
+import { MachineGuard } from '@libs/common/guards/machine.guard';
 import { Controller, Get, Headers, Param, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
@@ -11,7 +12,7 @@ export class VpnController {
   constructor(private readonly vpnService: VpnService) {}
 
   @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, MachineGuard)
   @ApiOperation({ summary: 'Get WireGuard configuration' })
   @ApiResponse({
     status: 200,
@@ -25,7 +26,7 @@ export class VpnController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(AccessTokenGuard, MachineGuard)
   @ApiOperation({ summary: 'Get WireGuard configuration' })
   @ApiResponse({
     status: 200,
@@ -38,6 +39,7 @@ export class VpnController {
     return await this.vpnService.getWireGuardConfig(callerId, username);
   }
 
+  @UseGuards(MachineGuard)
   @ApiOperation({ summary: 'Get WireGuard guest configuration' })
   @ApiResponse({
     status: 200,

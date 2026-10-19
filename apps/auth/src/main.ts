@@ -8,7 +8,8 @@ import { AppModule } from './app.module';
 import { AuthModule } from './auth/auth.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Machines sign the exact login body.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Enable validation with transform
   app.useGlobalPipes(
