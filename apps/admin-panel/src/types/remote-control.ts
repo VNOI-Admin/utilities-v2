@@ -1,5 +1,7 @@
 export type RemoteJobRunStatus = 'pending' | 'running' | 'success' | 'failed';
 
+export type RemoteJobStatus = RemoteJobRunStatus | 'partial';
+
 export interface RemoteJobStatusCounts {
   pending: number;
   running: number;
@@ -31,6 +33,7 @@ export interface RemoteJob {
   scriptName: string;
   scriptHash: string;
   statusCounts?: RemoteJobStatusCounts;
+  status: RemoteJobStatus;
   args?: string[];
   env?: Record<string, string>;
   inputFiles: RemoteControlFileMetadata[];

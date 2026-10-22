@@ -57,16 +57,16 @@
         @row-click="openJob"
       >
         <template #header>
-          <div class="col-span-3 tech-label">JOB ID</div>
+          <div class="col-span-2 tech-label">JOB ID</div>
           <div class="col-span-2 tech-label">SCRIPT</div>
-          <div class="col-span-2 tech-label">STATUS</div>
+          <div class="col-span-3 tech-label">STATUS</div>
           <div class="col-span-2 tech-label">CREATED BY</div>
           <div class="col-span-1 tech-label">TARGETS</div>
           <div class="col-span-2 tech-label">CREATED AT</div>
         </template>
 
         <template #row="{ item: job }">
-          <div class="col-span-3 font-mono text-xs text-mission-cyan truncate">
+          <div class="col-span-2 font-mono text-xs text-mission-cyan truncate">
             {{ job.jobId }}
           </div>
 
@@ -74,14 +74,18 @@
             {{ job.scriptName }}
           </div>
 
-          <div class="col-span-2">
+          <div class="col-span-3 flex items-center gap-2">
             <StatusBadge
-              :variant="statusVariant(getEffectiveStatus(job))"
+              :variant="statusVariant(job.status)"
               :show-dot="true"
-              :pulse="getEffectiveStatus(job) === 'running'"
+              :pulse="job.status === 'running'"
             >
-              {{ getEffectiveStatus(job).toUpperCase() }}
+              {{ job.status.toUpperCase() }}
             </StatusBadge>
+            <span v-if="job.statusCounts" class="font-mono text-xs text-gray-400">
+              <span class="text-mission-accent">{{ job.statusCounts.success }} OK</span>
+              / <span class="text-mission-red">{{ job.statusCounts.failed }} FAILED</span>
+            </span>
           </div>
 
           <div class="col-span-2 text-sm text-gray-300 truncate">
@@ -128,7 +132,7 @@ import SearchInput from '~/components/SearchInput.vue';
 import StatCounter from '~/components/StatCounter.vue';
 import StatusBadge from '~/components/StatusBadge.vue';
 import { useRemoteControlStore } from '~/stores/remoteControl';
-import type { RemoteJob, RemoteJobRunStatus, RemoteJobStatusCounts } from '~/types/remote-control';
+import type { RemoteJob, RemoteJobStatus } from '~/types/remote-control';
 
 const router = useRouter();
 const toast = useToast();
@@ -143,32 +147,18 @@ const filteredJobs = computed(() => {
 
   return remoteControlStore.jobs.filter((job) => {
     const targetText = (job.targets || []).join(' ').toLowerCase();
-    const effectiveStatus = getEffectiveStatus(job);
     return job.jobId.toLowerCase().includes(keyword)
       || job.scriptName.toLowerCase().includes(keyword)
-      || effectiveStatus.includes(keyword)
+      || job.status.includes(keyword)
       || job.createdBy.toLowerCase().includes(keyword)
       || targetText.includes(keyword);
   });
 });
 
-function getEffectiveStatus(job: RemoteJob): RemoteJobRunStatus {
-  const counts: RemoteJobStatusCounts = job.statusCounts ?? {
-    pending: (job.targets || []).length,
-    running: 0,
-    success: 0,
-    failed: 0,
-  };
-
-  if (counts.pending > 0) return 'pending';
-  if (counts.running > 0) return 'running';
-  if (counts.failed > 0) return 'failed';
-  return 'success';
-}
-
-function statusVariant(status?: RemoteJobRunStatus) {
+function statusVariant(status?: RemoteJobStatus) {
   if (status === 'running') return 'cyan';
   if (status === 'failed') return 'red';
+  if (status === 'partial') return 'purple';
   if (status === 'success') return 'accent';
   return 'amber';
 }
