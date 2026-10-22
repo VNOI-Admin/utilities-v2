@@ -75,6 +75,11 @@ These need outside services. Without them the rest still runs, and the affected 
 - **VPN peers**: `internal` pushes peers to [wg-portal](https://github.com/h44z/wg-portal) at
   `WG_PORTAL_BASE_URL`. `docker-compose.yaml` has a `wg_portal` service, but it runs on the host network and
   manages `/etc/wireguard`, so only start it on a machine meant to be the VPN server.
+- **Firewall probes**: the on-demand probe runs in `internal` and the scheduled one (`FIREWALL_PROBE_CRON`) in
+  `sync`. Both read each machine's last WireGuard handshake from wg-portal, so give both services the same
+  `WG_PORTAL_BASE_URL`, `WG_PORTAL_INTERFACE_ID`, `WG_PORTAL_CORE_ADMIN_USER` and `WG_PORTAL_CORE_ADMIN_API_TOKEN`
+  (the compose file does, through the shared `.docker.env`). Without them the probe logs a warning at startup and
+  results carry `handshakeAgeSeconds: null`.
 - **Contest data**: `sync` and the overlays read VNOJ through `VNOJ_API_BASE_URL` and `VNOJ_API_KEY`.
 - **Reactions**: rendering needs `ffmpeg` on the path, the assets under `REACTION_RENDERER_*`, and an S3 bucket
   in `REACTION_S3_*`.
