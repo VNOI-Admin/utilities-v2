@@ -107,7 +107,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { Users, Printer, Award, Monitor } from 'lucide-vue-next';
-import { internalClient, printingClient } from '~/services/api';
+import { internalClient } from '~/services/api';
 
 const loading = ref(true);
 const onlineUsers = ref(0);
@@ -119,23 +119,23 @@ async function loadMetrics() {
   loading.value = true;
   try {
     // Fetch online users
-    const onlineUsersRes = await internalClient.get('/user/users', {
+    const onlineUsersRes = await internalClient.get('/users', {
       params: { isOnline: true }
     });
     onlineUsers.value = onlineUsersRes.data?.length || 0;
 
     // Fetch queued print jobs
-    const printJobsRes = await printingClient.get('/printing/print-jobs', {
+    const printJobsRes = await internalClient.get('/printing/jobs', {
       params: { status: 'queued' }
     });
     queuedPrintJobs.value = printJobsRes.data?.length || 0;
 
     // Fetch total users
-    const usersRes = await internalClient.get('/user/users');
+    const usersRes = await internalClient.get('/users');
     totalUsers.value = usersRes.data?.length || 0;
 
     // Fetch active contests
-    const contestsRes = await internalClient.get('/contest/contests', {
+    const contestsRes = await internalClient.get('/contests', {
       params: { filter: 'ongoing' }
     });
     activeContests.value = contestsRes.data?.length || 0;
