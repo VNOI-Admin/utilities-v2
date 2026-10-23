@@ -1,10 +1,9 @@
-export default function getEnv(key: string): string {
-  // In development, use import.meta.env
-  if (import.meta.env.DEV) {
-    return import.meta.env[key] || '';
-  }
+import Config from '../../config/config.json';
 
-  // In production, use config.json
-  // For now, fall back to import.meta.env
+export default function getEnv(key: string): string {
+  const value = (Config as Record<string, string>)[key];
+  // Unsubstituted '$NAME' tokens mean the bundle wasn't served by nginx.sh (vite dev, plain vite build).
+  if (!import.meta.env.DEV && value && !value.startsWith('$')) return value;
+
   return import.meta.env[key] || '';
 }
