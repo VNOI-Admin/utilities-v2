@@ -3,6 +3,17 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { RemoteControlFileEntity } from './remoteControlFile.entity';
 
+export type RemoteJobStatus = 'pending' | 'running' | 'success' | 'partial' | 'failed';
+
+type RemoteJobStatusCounts = RemoteJobEntity['statusCounts'];
+
+function remoteJobStatus(counts: RemoteJobStatusCounts): RemoteJobStatus {
+  if (counts.pending > 0) return 'pending';
+  if (counts.running > 0) return 'running';
+  if (counts.failed === 0) return 'success';
+  return counts.success > 0 ? 'partial' : 'failed';
+}
+
 export class RemoteJobEntity {
   @Expose()
   @ApiProperty()
@@ -57,7 +68,11 @@ export class RemoteJobEntity {
     failed: number;
   };
 
-  constructor(data: ConstructorType<RemoteJobEntity>) {
+  @Expose()
+  @ApiProperty({ enum: ['pending', 'running', 'success', 'partial', 'failed'] })
+  status: RemoteJobStatus;
+
+  constructor(data: Omit<ConstructorType<RemoteJobEntity>, 'status'>) {
     this.jobId = data.jobId;
     this.scriptName = data.scriptName;
     this.scriptHash = data.scriptHash;
@@ -68,5 +83,6 @@ export class RemoteJobEntity {
     this.createdAt = data.createdAt;
     this.targets = data.targets;
     this.statusCounts = data.statusCounts;
+    this.status = remoteJobStatus(data.statusCounts);
   }
 }

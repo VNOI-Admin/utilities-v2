@@ -1,6 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type Document } from 'mongoose';
 
+export const FIREWALL_PROBE_RESULT_TTL_SECONDS = 30 * 24 * 60 * 60;
+
 export type FirewallProbeResultDocument = FirewallProbeResult & Document;
 
 @Schema({ _id: false })
@@ -57,4 +59,4 @@ export const FirewallProbeResultSchema = SchemaFactory.createForClass(FirewallPr
 
 FirewallProbeResultSchema.index({ runId: 1, target: 1 }, { unique: true });
 FirewallProbeResultSchema.index({ target: 1, createdAt: -1 });
-FirewallProbeResultSchema.index({ createdAt: -1 });
+FirewallProbeResultSchema.index({ createdAt: 1 }, { expireAfterSeconds: FIREWALL_PROBE_RESULT_TTL_SECONDS });

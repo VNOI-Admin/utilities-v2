@@ -1,3 +1,4 @@
+import { FIREWALL_PROBE_RESULT_TTL_SECONDS, FirewallProbeResultSchema } from './firewallProbe.schema';
 import { FloorPlanSchema } from './floorPlan.schema';
 import { MachineNonceSchema } from './machineNonce.schema';
 import { LuksRecoverySchema } from './luksRecovery.schema';
@@ -12,6 +13,10 @@ describe('schema indexes', () => {
     expect(indexesOn(RemoteControlScriptSchema, 'name')).toHaveLength(1));
   it('expires MachineNonce documents at expiresAt', () =>
     expect(indexesOn(MachineNonceSchema, 'expiresAt')).toEqual([[{ expiresAt: 1 }, expect.objectContaining({ expireAfterSeconds: 0 })]]));
+  it('expires FirewallProbeResult documents after the retention window', () =>
+    expect(indexesOn(FirewallProbeResultSchema, 'createdAt')).toEqual([
+      [{ createdAt: 1 }, expect.objectContaining({ expireAfterSeconds: FIREWALL_PROBE_RESULT_TTL_SECONDS })],
+    ]));
   it('declares LuksRecovery.username once', () =>
     expect(indexesOn(LuksRecoverySchema, 'username')).toHaveLength(1));
 });
