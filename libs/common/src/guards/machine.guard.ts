@@ -40,3 +40,19 @@ export class MachineGuard implements CanActivate {
     throw new ForbiddenException('machine not approved');
   }
 }
+
+// For routes nobody but an approved machine may call, whatever MACHINE_AUTH_REQUIRED says.
+@Injectable()
+export class ApprovedMachineGuard implements CanActivate {
+  constructor(private machineAuth: MachineAuthService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const machine = await this.machineAuth.approvedMachine(request);
+    if (!machine) {
+      throw new ForbiddenException('machine not approved');
+    }
+    request['machine'] = machine.fingerprint;
+    return true;
+  }
+}

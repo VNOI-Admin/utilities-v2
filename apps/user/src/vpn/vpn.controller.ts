@@ -1,6 +1,6 @@
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { MachineGuard } from '@libs/common/guards/machine.guard';
-import { Controller, Get, Headers, Param, Request, UseGuards } from '@nestjs/common';
+import { ApprovedMachineGuard, MachineGuard } from '@libs/common/guards/machine.guard';
+import { Controller, Get, Param, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { VpnConfig } from './entities/vpnConfig.entity';
@@ -39,15 +39,15 @@ export class VpnController {
     return await this.vpnService.getWireGuardConfig(callerId, username);
   }
 
-  @UseGuards(MachineGuard)
-  @ApiOperation({ summary: 'Get WireGuard guest configuration' })
+  @UseGuards(ApprovedMachineGuard)
+  @ApiOperation({ summary: 'Guest WireGuard configuration bound to the signing approved machine' })
   @ApiResponse({
     status: 200,
     description: 'WireGuard guest configuration',
     type: VpnConfig,
   })
   @Get('guest')
-  async getWireGuardGuestConfig(@Headers('x-guest-token') token: string | undefined) {
-    return await this.vpnService.getWireGuardGuestConfig(token);
+  async getWireGuardGuestConfig(@Request() req: any) {
+    return await this.vpnService.getWireGuardGuestConfig(req.machine);
   }
 }

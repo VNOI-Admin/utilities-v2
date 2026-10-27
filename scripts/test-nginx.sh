@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Checks the nginx templates with docker and no outside network: they load together, a 5 MB agent upload gets
-# through both utilities.conf hosts, the API sees the client's own address whatever X-Forwarded-For claims, and
-# machines on the contestant/guest tunnel subnets cannot reach login or VPN config on either host.
+# through both utilities.conf hosts, the API sees the client's own address whatever X-Forwarded-For claims,
+# machines on the contestant/guest tunnel subnets cannot reach login or VPN config on either host, and the admin
+# host answers over TLS.
 set -euo pipefail
 dir=$(cd "$(dirname "$0")/../config/nginx" && pwd)
 tmp=$(mktemp -d)
@@ -11,13 +12,14 @@ trap 'docker rm -f nginx-test nginx-test-api >/dev/null 2>&1; docker network rm 
 docker network create --internal "$net" >/dev/null
 docker network create --internal --subnet 10.10.0.0/24 "$vpn" >/dev/null
 
-# What certbot adds on the server: TLS on the public host, which the vpn-private hop verifies.
-openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=vpn.vnoi.info -addext subjectAltName=DNS:vpn.vnoi.info \
-  -keyout "$tmp/key.pem" -out "$tmp/cert.pem" 2>/dev/null
+# What certbot adds on the server: TLS on the public and admin hosts; the vpn-private hop verifies the public one.
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=vpn.vnoi.info \
+  -addext subjectAltName=DNS:vpn.vnoi.info,DNS:admin.vpn.vnoi.info -keyout "$tmp/key.pem" -out "$tmp/cert.pem" 2>/dev/null
 mkdir "$tmp/conf.d"
-cp "$dir"/*.conf "$tmp/conf.d/"
-sed -e 's|listen 80; # Use certbot.*|listen 80; listen 443 ssl; ssl_certificate /etc/nginx/tls/cert.pem; ssl_certificate_key /etc/nginx/tls/key.pem;|' \
-  -e 's|/etc/ssl/certs/ca-certificates.crt|/etc/nginx/tls/cert.pem|' "$dir/utilities.conf" > "$tmp/conf.d/utilities.conf"
+for conf in "$dir"/*.conf; do
+  sed -e 's|listen 80; # Use certbot.*|listen 80; listen 443 ssl; ssl_certificate /etc/nginx/tls/cert.pem; ssl_certificate_key /etc/nginx/tls/key.pem;|' \
+    -e 's|/etc/ssl/certs/ca-certificates.crt|/etc/nginx/tls/cert.pem|' "$conf" > "$tmp/conf.d/$(basename "$conf")"
+done
 head -c 5000000 /dev/urandom > "$tmp/upload.bin"
 
 docker run -d --name nginx-test-api --network "$net" python:3-alpine python3 -c '
@@ -60,4 +62,8 @@ for host in vpn.vnoi.info vpn-private.vnoi.info; do
   code=$(docker run --rm --network "$net" curlimages/curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" "http://$server/user/vpn/config")
   [[ $code == 200 ]] || { echo "FAIL $host blocks VPN config for a client off the tunnel ($code)"; status=1; }
 done
+
+code=$(docker run --rm --network "$net" -v "$tmp/cert.pem:/cert.pem:ro" curlimages/curl -s -o /dev/null -w '%{http_code}' \
+  --cacert /cert.pem --resolve "admin.vpn.vnoi.info:443:$server" https://admin.vpn.vnoi.info/services/user/vpn/config)
+[[ $code == 200 ]] || { echo "FAIL admin.vpn.vnoi.info does not answer over HTTPS ($code)"; status=1; }
 exit $status
