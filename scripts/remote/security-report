@@ -18,7 +18,10 @@ report_log /opt/vnoi/store/log/aide.log
 report_log /opt/vnoi/store/log/audit.log
 
 echo "=== integrity-dirty"
-if [ -e /opt/vnoi/run/integrity-dirty ]; then
+# Without the flag there is no AIDE, so "absent" would read as a clean machine.
+if ! grep -Eqs '^VNOI_SEC_FEATURES=.*\bintegrity\b' /opt/vnoi/config.sh; then
+    echo "integrity off"
+elif [ -e /opt/vnoi/run/integrity-dirty ]; then
     echo "present"
 else
     echo "absent"
