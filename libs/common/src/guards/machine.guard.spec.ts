@@ -6,7 +6,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { Role } from '../decorators/role.decorator';
 import { machineFingerprint, machineMessage } from '../machine/machine-auth';
 import { MachineAuthService } from '../machine/machine-auth.service';
-import { MachineGuard } from './machine.guard';
+import { ApprovedMachineGuard, MachineGuard } from './machine.guard';
 
 const PATH = '/internal/contests/current';
 
@@ -209,6 +209,42 @@ describe('MachineGuard', () => {
     ])('lets %s through', async (_, user) => {
       const { guard } = setup();
       await expect(guard.canActivate(ctx(unsigned(user)))).resolves.toBe(true);
+    });
+  });
+});
+
+describe('ApprovedMachineGuard', () => {
+  const strict = (opts: Parameters<typeof setup>[0]) => {
+    const { auth } = setup(opts);
+    return { auth, guard: new ApprovedMachineGuard(auth) };
+  };
+
+  it.each([true, false])('accepts an approved machine and marks it (enforcement %p)', async (required) => {
+    const { auth, guard } = strict({ required });
+    const req = await signedRequest(auth);
+    await expect(guard.canActivate(ctx(req))).resolves.toBe(true);
+    expect(req.machine).toBe(known.fingerprint);
+  });
+
+  describe('with enforcement off', () => {
+    it.each([
+      ['an unsigned request', undefined],
+      ['an unsigned admin token', { sub: 'root' }],
+    ])('refuses %s', async (_, user) => {
+      const { guard } = strict({ required: false });
+      await expect(guard.canActivate(ctx(unsigned(user)))).rejects.toThrow(ForbiddenException);
+    });
+
+    it.each([MachineStatus.PENDING, MachineStatus.REVOKED])('refuses a %s machine', async (status) => {
+      const { auth, guard } = strict({ required: false, status });
+      await expect(guard.canActivate(ctx(await signedRequest(auth)))).rejects.toThrow(ForbiddenException);
+    });
+
+    it('refuses a key it has never enrolled', async () => {
+      const { auth, guard } = strict({ required: false });
+      await expect(guard.canActivate(ctx(await signedRequest(auth, { signer: stranger })))).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 });

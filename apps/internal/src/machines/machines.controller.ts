@@ -1,10 +1,11 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Body, Controller, Delete, Get, Param, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ApproveMachineDto } from './dtos/approveMachine.dto';
 import { EnrollMachineDto } from './dtos/enrollMachine.dto';
+import { RenameMachineDto } from './dtos/renameMachine.dto';
 import { MachinesService } from './machines.service';
 
 @ApiTags('Machines')
@@ -24,7 +25,7 @@ export class MachinesController {
     return this.machinesService.challenge();
   }
 
-  @ApiOperation({ summary: "The signing machine's code and approval status" })
+  @ApiOperation({ summary: "The signing machine's code, approval status, name and contestant login lock" })
   @Get('/me')
   me(@Request() req: any) {
     return this.machinesService.me(req);
@@ -46,6 +47,24 @@ export class MachinesController {
   @Post('/approve')
   approve(@Body() dto: ApproveMachineDto, @Request() req: any) {
     return this.machinesService.approve(dto.code, req.user?.sub);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Approve the machine with this fingerprint' })
+  @Post('/:fingerprint/approve')
+  approveFingerprint(@Param('fingerprint') fingerprint: string, @Request() req: any) {
+    return this.machinesService.approveFingerprint(fingerprint, req.user?.sub);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Rename a machine' })
+  @Patch('/:fingerprint')
+  rename(@Param('fingerprint') fingerprint: string, @Body() dto: RenameMachineDto) {
+    return this.machinesService.rename(fingerprint, dto.name);
   }
 
   @ApiBearerAuth()
