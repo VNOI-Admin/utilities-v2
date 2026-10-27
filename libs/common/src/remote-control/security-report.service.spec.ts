@@ -1,4 +1,6 @@
-import { existsSync, readFileSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { SECURITY_REPORT_SCRIPT_NAME, SecurityReportService } from './security-report.service';
 
@@ -14,6 +16,20 @@ function makeUserModel(usernames: string[]) {
   };
 }
 
+// Runs the real script with /opt/vnoi pointed at a scratch tree.
+function runScript(features: string, dirty: boolean): string {
+  const root = mkdtempSync(path.join(os.tmpdir(), 'secreport-'));
+  try {
+    mkdirSync(path.join(root, 'run'), { recursive: true });
+    writeFileSync(path.join(root, 'config.sh'), `VNOI_SEC_FEATURES="${features}"\n`);
+    if (dirty) writeFileSync(path.join(root, 'run/integrity-dirty'), '');
+    const script = readFileSync(SCRIPT_PATH, 'utf8').replaceAll('/opt/vnoi', root);
+    return execFileSync('bash', ['-c', script], { encoding: 'utf8' });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
 function makeRemoteControl() {
   return { createJob: jest.fn() };
 }
@@ -25,6 +41,12 @@ describe('SecurityReportService', () => {
     expect(content).toContain('/opt/vnoi/store/log/aide.log');
     expect(content).toContain('/opt/vnoi/store/log/audit.log');
     expect(content).toContain('integrity-dirty');
+  });
+
+  it('says integrity is off instead of reporting a clean machine when AIDE is not enabled', () => {
+    expect(runScript('audit,grub_pw,secure_boot,sign', false)).toContain('=== integrity-dirty\nintegrity off');
+    expect(runScript('audit,integrity,sign', false)).toContain('=== integrity-dirty\nabsent');
+    expect(runScript('audit,integrity,sign', true)).toContain('=== integrity-dirty\npresent');
   });
 
   it('runs the preset script against the whole fleet when no targets are given', async () => {
