@@ -50,6 +50,11 @@ function fakeMachineModel(docs: Doc[] = [], hooks: { beforeUpdate?: () => void }
     findOne: (q: Doc) => ({ lean: async () => docs.find((d) => matches(d, q)) ?? null }),
     find: (q: Doc = {}) => query(() => docs.filter((d) => matches(d, q))),
     countDocuments: async (q: Doc) => docs.filter((d) => matches(d, q)).length,
+    deleteOne: async (q: Doc) => {
+      const i = docs.findIndex((d) => matches(d, q));
+      if (i >= 0) docs.splice(i, 1);
+      return { deletedCount: i >= 0 ? 1 : 0 };
+    },
     findOneAndUpdate: (q: Doc, update: Doc, options: Doc = {}) => ({
       lean: async () => {
         hooks.beforeUpdate?.();
@@ -73,7 +78,15 @@ const fakeConfigModel = (value?: unknown) => ({
   }),
 });
 
-const fakeUserModel = (docs: Doc[] = []) => ({ find: (q: Doc) => query(() => docs.filter((d) => matches(d, q))) });
+const fakeUserModel = (docs: Doc[] = []) => ({
+  docs,
+  find: (q: Doc) => query(() => docs.filter((d) => matches(d, q))),
+  findOneAndUpdate: async (q: Doc, update: Doc) => {
+    const doc = docs.find((d) => matches(d, q));
+    if (doc) Object.assign(doc, update.$set);
+    return doc ?? null;
+  },
+});
 
 const service = (
   model: ReturnType<typeof fakeMachineModel>,
@@ -326,6 +339,19 @@ describe('MachinesService.revoke', () => {
     const model = fakeMachineModel([target]);
     await service(model).revoke(target.fingerprint);
     expect(model.docs[0].status).toBe(MachineStatus.REVOKED);
+  });
+
+  it.each(['revoke', 'remove'] as const)('%s frees the machine guest account and cuts its tunnel', async (action) => {
+    const target = machine('CSM7N-BFRCA', MachineStatus.APPROVED);
+    const users = fakeUserModel([
+      { username: 'guest_007', role: Role.GUEST, isActive: true, machine: target.fingerprint },
+      { username: 'guest_008', role: Role.GUEST, isActive: true, machine: 'other' },
+    ]);
+    await service(fakeMachineModel([target]), { users })[action](target.fingerprint);
+    expect(users.docs).toEqual([
+      expect.objectContaining({ username: 'guest_007', isActive: false, machine: null }),
+      expect.objectContaining({ username: 'guest_008', isActive: true, machine: 'other' }),
+    ]);
   });
 });
 

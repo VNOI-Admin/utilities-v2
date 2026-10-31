@@ -5,6 +5,7 @@ import {
   type SystemConfigDocument,
 } from '@libs/common-db/schemas/systemConfig.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import { Role } from '@libs/common/decorators/role.decorator';
 import { machineCode, machineFingerprint, normalizeMachineCode } from '@libs/common/machine/machine-auth';
 import { MachineAuthService } from '@libs/common/machine/machine-auth.service';
 import { machineName, nextFreeName } from '@libs/common/machine/machine-name';
@@ -208,6 +209,7 @@ export class MachinesService {
     if (!machine) {
       throw new NotFoundException('Machine not found');
     }
+    await this.releaseGuest(fingerprint);
     return machine;
   }
 
@@ -216,6 +218,15 @@ export class MachinesService {
     if (!deletedCount) {
       throw new NotFoundException('Machine not found');
     }
+    await this.releaseGuest(fingerprint);
     return { success: true };
+  }
+
+  // Deactivating disables the account's WireGuard peer (VPN sync), so the machine loses its cached guest tunnel too.
+  private releaseGuest(fingerprint: string) {
+    return this.userModel.findOneAndUpdate(
+      { role: Role.GUEST, machine: fingerprint },
+      { $set: { machine: null, isActive: false } },
+    );
   }
 }
