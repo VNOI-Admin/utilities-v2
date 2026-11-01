@@ -70,6 +70,10 @@ export class User {
 
   @Prop({ required: false })
   group!: string;
+
+  // Fingerprint of the contest machine this guest account is bound to.
+  @Prop({ type: String })
+  machine?: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
@@ -83,6 +87,8 @@ UserSchema.index(
     },
   },
 );
+
+UserSchema.index({ machine: 1 }, { unique: true, partialFilterExpression: { machine: { $type: 'string' } } });
 
 let queueVpnSync = async (_usernames: string[]) => {};
 

@@ -1,4 +1,3 @@
-import { createHash, timingSafeEqual } from 'crypto';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import type { OnModuleInit } from '@nestjs/common';
 import { BadRequestException, ForbiddenException, Injectable, ServiceUnavailableException } from '@nestjs/common';
@@ -8,6 +7,13 @@ import { Model } from 'mongoose';
 
 import { Role } from '@libs/common/decorators/role.decorator';
 import { VpnConfig } from './entities/vpnConfig.entity';
+
+const USABLE_GUEST = {
+  role: Role.GUEST,
+  vpnIpAddress: { $ne: null },
+  'keyPair.privateKey': { $ne: null },
+  'keyPair.publicKey': { $ne: null },
+};
 
 @Injectable()
 export class VpnService implements OnModuleInit {
@@ -42,38 +48,8 @@ export class VpnService implements OnModuleInit {
     });
   }
 
-  async getWireGuardGuestConfig(token: string | undefined): Promise<VpnConfig> {
-    // Machines ask before anyone logs in, so a provisioning token set on the guest machines is the only credential.
-    const expected = this.configService.get<string>('GUEST_VPN_TOKEN');
-    const digest = (value: string) => createHash('sha256').update(value).digest();
-    if (!expected || !token || !timingSafeEqual(digest(token), digest(expected))) {
-      throw new ForbiddenException('Invalid guest provisioning token');
-    }
-
-    const now = new Date();
-
-    // Atomically find a free guest account and mark it active
-    // Sort by username to get the lowest numbered guest (guest_001, guest_002, etc.)
-    const user = await this.userModel.findOneAndUpdate(
-      {
-        role: Role.GUEST,
-        isActive: false,
-        vpnIpAddress: { $ne: null },
-        'keyPair.privateKey': { $ne: null },
-        'keyPair.publicKey': { $ne: null },
-      },
-      {
-        $set: {
-          isActive: true,
-          'machineUsage.lastReportedAt': now,
-        },
-      },
-      {
-        new: true,
-        sort: { username: 1 } // Sort ascending to get the lowest numbered guest first
-      }
-    );
-
+  async getWireGuardGuestConfig(machine: string): Promise<VpnConfig> {
+    const user = (await this.boundGuest(machine)) ?? (await this.claimGuest(machine));
     if (!user) {
       throw new ServiceUnavailableException('No available guest VPN accounts.');
     }
@@ -82,6 +58,33 @@ export class VpnService implements OnModuleInit {
       config: await this.generateWireGuardUserConfig(user as UserDocument),
       apiKey: null,
     });
+  }
+
+  private boundGuest(machine: string) {
+    return this.userModel.findOneAndUpdate(
+      { ...USABLE_GUEST, machine },
+      { $set: { isActive: true, 'machineUsage.lastReportedAt': new Date() } },
+      { new: true },
+    );
+  }
+
+  private async claimGuest(machine: string) {
+    const claim = (filter: Record<string, unknown>) =>
+      this.userModel.findOneAndUpdate(
+        { ...USABLE_GUEST, isActive: false, ...filter },
+        { $set: { isActive: true, machine, 'machineUsage.lastReportedAt': new Date() } },
+        { new: true, sort: { username: 1 } },
+      );
+
+    try {
+      return (await claim({ machine: null })) ?? (await claim({}));
+    } catch (error) {
+      // machine is unique: a concurrent request from this same machine bound an account first.
+      if ((error as { code?: number }).code === 11000) {
+        return this.boundGuest(machine);
+      }
+      throw error;
+    }
   }
 
   async generateWireGuardUserConfig(user: UserDocument): Promise<string> {

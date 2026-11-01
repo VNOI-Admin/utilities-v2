@@ -23,6 +23,18 @@ export const useMachinesStore = defineStore('machines', () => {
     return response.data;
   }
 
+  async function approveFingerprint(fingerprint: string) {
+    const response = await internalClient.post<Machine>(`/machines/${encodeURIComponent(fingerprint)}/approve`);
+    await fetchMachines();
+    return response.data;
+  }
+
+  async function rename(fingerprint: string, name: string) {
+    const response = await internalClient.patch<Machine>(`/machines/${encodeURIComponent(fingerprint)}`, { name });
+    await fetchMachines();
+    return response.data;
+  }
+
   async function revoke(fingerprint: string) {
     await internalClient.post(`/machines/${encodeURIComponent(fingerprint)}/revoke`);
     await fetchMachines();
@@ -33,5 +45,5 @@ export const useMachinesStore = defineStore('machines', () => {
     await fetchMachines();
   }
 
-  return { machines, loading, fetchMachines, approve, revoke, remove };
+  return { machines, loading, fetchMachines, approve, approveFingerprint, rename, revoke, remove };
 });

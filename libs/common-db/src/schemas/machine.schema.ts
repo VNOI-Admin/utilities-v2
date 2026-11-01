@@ -23,6 +23,9 @@ export class Machine {
   @Prop({ required: true, type: String, enum: MachineStatus, default: MachineStatus.PENDING })
   status!: MachineStatus;
 
+  @Prop({ type: String })
+  name?: string;
+
   @Prop()
   hostname?: string;
 
@@ -40,3 +43,5 @@ export class Machine {
 }
 
 export const MachineSchema = SchemaFactory.createForClass(Machine);
+
+MachineSchema.index({ name: 1 }, { unique: true, partialFilterExpression: { name: { $type: 'string' } } });

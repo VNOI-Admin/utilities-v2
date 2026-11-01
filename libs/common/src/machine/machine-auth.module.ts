@@ -4,7 +4,7 @@ import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
-import { MachineGuard } from '../guards/machine.guard';
+import { ApprovedMachineGuard, MachineGuard } from '../guards/machine.guard';
 import { MachineAuthService } from './machine-auth.service';
 
 @Module({
@@ -15,7 +15,7 @@ import { MachineAuthService } from './machine-auth.service';
       { name: User.name, schema: UserSchema },
     ]),
   ],
-  providers: [MachineAuthService, MachineGuard],
-  exports: [MachineAuthService, MachineGuard, MongooseModule],
+  providers: [MachineAuthService, MachineGuard, ApprovedMachineGuard],
+  exports: [MachineAuthService, MachineGuard, ApprovedMachineGuard, MongooseModule],
 })
 export class MachineAuthModule {}

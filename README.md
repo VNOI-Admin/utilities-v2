@@ -104,4 +104,11 @@ cp .docker.env.sample .docker.env   # then fill in the secrets
 docker compose up -d
 ```
 
-`config/nginx/` holds the nginx templates for the public API and admin hosts.
+`config/nginx/` holds the nginx templates for the public API and admin hosts. Both listen on plain HTTP until certbot
+adds TLS where they say `# Use certbot to get SSL certificate`. Run it for both: phones log in to the admin panel over
+venue Wi-Fi, and browsers only give a page the camera over HTTPS.
+
+```bash
+sudo certbot --nginx -d vpn.vnoi.info
+sudo certbot --nginx -d admin.vpn.vnoi.info
+```
