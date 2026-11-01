@@ -14,7 +14,8 @@
     "build": "turbo run build",
     "dev": "turbo run dev --parallel",
     "dev:main": "yarn dev --filter user --filter auth --filter internal --filter admin-panel",
-    "gen-swagger": "ts-node --transpile-only ./scripts/generate-api.ts"
+    "gen-swagger": "ts-node --transpile-only ./scripts/generate-api.ts",
+    "lint": "biome check ."
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.731.0",

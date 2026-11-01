@@ -83,7 +83,12 @@ export class MachinesService {
     if (!machine) {
       throw new NotFoundException('Unknown machine');
     }
-    return { ...status(machine), name: machine.name ?? null, lockedUntil: await this.contestantLoginLockedUntil() };
+    return {
+      ...status(machine),
+      name: machine.name ?? null,
+      lockedUntil: await this.contestantLoginLockedUntil(),
+      approvedAt: machine.approvedAt?.toISOString() ?? null,
+    };
   }
 
   private async contestantLoginLockedUntil(): Promise<string | null> {
