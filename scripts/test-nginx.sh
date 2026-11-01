@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Checks the nginx templates with docker and no outside network: they load together, a 5 MB agent upload gets
 # through both utilities.conf hosts, the API sees the client's own address whatever X-Forwarded-For claims,
-# machines on the contestant/guest tunnel subnets cannot reach login or VPN config on either host, and the admin
-# host answers over TLS.
+# machines on the contestant/guest tunnel subnets cannot reach login or VPN config through the private address
+# (10.1.0.1) or the vpn-private hop, and their root still can through the public address (the full tunnel
+# carries it), and the admin host answers over TLS.
 set -euo pipefail
 dir=$(cd "$(dirname "$0")/../config/nginx" && pwd)
 tmp=$(mktemp -d)
@@ -10,7 +11,9 @@ net=nginx-test-$$
 vpn=nginx-test-vpn-$$
 trap 'docker rm -f nginx-test nginx-test-api >/dev/null 2>&1; docker network rm "$net" "$vpn" >/dev/null 2>&1; rm -rf "$tmp"' EXIT
 docker network create --internal "$net" >/dev/null
-docker network create --internal --subnet 10.10.0.0/24 "$vpn" >/dev/null
+# One subnet holds the tunnel client (10.10.0.99), central's private address (10.1.0.1) and a stand-in for its
+# public address (10.20.0.1), which full-tunnel machines reach over the tunnel too.
+docker network create --internal --subnet 10.0.0.0/8 "$vpn" >/dev/null
 
 # What certbot adds on the server: TLS on the public and admin hosts; the vpn-private hop verifies the public one.
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=vpn.vnoi.info \
@@ -22,7 +25,7 @@ for conf in "$dir"/*.conf; do
 done
 head -c 5000000 /dev/urandom > "$tmp/upload.bin"
 
-docker run -d --name nginx-test-api --network "$net" python:3-alpine python3 -c '
+docker run -d --name nginx-test-api --cap-add NET_ADMIN --network "$net" python:3-alpine python3 -c '
 import http.server
 class H(http.server.BaseHTTPRequestHandler):
     def reply(s):
@@ -35,9 +38,9 @@ http.server.HTTPServer(("127.0.0.1", 8001), H).serve_forever()' >/dev/null
 mounts=(-v "$tmp/conf.d:/etc/nginx/conf.d:ro" -v "$tmp:/etc/nginx/tls:ro")
 docker run --rm --network container:nginx-test-api "${mounts[@]}" --entrypoint nginx nginx:stable -t -q
 docker run -d --name nginx-test --network container:nginx-test-api "${mounts[@]}" nginx:stable >/dev/null
-docker network connect "$vpn" nginx-test-api
+docker network connect --ip 10.1.0.1 "$vpn" nginx-test-api
+docker exec nginx-test-api sh -c 'ip addr add 10.20.0.1/32 dev "$(ip -o addr | awk "/10\.1\.0\.1\//{print \$2}")"'
 server=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$net\").IPAddress}}" nginx-test-api)
-vpn_server=$(docker inspect -f "{{(index .NetworkSettings.Networks \"$vpn\").IPAddress}}" nginx-test-api)
 sleep 2
 
 client() {
@@ -54,11 +57,13 @@ for host in vpn.vnoi.info vpn-private.vnoi.info; do
   [[ $seen == "$ip" ]] || { echo "FAIL $host: API saw X-Real-IP '$seen' for client $ip (code $code)"; status=1; }
 
   for path in /auth/auth/login /user/vpn/config /USER/VPN/config /%61uth/auth/login /user//vpn/config; do
-    code=$(docker run --rm --network "$vpn" curlimages/curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" "http://$vpn_server$path")
+    code=$(docker run --rm --network "$vpn" --ip 10.10.0.99 curlimages/curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" "http://10.1.0.1$path")
     [[ $code == 403 ]] || { echo "FAIL $host lets a contestant-subnet client reach $path ($code)"; status=1; }
   done
-  code=$(docker run --rm --network "$vpn" curlimages/curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" "http://$vpn_server/user/remote-control/agent/jobs/test/updates")
+  code=$(docker run --rm --network "$vpn" --ip 10.10.0.99 curlimages/curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" "http://10.1.0.1/user/remote-control/agent/jobs/test/updates")
   [[ $code == 200 ]] || { echo "FAIL $host blocks a contestant-subnet agent ($code)"; status=1; }
+  code=$(docker run --rm --network "$vpn" --ip 10.10.0.99 curlimages/curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" "http://10.20.0.1/user/vpn/config")
+  [[ $host == vpn-private.vnoi.info || $code == 200 ]] || { echo "FAIL $host blocks a tunnel client's root on the public address ($code)"; status=1; }
   code=$(docker run --rm --network "$net" curlimages/curl -s -o /dev/null -w '%{http_code}' -H "Host: $host" "http://$server/user/vpn/config")
   [[ $code == 200 ]] || { echo "FAIL $host blocks VPN config for a client off the tunnel ($code)"; status=1; }
 done

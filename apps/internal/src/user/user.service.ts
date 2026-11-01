@@ -198,7 +198,7 @@ export class UserService implements OnModuleInit {
     }
 
     user.fullName = updateUserDto.fullName ?? user.fullName;
-    user.apiKey = updateUserDto.apiKey ?? user.apiKey;
+    if (updateUserDto.apiKey !== undefined) user.apiKey = updateUserDto.apiKey || null;
     const deactivating = updateUserDto.isActive === false;
     user.isActive = updateUserDto.isActive ?? user.isActive;
 
