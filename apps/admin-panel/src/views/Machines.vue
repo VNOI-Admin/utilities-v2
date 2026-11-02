@@ -145,13 +145,13 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
+import { useMachinesStore } from '~/stores/machines';
+import type { Machine, MachineStatus } from '~/types/machines';
 import EmptyState from '../components/EmptyState.vue';
 import MissionModal from '../components/MissionModal.vue';
 import MissionTable from '../components/MissionTable.vue';
 import PageHeader from '../components/PageHeader.vue';
 import StatusBadge from '../components/StatusBadge.vue';
-import { useMachinesStore } from '~/stores/machines';
-import type { Machine, MachineStatus } from '~/types/machines';
 
 const store = useMachinesStore();
 const toast = useToast();

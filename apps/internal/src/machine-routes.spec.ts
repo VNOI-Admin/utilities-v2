@@ -1,3 +1,4 @@
+import { Role } from '@libs/common/decorators/role.decorator';
 import { MachineGuard } from '@libs/common/guards/machine.guard';
 import { GUARDS_METADATA } from '@nestjs/common/constants';
 
@@ -11,5 +12,12 @@ describe.each([
 ] as const)('%p', (controller, handler) => {
   it(`${handler} ends its guard chain with MachineGuard`, () => {
     expect(Reflect.getMetadata(GUARDS_METADATA, controller.prototype[handler]).at(-1)).toBe(MachineGuard);
+  });
+});
+
+// A machine at the greeter talks over its guest tunnel, so central knows its address as the guest account's.
+describe.each(['getScript', 'agentUpdate'] as const)('RemoteControlController.%s', (handler) => {
+  it('serves the agent of a machine nobody is logged in on', () => {
+    expect(Reflect.getMetadata('roles', RemoteControlController.prototype[handler])).toContain(Role.GUEST);
   });
 });

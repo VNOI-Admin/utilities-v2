@@ -119,14 +119,13 @@
 </template>
 
 <script setup lang="ts">
+import type { UserEntity } from '@libs/api/internal';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useToast } from 'vue-toastification';
-import PageHeader from '../components/PageHeader.vue';
-import MissionModal from '../components/MissionModal.vue';
 import EmptyState from '../components/EmptyState.vue';
+import MissionModal from '../components/MissionModal.vue';
+import PageHeader from '../components/PageHeader.vue';
 import { internalApi } from '../services/api';
-import getEnv from '~/common/getEnv';
-import type { UserEntity } from '@libs/api/internal';
 
 const toast = useToast();
 
@@ -175,21 +174,7 @@ async function handleAdjustCount() {
   try {
     adjusting.value = true;
 
-    const internalEndpoint = getEnv('VITE_APP_INTERNAL_ENDPOINT') || 'http://localhost:8003';
-    const response = await fetch(`${internalEndpoint}/guests/adjust`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ targetCount: targetCount.value }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to adjust guest count');
-    }
-
-    const result = await response.json();
+    const { data: result } = await internalApi.guests.adjustGuestCount({ targetCount: targetCount.value });
 
     // Show immediate feedback that job is queued
     if (result.status === 'queued') {

@@ -99,7 +99,7 @@ export class RemoteControlController {
   @ApiBearerAuth()
   @AccessTokenOptional()
   @UseGuards(AccessTokenGuard, IPAddressGuard, MachineGuard)
-  @RequiredRoles(Role.ADMIN, Role.CONTESTANT)
+  @RequiredRoles(Role.ADMIN, Role.CONTESTANT, Role.GUEST)
   @ApiOperation({ summary: 'Get script by name' })
   @ApiResponse({ status: 200, type: RemoteControlScriptEntity })
   @Get('/scripts/:name')
@@ -292,7 +292,7 @@ export class RemoteControlController {
   }
 
   @UseGuards(IPAddressGuard, MachineGuard)
-  @RequiredRoles(Role.CONTESTANT)
+  @RequiredRoles(Role.CONTESTANT, Role.GUEST)
   @ApiOperation({ summary: 'Post job updates (status/log)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

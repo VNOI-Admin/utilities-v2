@@ -256,7 +256,20 @@ describe('MachinesService.me', () => {
     const doc = { ...machine('CSM7N-BFRCA', MachineStatus.APPROVED), name: 'swift-otter' };
     const until = new Date(Date.now() + 3_600_000).toISOString();
     const out = await service(fakeMachineModel([doc]), { auth: signed(doc), config: fakeConfigModel(until) }).me({});
-    expect(out).toEqual({ code: 'CSM7N-BFRCA', status: MachineStatus.APPROVED, name: 'swift-otter', lockedUntil: until });
+    expect(out).toEqual({
+      code: 'CSM7N-BFRCA',
+      status: MachineStatus.APPROVED,
+      name: 'swift-otter',
+      lockedUntil: until,
+      approvedAt: null,
+    });
+  });
+
+  it('returns when the machine was approved, so it can tell a re-approval it never saw the revoke of', async () => {
+    const approvedAt = new Date('2026-11-01T10:00:20.000Z');
+    const doc = { ...machine('CSM7N-BFRCA', MachineStatus.APPROVED), name: 'swift-otter', approvedAt };
+    const out = await service(fakeMachineModel([doc]), { auth: signed(doc), config: fakeConfigModel(null) }).me({});
+    expect(out).toMatchObject({ approvedAt: '2026-11-01T10:00:20.000Z' });
   });
 
   it.each([
@@ -267,7 +280,13 @@ describe('MachinesService.me', () => {
   ])('returns a null lock when it is %s', async (_, value) => {
     const doc = machine('CSM7N-BFRCA');
     const out = await service(fakeMachineModel([doc]), { auth: signed(doc), config: fakeConfigModel(value) }).me({});
-    expect(out).toEqual({ code: 'CSM7N-BFRCA', status: MachineStatus.PENDING, name: null, lockedUntil: null });
+    expect(out).toEqual({
+      code: 'CSM7N-BFRCA',
+      status: MachineStatus.PENDING,
+      name: null,
+      lockedUntil: null,
+      approvedAt: null,
+    });
   });
 
   it('answers 404 for an unsigned or unknown caller', async () => {
