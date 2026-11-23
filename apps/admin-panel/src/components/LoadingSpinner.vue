@@ -2,10 +2,10 @@
   <div class="flex items-center justify-center" :class="containerClass">
     <div class="text-center">
       <div
-        class="inline-block border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-4"
+        class="inline-block border-2 border-mission-accent border-t-transparent rounded-full animate-spin mb-3"
         :class="sizeClass"
       ></div>
-      <p v-if="message" class="font-mono text-gray-500 text-sm uppercase tracking-wider">
+      <p v-if="message" class="text-mission-muted text-sm">
         {{ message }}
       </p>
     </div>

@@ -1,1349 +1,984 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
+  <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
     <!-- Header -->
-    <header class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40">
-      <div class="container mx-auto px-6 py-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <BackButton to="/contests" />
-            <div class="h-8 w-px bg-white/20"></div>
-            <div v-if="contest">
-              <h1 class="text-2xl font-display font-bold flex items-center gap-2 text-glow">
-                <span class="text-mission-accent">█</span>
-                {{ contest.name }}
-              </h1>
-              <p class="text-xs font-mono text-gray-500 mt-1 uppercase">
-                {{ contest.code }}
-                <span class="mx-2">•</span>
-                <span
-                  class="px-2 py-0.5 border rounded-sm text-xs uppercase"
-                  :class="{
-                    'border-mission-accent text-mission-accent': contestStatus === 'ongoing',
-                    'border-mission-cyan text-mission-cyan': contestStatus === 'upcoming',
-                    'border-mission-amber text-mission-amber': contestStatus === 'frozen',
-                    'border-gray-600 text-gray-500': contestStatus === 'past'
-                  }"
-                >
-                  {{ contestStatus }}
-                </span>
-              </p>
-            </div>
+    <header class="space-y-4">
+      <BackButton to="/contests" label="Contests" button-class="!px-3 !py-1.5 text-xs" />
+      <div v-if="contest" class="flex flex-wrap items-start gap-3">
+        <div class="flex-1 min-w-0">
+          <PageHeader :title="contest.name" />
+          <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-mission-muted">
+            <span class="font-mono">{{ contest.code }}</span>
+            <StatusBadge v-bind="contestStatusBadge(contestStatus)" />
+            <span class="tabular-nums">{{ formatSchedule(contest.start_time, contest.end_time) }}</span>
+            <span v-if="contest.frozen_at" class="tabular-nums">Freeze at {{ formatClock(contest.frozen_at) }}</span>
+            <span>{{ rankingFormat }} format</span>
           </div>
-          <div class="flex items-center gap-4">
-            <!-- Force Sync Submissions button -->
-            <button
-              @click="forceSyncSubmissions"
-              :disabled="forceSyncingSubmissions"
-              class="px-4 py-2 border border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
-              :class="{ 'opacity-50 cursor-not-allowed': forceSyncingSubmissions }"
-            >
-              <RotateCw
-                :size="16"
-                :stroke-width="2"
-                :class="{ 'animate-spin': forceSyncingSubmissions }"
-              />
-              <span>{{ forceSyncingSubmissions ? 'FORCE SYNCING...' : 'FORCE SYNC' }}</span>
-            </button>
-            <!-- Resync button -->
-            <button
-              @click="resyncContest"
-              :disabled="resyncingContest"
-              class="px-4 py-2 border border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
-              :class="{ 'opacity-50 cursor-not-allowed': resyncingContest }"
-            >
-              <RotateCw
-                :size="16"
-                :stroke-width="2"
-                :class="{ 'animate-spin': resyncingContest }"
-              />
-              <span>{{ resyncingContest ? 'RESYNCING...' : 'RESYNC ALL' }}</span>
-            </button>
-            <!-- Recalculate submission data (rank change, score) from stored submissions -->
-            <button
-              @click="recalculateContestData"
-              :disabled="recalculatingData"
-              class="px-4 py-2 border border-mission-amber text-mission-amber hover:bg-mission-amber hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
-              :class="{ 'opacity-50 cursor-not-allowed': recalculatingData }"
-            >
-              <Calculator
-                :size="16"
-                :stroke-width="2"
-                :class="{ 'animate-pulse': recalculatingData }"
-              />
-              <span>{{ recalculatingData ? 'RECALCULATING...' : 'REGEN DATA' }}</span>
-            </button>
-            <!-- Re-render every accepted submission's reaction video -->
-            <button
-              @click="regenerateAllReactions"
-              :disabled="regeneratingAllReactions"
-              class="px-4 py-2 border border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
-              :class="{ 'opacity-50 cursor-not-allowed': regeneratingAllReactions }"
-            >
-              <Video
-                :size="16"
-                :stroke-width="2"
-                :class="{ 'animate-pulse': regeneratingAllReactions }"
-              />
-              <span>{{ regeneratingAllReactions ? 'QUEUEING...' : 'REGEN REACTIONS' }}</span>
-            </button>
-            <!-- Delete button -->
-            <button
-              @click="showDeleteModal = true"
-              class="px-4 py-2 border border-mission-red text-mission-red hover:bg-mission-red hover:text-white transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
-            >
-              <Trash2 :size="16" :stroke-width="2" />
-              <span>DELETE</span>
-            </button>
-          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Force Sync Submissions button -->
+          <button
+            @click="forceSyncSubmissions"
+            :disabled="forceSyncingSubmissions"
+            class="btn-secondary"
+            title="Fetch every submission from VNOJ again and rebuild the ranking"
+          >
+            <RotateCw
+              :size="16"
+              :stroke-width="2"
+              :class="{ 'animate-spin': forceSyncingSubmissions }"
+            />
+            <span>{{ forceSyncingSubmissions ? 'Syncing submissions…' : 'Sync submissions' }}</span>
+          </button>
+          <!-- Resync button -->
+          <button
+            @click="resyncContest"
+            :disabled="resyncingContest"
+            class="btn-secondary"
+            title="Fetch contest details, problems and participants from VNOJ again"
+          >
+            <RotateCw
+              :size="16"
+              :stroke-width="2"
+              :class="{ 'animate-spin': resyncingContest }"
+            />
+            <span>{{ resyncingContest ? 'Resyncing…' : 'Resync contest' }}</span>
+          </button>
+          <!-- Recalculate submission data (rank change, score) from stored submissions -->
+          <button
+            @click="recalculateContestData"
+            :disabled="recalculatingData"
+            class="btn-secondary"
+            title="Rebuild rank changes, scores and standings from the stored submissions"
+          >
+            <Calculator
+              :size="16"
+              :stroke-width="2"
+              :class="{ 'animate-pulse': recalculatingData }"
+            />
+            <span>{{ recalculatingData ? 'Recalculating…' : 'Recalculate data' }}</span>
+          </button>
+          <!-- Re-render every accepted submission's reaction video -->
+          <button
+            @click="regenerateAllReactions"
+            :disabled="regeneratingAllReactions"
+            class="btn-secondary"
+            title="Render the reaction video of every accepted submission again"
+          >
+            <Video
+              :size="16"
+              :stroke-width="2"
+              :class="{ 'animate-pulse': regeneratingAllReactions }"
+            />
+            <span>{{ regeneratingAllReactions ? 'Queueing…' : 'Regenerate reactions' }}</span>
+          </button>
+          <!-- Delete button -->
+          <button @click="showDeleteModal = true" class="btn-danger">
+            <Trash2 :size="16" :stroke-width="2" />
+            <span>Delete</span>
+          </button>
         </div>
       </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-6 py-8">
-      <!-- Loading State -->
-      <div v-if="loading" class="flex items-center justify-center py-24">
-        <div class="text-center">
-          <div class="inline-block w-12 h-12 border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p class="font-mono text-gray-500 text-sm uppercase tracking-wider">LOADING CONTEST DATA...</p>
+    <!-- Loading State -->
+    <LoadingSpinner v-if="loading" message="Loading contest…" />
+
+    <!-- Error State -->
+    <div v-else-if="error" class="mission-card p-8 max-w-md mx-auto text-center">
+      <AlertCircle :size="40" :stroke-width="2" class="mx-auto mb-3 text-mission-red" />
+      <p class="text-sm text-mission-red mb-4">{{ error }}</p>
+      <router-link to="/contests" class="btn-secondary">
+        Back to contests
+      </router-link>
+    </div>
+
+    <!-- Contest Detail Content -->
+    <div v-else-if="contest" class="space-y-5">
+      <!-- Tab Navigation -->
+      <nav class="flex gap-6 border-b border-white/[0.06] overflow-x-auto">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          @click="changeTab(tab.id)"
+          class="-mb-px flex items-center gap-2 whitespace-nowrap border-b-2 pb-3 pt-1 text-sm font-medium transition-colors"
+          :class="activeTab === tab.id
+            ? 'border-mission-accent text-gray-100'
+            : 'border-transparent text-mission-muted hover:text-gray-100'"
+        >
+          {{ tab.label }}
+          <span v-if="tab.count !== undefined" class="text-xs font-normal text-mission-muted tabular-nums">{{ tab.count }}</span>
+          <span
+            v-if="tab.id === 'participants' && unmappedParticipantsCount > 0"
+            class="rounded-full bg-mission-amber/15 px-2 py-0.5 text-xs text-mission-amber tabular-nums"
+          >
+            {{ unmappedParticipantsCount }} unlinked
+          </span>
+        </button>
+      </nav>
+
+      <!-- Tab Content -->
+      <!-- RANKING TAB -->
+      <div v-show="activeTab === 'ranking'">
+        <LoadingSpinner v-if="loadingParticipants || loadingProblems" message="Loading ranking…" container-class="py-16" />
+        <EmptyState
+          v-else-if="participants.length === 0"
+          icon="participants"
+          title="No participants yet"
+          subtitle="Sync participants from VNOJ on the Participants tab."
+        />
+        <div v-else class="mission-card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-white/[0.06] text-xs text-mission-muted">
+                  <th class="px-4 py-3 text-left font-medium w-12">#</th>
+                  <th class="px-3 py-3 text-left font-medium min-w-[180px]">Team</th>
+                  <th class="px-3 py-3 text-right font-medium w-16">{{ primaryLabel(rankingFormat) }}</th>
+                  <th class="px-3 py-3 text-right font-medium w-20">{{ secondaryLabel(rankingFormat) }}</th>
+                  <th
+                    v-for="problem in sortedProblems"
+                    :key="problem._id"
+                    class="px-1 py-3 text-center font-medium w-14"
+                    :title="problem.displayName ? `${problem.displayName} (${problem.code})` : problem.code"
+                  >
+                    <span class="block max-w-[6rem] mx-auto truncate">{{ problemLabel(problem.code) }}</span>
+                  </th>
+                  <th class="w-3"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-white/[0.06]">
+                <tr
+                  v-for="row in rankingData"
+                  :key="row.participant._id"
+                  class="hover:bg-white/[0.03] transition-colors"
+                >
+                  <!-- Rank -->
+                  <td class="px-4 py-2 text-mission-muted tabular-nums">
+                    {{ row.rank }}
+                  </td>
+                  <!-- Display Name -->
+                  <td class="px-3 py-2 max-w-[280px]">
+                    <div class="font-medium truncate">{{ row.participant.displayName }}</div>
+                    <div class="text-xs text-mission-muted truncate">
+                      {{ row.participant.username }}<template v-if="groupLabel(row.participant)"> · {{ groupLabel(row.participant) }}</template>
+                    </div>
+                  </td>
+                  <!-- Primary metric (Score for VNOJ, Solved for ICPC) -->
+                  <td class="px-3 py-2 text-right font-semibold tabular-nums">
+                    {{ row.primary }}
+                  </td>
+                  <!-- Secondary metric (Time for VNOJ, Penalty for ICPC) -->
+                  <td class="px-3 py-2 text-right text-mission-muted tabular-nums">
+                    {{ row.secondary }}
+                  </td>
+                  <!-- Problem Cells -->
+                  <td
+                    v-for="problem in sortedProblems"
+                    :key="problem._id"
+                    class="px-1 py-2"
+                  >
+                    <div
+                      class="mx-auto h-8 min-w-[3rem] px-1 rounded-lg flex items-center justify-center gap-0.5 text-xs tabular-nums"
+                      :class="rankCellClass(row.problemStates[problem.code])"
+                      :title="rankCellTitle(problemLabel(problem.code), row.problemStates[problem.code])"
+                    >
+                      <template v-if="rankingFormat === 'VNOJ' && row.problemStates[problem.code]?.attempted">
+                        <span class="font-semibold">{{ row.problemStates[problem.code].points }}</span>
+                        <span v-if="row.problemStates[problem.code].solved" class="text-[10px] opacity-70">{{ row.problemStates[problem.code].time }}′</span>
+                        <span v-else-if="row.problemStates[problem.code].pending > 0" class="text-[10px] opacity-70">+{{ row.problemStates[problem.code].pending }}?</span>
+                      </template>
+                      <template v-else-if="row.problemStates[problem.code]?.solved">
+                        <span class="font-semibold">{{ row.problemStates[problem.code].time }}′</span>
+                        <span v-if="row.problemStates[problem.code].tries > 1" class="text-[10px] opacity-70">+{{ row.problemStates[problem.code].tries - 1 }}</span>
+                      </template>
+                      <span v-else-if="row.problemStates[problem.code]?.attempted" class="font-semibold">−{{ row.problemStates[problem.code].tries }}</span>
+                      <span v-else class="w-1 h-1 rounded-full bg-white/15"></span>
+                    </div>
+                  </td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="flex items-center justify-center py-24">
-        <div class="mission-card p-8 max-w-md text-center border-mission-red">
-          <AlertCircle :size="64" :stroke-width="2" class="mx-auto mb-4 text-mission-red" />
-          <p class="font-mono text-mission-red mb-4">{{ error }}</p>
-          <router-link to="/contests" class="btn-secondary inline-block">
-            RETURN TO CONTESTS
-          </router-link>
-        </div>
-      </div>
-
-      <!-- Contest Detail Content -->
-      <div v-else-if="contest" class="space-y-6">
-        <!-- Tab Navigation -->
-        <div class="mission-card overflow-hidden">
-          <div class="flex border-b border-white/10 bg-mission-gray">
+      <!-- PARTICIPANTS TAB -->
+      <div v-show="activeTab === 'participants'" class="space-y-4">
+        <!-- Search and filters -->
+        <div class="flex flex-wrap items-center gap-2">
+          <SearchInput
+            v-model="participantSearch"
+            placeholder="Search name or username"
+            container-class="w-full md:w-72"
+          />
+          <ToggleButton v-model="unlinkedOnly" :label="`Unlinked only · ${unmappedParticipantsCount}`" />
+          <div class="flex flex-wrap items-center gap-2 md:ml-auto">
+            <RefreshButton
+              :loading="syncingParticipants"
+              label="Sync from VNOJ"
+              @click="syncParticipants"
+            />
             <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              @click="changeTab(tab.id as TabType)"
-              class="flex-1 px-6 py-4 font-mono text-sm uppercase tracking-wider transition-all duration-300 relative group"
-              :class="activeTab === tab.id
-                ? 'text-mission-accent bg-mission-accent/5'
-                : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'"
+              @click="quickMapAll"
+              :disabled="quickMappingAll"
+              class="btn-secondary"
+              title="Link each unlinked participant to the contestant account with the same username"
             >
-              <div class="flex items-center justify-center gap-2">
-                <component :is="tab.iconComponent" :size="16" :stroke-width="2" />
-                {{ tab.label }}
-              </div>
-              <div
-                v-if="activeTab === tab.id"
-                class="absolute bottom-0 left-0 right-0 h-0.5 bg-mission-accent shadow-[0_0_8px_rgba(0,255,157,0.5)]"
-              ></div>
+              <RotateCw
+                v-if="quickMappingAll"
+                :size="16"
+                :stroke-width="2"
+                class="animate-spin"
+              />
+              <Link2 v-else :size="16" :stroke-width="2" />
+              <span>{{ quickMappingAll ? 'Linking…' : 'Auto-link by username' }}</span>
+            </button>
+            <button
+              @click="showAddParticipantModal = true"
+              class="btn-primary"
+            >
+              <UserPlus :size="16" :stroke-width="2" />
+              Add participant
             </button>
           </div>
+        </div>
 
-          <!-- Tab Content -->
-          <div class="p-6">
-            <!-- DETAILS TAB -->
-            <div v-show="activeTab === 'details'" class="space-y-6">
-              <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Contest Info Card -->
-                <div class="mission-card p-6 bg-mission-gray">
-                  <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
-                    <span class="text-mission-accent">●</span>
-                    <h2 class="text-lg font-display font-semibold uppercase tracking-wider">Contest Info</h2>
-                  </div>
-                  <div class="space-y-3">
-                    <div>
-                      <div class="tech-label mb-1">CODE</div>
-                      <div class="font-mono text-sm uppercase">{{ contest.code }}</div>
-                    </div>
-                    <div>
-                      <div class="tech-label mb-1">NAME</div>
-                      <div class="text-sm">{{ contest.name }}</div>
-                    </div>
-                    <div>
-                      <div class="tech-label mb-1">STATUS</div>
-                      <div class="font-mono text-sm data-value">{{ contestStatus.toUpperCase() }}</div>
-                    </div>
-                    <div>
-                      <div class="tech-label mb-1">FORMAT</div>
-                      <select
-                        v-model="formatSelectValue"
-                        :disabled="savingFormat"
-                        @change="onFormatChange"
-                        class="input-mission font-mono text-sm w-full"
-                      >
-                        <option value="ICPC">ICPC (ranked by AC count)</option>
-                        <option value="VNOJ">VNOJ (ranked by points)</option>
-                      </select>
-                      <div class="text-xs text-gray-500 mt-1">
-                        Changing format immediately recomputes standings, ranks, and submission rank history.
-                      </div>
-                    </div>
-                    <div>
-                      <div class="tech-label mb-1">PENALTY (MINUTES PER ATTEMPT)</div>
-                      <div class="flex gap-2">
-                        <input
-                          v-model.number="penaltyInput"
-                          type="number"
-                          min="0"
-                          :disabled="savingScoring"
-                          class="input-mission font-mono text-sm flex-1"
-                          :placeholder="String(defaultPenalty)"
-                        />
-                        <button
-                          class="btn-mission-secondary text-xs px-3"
-                          :disabled="savingScoring || penaltyInput === (contest.penalty ?? null)"
-                          @click="applyPenalty"
-                        >
-                          {{ savingScoring ? '...' : 'SET' }}
-                        </button>
-                      </div>
-                      <div class="text-xs text-gray-500 mt-1">
-                        Every attempt before the first maximum-score submission is charged. Leave blank to use the
-                        format default ({{ defaultPenalty }}m for {{ formatSelectValue }}).
-                      </div>
-                    </div>
-                    <div v-if="formatSelectValue === 'VNOJ'">
-                      <div class="tech-label mb-1">LAST SUBMISSION ONLY (LSO)</div>
-                      <label class="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          :checked="contest.lso === true"
-                          :disabled="savingScoring"
-                          class="accent-mission-cyan"
-                          @change="applyLso(($event.target as HTMLInputElement).checked)"
-                        />
-                        <span class="font-mono text-sm">{{ contest.lso ? 'ENABLED' : 'DISABLED' }}</span>
-                      </label>
-                      <div class="text-xs text-gray-500 mt-1">
-                        Cumulative time counts only the latest scoring submission instead of the sum across problems.
-                        Penalties still apply.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Time Info Card -->
-                <div class="mission-card p-6 bg-mission-gray">
-                  <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
-                    <span class="text-mission-cyan">●</span>
-                    <h2 class="text-lg font-display font-semibold uppercase tracking-wider">Schedule</h2>
-                  </div>
-                  <div class="space-y-3">
-                    <div>
-                      <div class="tech-label mb-1">START TIME</div>
-                      <div class="font-mono text-xs text-gray-400">{{ formatFullDateTime(contest.start_time) }}</div>
-                    </div>
-                    <div>
-                      <div class="tech-label mb-1">END TIME</div>
-                      <div class="font-mono text-xs text-gray-400">{{ formatFullDateTime(contest.end_time) }}</div>
-                    </div>
-                    <div v-if="contest.frozen_at">
-                      <div class="tech-label mb-1">FROZEN AT</div>
-                      <div class="font-mono text-xs text-mission-amber">{{ formatFullDateTime(contest.frozen_at) }}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Stats Card -->
-                <div class="mission-card p-6 bg-mission-gray">
-                  <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
-                    <span class="text-mission-amber">●</span>
-                    <h2 class="text-lg font-display font-semibold uppercase tracking-wider">Statistics</h2>
-                  </div>
-                  <div class="space-y-4">
-                    <div>
-                      <div class="flex items-center justify-between mb-1">
-                        <div class="tech-label">PARTICIPANTS</div>
-                        <div class="font-mono text-sm data-value">{{ participants.length }}</div>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="flex items-center justify-between mb-1">
-                        <div class="tech-label">SUBMISSIONS</div>
-                        <div class="font-mono text-sm data-value">{{ submissions.length }}</div>
-                      </div>
-                    </div>
-                    <div>
-                      <div class="flex items-center justify-between mb-1">
-                        <div class="tech-label">PROBLEMS</div>
-                        <div class="font-mono text-sm data-value">{{ problems.length }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+        <!-- Participants Table -->
+        <LoadingSpinner v-if="loadingParticipants" message="Loading participants…" container-class="py-16" />
+        <EmptyState
+          v-else-if="filteredParticipants.length === 0"
+          icon="participants"
+          :title="participants.length ? 'No participants match' : 'No participants yet'"
+          :subtitle="participants.length ? 'Try another search or turn off “Unlinked only”.' : 'Sync from VNOJ or add participants by hand.'"
+        />
+        <MissionTable
+          v-else
+          :items="filteredParticipants"
+          item-key="_id"
+          grid-template-columns="minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(220px, auto)"
+          min-width="760px"
+          row-class="hover:bg-white/[0.03]"
+        >
+          <template #header>
+            <div>Participant</div>
+            <div>Linked account</div>
+            <div class="text-right">Actions</div>
+          </template>
+          <template #row="{ item: participant }">
+            <div class="min-w-0">
+              <div class="font-medium truncate">{{ participant.displayName }}</div>
+              <div class="text-xs text-mission-muted truncate">
+                {{ participant.username }}<template v-if="groupLabel(participant)"> · {{ groupLabel(participant) }}</template>
               </div>
             </div>
+            <div class="min-w-0">
+              <MissionSelect
+                v-if="editingParticipant === participant._id"
+                v-model="selectedUser[participant._id]"
+                :options="availableUsers"
+                :option-label="(user: any) => `${user.fullName} (${user.username})`"
+                option-value="username"
+                :disabled-options="(user: any) => isUserAlreadyMapped(user.username, participant._id)"
+                placeholder="Choose an account"
+              />
+              <span v-else-if="participant.mapToUser" class="font-mono text-sm">{{ participant.mapToUser }}</span>
+              <StatusBadge v-else variant="amber" text="Unlinked" />
+            </div>
+            <div class="flex items-center justify-end gap-2">
+              <button
+                v-if="editingParticipant === participant._id"
+                @click="saveParticipantMapping(participant._id)"
+                :disabled="linkingParticipant === participant._id"
+                class="btn-primary !px-3 !py-1.5 text-xs"
+              >
+                {{ linkingParticipant === participant._id ? 'Saving…' : 'Save' }}
+              </button>
+              <button
+                v-if="editingParticipant === participant._id"
+                @click="cancelEditParticipant"
+                class="btn-secondary !px-3 !py-1.5 text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                v-else
+                @click="startEditParticipant(participant._id, participant.mapToUser)"
+                class="btn-secondary !px-3 !py-1.5 text-xs"
+              >
+                {{ participant.mapToUser ? 'Change' : 'Link account' }}
+              </button>
+              <button
+                v-if="participant.mapToUser && editingParticipant !== participant._id"
+                @click="unlinkParticipant(participant._id)"
+                :disabled="linkingParticipant === participant._id"
+                class="btn-secondary !px-3 !py-1.5 text-xs"
+              >
+                Unlink
+              </button>
+              <button
+                v-if="editingParticipant !== participant._id"
+                @click="confirmDeleteParticipant(participant._id, participant.displayName)"
+                class="p-1.5 rounded-lg text-mission-muted hover:text-mission-red hover:bg-mission-red/10 transition-colors"
+                title="Remove participant"
+              >
+                <Trash2 :size="16" :stroke-width="2" />
+              </button>
+            </div>
+          </template>
+        </MissionTable>
+      </div>
 
-            <!-- PARTICIPANTS TAB -->
-            <div v-show="activeTab === 'participants'">
-              <!-- Search and filters -->
-              <div class="mb-4 flex items-center gap-4">
-                <SearchInput
-                  v-model="participantSearch"
-                  placeholder="SEARCH PARTICIPANT..."
-                  container-class="flex-1"
-                />
-                <StatCounter
-                  label="TOTAL:"
-                  :value="filteredParticipants.length"
-                />
-                <RefreshButton
-                  :loading="syncingParticipants"
-                  label="SYNC"
-                  button-class="text-xs"
-                  @click="syncParticipants"
-                />
-                <button
-                  @click="quickMapAll"
-                  :disabled="quickMappingAll"
-                  class="border transition-all duration-300 flex items-center gap-2 text-xs px-4 py-2 font-mono uppercase tracking-wider"
-                  :class="quickMappingAll
-                    ? 'border-white/10 text-gray-600 cursor-not-allowed'
-                    : 'border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark'"
-                >
-                  <RotateCw
-                    v-if="quickMappingAll"
-                    :size="16"
-                    :stroke-width="2"
-                    class="animate-spin"
-                  />
-                  <span>{{ quickMappingAll ? 'MAPPING...' : 'QUICK MAP ALL' }}</span>
-                </button>
-                <button
-                  @click="showAddParticipantModal = true"
-                  class="btn-primary flex items-center gap-2 text-xs"
-                >
-                  <UserPlus :size="16" :stroke-width="2" />
-                  ADD PARTICIPANT
-                </button>
+      <!-- PROBLEMS TAB -->
+      <div v-show="activeTab === 'problems'">
+        <LoadingSpinner v-if="loadingProblems" message="Loading problems…" container-class="py-16" />
+        <EmptyState
+          v-else-if="problems.length === 0"
+          icon="problems"
+          title="No problems yet"
+          subtitle="Resync the contest to fetch its problems from VNOJ."
+        />
+        <MissionTable
+          v-else
+          :items="sortedProblems"
+          item-key="_id"
+          grid-template-columns="minmax(0, 1.2fr) minmax(240px, 1.4fr) 80px 90px minmax(140px, 1.2fr)"
+          min-width="860px"
+          row-class="hover:bg-white/[0.03]"
+        >
+          <template #header>
+            <div>Problem</div>
+            <div>Display name</div>
+            <div class="text-right">{{ rankingFormat === 'VNOJ' ? 'Scored' : 'Solved' }}</div>
+            <div class="text-right">Attempts</div>
+            <div>{{ rankingFormat === 'VNOJ' ? 'Score rate' : 'AC rate' }}</div>
+          </template>
+          <template #row="{ item: problem }">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="min-w-[1.75rem] max-w-[10rem] h-7 px-1.5 shrink-0 rounded-lg bg-mission-gray grid place-items-center text-xs font-semibold truncate">
+                {{ problemLabel(problem.code) }}
+              </span>
+              <span class="font-mono text-sm text-mission-muted truncate">{{ problem.code }}</span>
+            </div>
+            <div class="flex items-center gap-2 min-w-0">
+              <input
+                v-model="problemNameDrafts[problem._id]"
+                type="text"
+                :placeholder="problem.code"
+                class="input-mission !py-1.5 min-w-0"
+                @keyup.enter="saveProblemName(problem)"
+              />
+              <button
+                @click="saveProblemName(problem)"
+                :disabled="savingProblemId === problem._id || (problemNameDrafts[problem._id] ?? '').trim() === (problem.displayName ?? '')"
+                class="btn-secondary !px-3 !py-1.5 text-xs shrink-0"
+              >
+                {{ savingProblemId === problem._id ? 'Saving…' : 'Save' }}
+              </button>
+            </div>
+            <div class="text-right font-semibold tabular-nums">{{ problemStats(problem.code).solved }}</div>
+            <div class="text-right text-mission-muted tabular-nums">{{ problemStats(problem.code).attempts }}</div>
+            <div class="flex items-center gap-3">
+              <div class="flex-1 h-1.5 rounded-full bg-mission-gray overflow-hidden">
+                <div class="h-full bg-mission-ok" :style="{ width: `${problemStats(problem.code).rate}%` }"></div>
               </div>
+              <span class="w-12 text-right text-xs text-mission-muted tabular-nums">{{ problemStats(problem.code).rate.toFixed(0) }}%</span>
+            </div>
+          </template>
+        </MissionTable>
+      </div>
 
-              <!-- Participants Table -->
-              <div v-if="loadingParticipants" class="text-center py-12">
-                <div class="inline-block w-8 h-8 border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p class="font-mono text-gray-500 text-xs uppercase">Loading participants...</p>
-              </div>
-              <div v-else-if="filteredParticipants.length === 0" class="text-center py-12 text-gray-500">
-                <Users :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
-                <p class="font-mono text-sm uppercase">No participants found</p>
-              </div>
-              <div v-else class="mission-card overflow-hidden bg-mission-gray">
-                <div class="grid grid-cols-12 gap-4 px-6 py-4 bg-mission-dark border-b border-white/10">
-                  <div class="col-span-3 tech-label">PARTICIPANT</div>
-                  <div class="col-span-4 tech-label">MAPPED USER</div>
-                  <div class="col-span-2 tech-label">STATUS</div>
-                  <div class="col-span-3 tech-label text-center">ACTIONS</div>
-                </div>
-                <div class="divide-y divide-white/5">
-                  <div
-                    v-for="participant in filteredParticipants"
-                    :key="participant._id"
-                    class="grid grid-cols-12 gap-4 px-6 py-4 hover:bg-mission-accent/5 transition-all duration-300"
-                  >
-                    <div class="col-span-3">
-                      <div class="font-mono text-sm">{{ participant.displayName }}</div>
-                      <div class="text-xs text-gray-500">@{{ participant.username }}</div>
-                    </div>
-                    <div class="col-span-4">
-                      <MissionSelect
-                        v-if="editingParticipant === participant._id"
-                        v-model="selectedUser[participant._id]"
-                        :options="availableUsers"
-                        :option-label="(user: any) => `${user.fullName} (@${user.username})`"
-                        option-value="username"
-                        :disabled-options="(user: any) => isUserAlreadyMapped(user.username, participant._id)"
-                        placeholder="-- Select User --"
-                      />
-                      <div v-else class="text-sm">
-                        <span v-if="participant.mapToUser" class="data-value">{{ participant.mapToUser }}</span>
-                        <span v-else class="text-gray-500">Not mapped</span>
-                      </div>
-                    </div>
-                    <div class="col-span-2">
-                      <span
-                        v-if="participant.mapToUser"
-                        class="px-2 py-1 text-xs font-mono uppercase border border-mission-accent text-mission-accent bg-mission-accent/10 rounded-sm"
-                      >
-                        LINKED
-                      </span>
-                      <span
-                        v-else
-                        class="px-2 py-1 text-xs font-mono uppercase border border-gray-600 text-gray-500 rounded-sm"
-                      >
-                        UNMAPPED
-                      </span>
-                    </div>
-                    <div class="col-span-3 flex items-center justify-center gap-2">
-                      <button
-                        v-if="editingParticipant === participant._id"
-                        @click="saveParticipantMapping(participant._id)"
-                        :disabled="linkingParticipant === participant._id"
-                        class="btn-primary text-xs px-3 py-1"
-                      >
-                        {{ linkingParticipant === participant._id ? 'SAVING...' : 'SAVE' }}
-                      </button>
-                      <button
-                        v-if="editingParticipant === participant._id"
-                        @click="cancelEditParticipant"
-                        class="btn-secondary text-xs px-3 py-1"
-                      >
-                        CANCEL
-                      </button>
-                      <button
-                        v-else
-                        @click="startEditParticipant(participant._id, participant.mapToUser)"
-                        class="btn-secondary text-xs px-3 py-1"
-                      >
-                        {{ participant.mapToUser ? 'EDIT' : 'MAP' }}
-                      </button>
-                      <button
-                        v-if="participant.mapToUser && editingParticipant !== participant._id"
-                        @click="unlinkParticipant(participant._id)"
-                        class="text-mission-amber hover:text-mission-amber/80 transition-colors"
-                        title="Unlink user"
-                      >
-                        <EyeOff :size="16" :stroke-width="2" />
-                      </button>
-                      <button
-                        v-if="editingParticipant !== participant._id"
-                        @click="confirmDeleteParticipant(participant._id, participant.displayName)"
-                        class="text-mission-red hover:text-mission-red/80 transition-colors"
-                        title="Remove participant"
-                      >
-                        <Trash2 :size="16" :stroke-width="2" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
+      <!-- SUBMISSIONS TAB -->
+      <div v-show="activeTab === 'submissions'" class="space-y-4">
+        <!-- Filters -->
+        <div class="flex flex-wrap items-center gap-2">
+          <SearchInput
+            v-model="submissionSearch"
+            placeholder="Search username or problem"
+            container-class="w-full md:w-72"
+          />
+          <FilterButtonGroup
+            v-model="submissionStatusFilter"
+            :options="mainVerdicts"
+            :formatter="(v) => v === 'all' ? 'All' : v"
+          />
+          <MissionSelect
+            :model-value="otherVerdicts.includes(submissionStatusFilter) ? submissionStatusFilter : null"
+            @update:model-value="(v) => (submissionStatusFilter = v ?? 'all')"
+            :options="otherVerdicts"
+            :searchable="false"
+            placeholder="Other verdicts"
+            class="w-40"
+          />
+          <div class="flex items-center gap-3 md:ml-auto">
+            <span class="text-sm text-mission-muted tabular-nums">{{ submissions.length }} of {{ totalSubmissions }}</span>
+            <RefreshButton
+              v-if="contestStatus === 'ongoing' || contestStatus === 'frozen'"
+              :loading="loadingSubmissions"
+              :label="autoRefresh ? 'Refresh · auto every 30s' : 'Refresh'"
+              @click="refreshSubmissions"
+            />
+          </div>
+        </div>
+
+        <!-- Submissions Table -->
+        <LoadingSpinner v-if="loadingSubmissions && submissions.length === 0" message="Loading submissions…" container-class="py-16" />
+        <EmptyState
+          v-else-if="submissions.length === 0"
+          icon="submissions"
+          title="No submissions found"
+          :subtitle="submissionSearch || submissionStatusFilter !== 'all' ? 'Try another search or verdict.' : ''"
+        />
+        <MissionTable
+          v-else
+          :items="submissions"
+          item-key="_id"
+          grid-template-columns="90px minmax(0, 1.6fr) minmax(0, 1fr) 70px 60px 70px 90px 80px"
+          min-width="880px"
+          row-class="hover:bg-white/[0.03]"
+        >
+          <template #header>
+            <div>Time</div>
+            <div>Team</div>
+            <div>Problem</div>
+            <div>Verdict</div>
+            <div class="text-right">Score</div>
+            <div class="text-right">Penalty</div>
+            <div class="text-center">Rank</div>
+            <div class="text-center">Reaction</div>
+          </template>
+          <template #row="{ item: submission }">
+            <div class="text-sm text-mission-muted tabular-nums" :title="formatFullDateTime(submission.submittedAt)">
+              {{ formatClock(submission.submittedAt, true) }}
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm font-medium truncate">{{ participantsByUsername.get(submission.author)?.displayName || submission.author }}</div>
+              <div
+                v-if="participantsByUsername.get(submission.author)?.displayName !== submission.author"
+                class="text-xs text-mission-muted truncate"
+              >
+                {{ submission.author }}
               </div>
             </div>
-
-            <!-- SUBMISSIONS TAB -->
-            <div v-show="activeTab === 'submissions'">
-              <!-- Filters -->
-              <div class="mb-4 flex items-center gap-4 flex-wrap">
-                <SearchInput
-                  v-model="submissionSearch"
-                  placeholder="SEARCH AUTHOR OR PROBLEM..."
-                  container-class="flex-1 min-w-[250px]"
+            <div class="flex items-center gap-2 min-w-0 text-sm">
+              <span v-if="problemLabel(submission.problem_code) !== submission.problem_code" class="font-semibold truncate">{{ problemLabel(submission.problem_code) }}</span>
+              <span class="font-mono text-xs text-mission-muted truncate">{{ submission.problem_code }}</span>
+            </div>
+            <div class="text-sm font-semibold" :class="getStatusClass(submission.submissionStatus)">
+              {{ submission.submissionStatus }}
+            </div>
+            <div class="text-right text-sm tabular-nums">{{ submission.data.score }}</div>
+            <div class="text-right text-sm text-mission-muted tabular-nums">{{ submission.data.penalty }}</div>
+            <!-- Always show both ends of the move: holding a place is a
+                 result too, and a blank cell reads as missing data. -->
+            <div class="text-center text-sm tabular-nums">
+              <span class="inline-flex items-center">
+                <span class="text-mission-muted">{{ submission.data.old_rank }}</span>
+                <ChevronRight :size="12" :stroke-width="2" class="mx-0.5 text-mission-muted" />
+                <span
+                  :class="submission.data.new_rank < submission.data.old_rank
+                    ? 'text-mission-ok'
+                    : submission.data.new_rank > submission.data.old_rank
+                      ? 'text-mission-red'
+                      : 'text-mission-muted'"
+                >
+                  {{ submission.data.new_rank }}
+                </span>
+              </span>
+            </div>
+            <div class="flex items-center justify-center gap-1">
+              <!-- Quick view: only meaningful once a clip exists. -->
+              <button
+                v-if="submission.data.reaction"
+                @click="openReactionPreview(submission)"
+                title="Play the rendered reaction"
+                class="p-1.5 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/5 transition-colors"
+              >
+                <Play :size="14" :stroke-width="2" />
+              </button>
+              <span v-else-if="submission.submissionStatus !== 'AC'" class="text-mission-muted">—</span>
+              <span v-else class="text-mission-muted" title="Not rendered yet">···</span>
+              <!-- Regenerate: confirmed first, since it throws away the
+                   existing clip and re-renders from the raw feeds. -->
+              <button
+                v-if="submission.submissionStatus === 'AC'"
+                @click="askRegenerateSubmissionReaction(submission)"
+                :disabled="regeneratingReactionIds.has(submission._id)"
+                title="Render this reaction again"
+                class="p-1.5 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RotateCw
+                  :size="14"
+                  :stroke-width="2"
+                  :class="{ 'animate-spin': regeneratingReactionIds.has(submission._id) }"
                 />
-                <div class="flex items-center gap-2">
-                  <span class="tech-label">STATUS:</span>
-                  <MissionSelect
-                    v-model="submissionStatusFilter"
-                    :options="['all', 'AC', 'PAC', 'WA', 'RTE', 'RE', 'IR', 'OLE', 'MLE', 'TLE', 'SC', 'IE', 'AB', 'CE', 'UNKNOWN']"
-                    :searchable="false"
-                    container-class="w-32"
-                  />
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="tech-label">SHOWING:</span>
-                  <span class="data-value text-lg">{{ submissions.length }}</span>
-                  <span class="text-gray-500 text-xs">/ {{ totalSubmissions }}</span>
-                </div>
-                <button
-                  v-if="contestStatus === 'ongoing'"
-                  @click="refreshSubmissions"
-                  :disabled="loadingSubmissions"
-                  class="btn-secondary flex items-center gap-2 text-xs"
-                >
-                  <RotateCw
-                    :size="16"
-                    :stroke-width="2"
-                    :class="{ 'animate-spin': loadingSubmissions || autoRefresh }"
-                  />
-                  {{ autoRefresh ? 'AUTO-SYNC' : 'REFRESH' }}
-                </button>
-              </div>
-
-              <!-- Submissions Table -->
-              <div v-if="loadingSubmissions && submissions.length === 0" class="text-center py-12">
-                <div class="inline-block w-8 h-8 border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p class="font-mono text-gray-500 text-xs uppercase">Loading submissions...</p>
-              </div>
-              <div v-else-if="submissions.length === 0" class="text-center py-12 text-gray-500">
-                <FileText :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
-                <p class="font-mono text-sm uppercase">No submissions found</p>
-              </div>
-              <div v-else class="mission-card overflow-hidden bg-mission-gray">
-                <div class="grid grid-cols-12 gap-4 px-6 py-4 bg-mission-dark border-b border-white/10 text-xs">
-                  <div class="col-span-2 tech-label">TIME</div>
-                  <div class="col-span-2 tech-label">AUTHOR</div>
-                  <div class="col-span-1 tech-label">PROBLEM</div>
-                  <div class="col-span-2 tech-label">STATUS</div>
-                  <div class="col-span-1 tech-label text-center">SCORE</div>
-                  <div class="col-span-1 tech-label text-center">PENALTY</div>
-                  <div class="col-span-2 tech-label text-center">RANK CHANGE</div>
-                  <div class="col-span-1 tech-label text-center">REACTION</div>
-                </div>
-                <div class="divide-y divide-white/5 max-h-[600px] overflow-y-auto">
-                  <div
-                    v-for="submission in submissions"
-                    :key="submission._id"
-                    class="grid grid-cols-12 gap-4 px-6 py-3 hover:bg-mission-accent/5 transition-all duration-300 text-xs"
-                  >
-                    <div class="col-span-2 font-mono text-gray-400">{{ formatFullDateTime(submission.submittedAt) }}</div>
-                    <div class="col-span-2 font-mono">{{ submission.author }}</div>
-                    <div class="col-span-1 font-mono text-mission-cyan">{{ problemName(submission.problem_code) }}</div>
-                    <div class="col-span-2">
-                      <span
-                        class="px-2 py-1 font-mono uppercase border rounded-sm"
-                        :class="getStatusClass(submission.submissionStatus)"
-                      >
-                        {{ submission.submissionStatus }}
-                      </span>
-                    </div>
-                    <div class="col-span-1 text-center font-mono data-value">{{ submission.data.score }}</div>
-                    <div class="col-span-1 text-center font-mono text-gray-400">{{ submission.data.penalty }}</div>
-                    <!-- Always show both ends of the move: holding a place is a
-                         result too, and a blank cell reads as missing data. -->
-                    <div class="col-span-2 text-center font-mono">
-                      <span class="text-gray-500">{{ submission.data.old_rank }}</span>
-                      <ChevronRight :size="12" :stroke-width="2" class="inline mx-1" />
-                      <span
-                        :class="submission.data.new_rank < submission.data.old_rank
-                          ? 'text-mission-accent'
-                          : submission.data.new_rank > submission.data.old_rank
-                            ? 'text-mission-red'
-                            : 'text-gray-500'"
-                      >
-                        {{ submission.data.new_rank }}
-                      </span>
-                    </div>
-                    <div class="col-span-1 flex items-center justify-center gap-1">
-                      <!-- Quick view: only meaningful once a clip exists. -->
-                      <button
-                        v-if="submission.data.reaction"
-                        @click="openReactionPreview(submission)"
-                        title="Play the rendered reaction"
-                        class="p-1 border border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent transition-all duration-300"
-                      >
-                        <Play :size="14" :stroke-width="2" />
-                      </button>
-                      <span v-else-if="submission.submissionStatus !== 'AC'" class="text-gray-600">—</span>
-                      <span v-else class="text-gray-600 font-mono">···</span>
-                      <!-- Regenerate: confirmed first, since it throws away the
-                           existing clip and re-renders from the raw feeds. -->
-                      <button
-                        v-if="submission.submissionStatus === 'AC'"
-                        @click="askRegenerateSubmissionReaction(submission)"
-                        :disabled="regeneratingReactionIds.has(submission._id)"
-                        title="Re-render this reaction"
-                        class="p-1 border border-white/20 text-gray-400 hover:border-mission-cyan hover:text-mission-cyan transition-all duration-300"
-                        :class="{ 'opacity-50 cursor-not-allowed': regeneratingReactionIds.has(submission._id) }"
-                      >
-                        <RotateCw
-                          :size="14"
-                          :stroke-width="2"
-                          :class="{ 'animate-spin': regeneratingReactionIds.has(submission._id) }"
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Pagination Controls -->
-              <div v-if="totalPages > 1" class="mt-6 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="tech-label">PAGE:</span>
-                  <span class="data-value">{{ currentPage }} / {{ totalPages }}</span>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <!-- Previous Button -->
-                  <button
-                    @click="prevPage"
-                    :disabled="currentPage === 1"
-                    class="px-4 py-2 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
-                    :class="currentPage === 1
-                      ? 'border-white/10 text-gray-600 cursor-not-allowed'
-                      : 'border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent'"
-                  >
-                    <ChevronLeft :size="16" :stroke-width="2" />
-                  </button>
-
-                  <!-- Page Numbers -->
-                  <div class="flex items-center gap-1">
-                    <button
-                      v-for="page in getPageNumbers()"
-                      :key="page"
-                      @click="page !== '...' && goToPage(Number(page))"
-                      class="px-3 py-2 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
-                      :class="page === currentPage
-                        ? 'border-mission-accent text-mission-accent bg-mission-accent/10'
-                        : page === '...'
-                        ? 'border-transparent text-gray-600 cursor-default'
-                        : 'border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent'"
-                    >
-                      {{ page }}
-                    </button>
-                  </div>
-
-                  <!-- Next Button -->
-                  <button
-                    @click="nextPage"
-                    :disabled="currentPage === totalPages"
-                    class="px-4 py-2 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
-                    :class="currentPage === totalPages
-                      ? 'border-white/10 text-gray-600 cursor-not-allowed'
-                      : 'border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent'"
-                  >
-                    <ChevronRight :size="16" :stroke-width="2" />
-                  </button>
-                </div>
-              </div>
+              </button>
             </div>
+          </template>
+        </MissionTable>
 
-            <!-- PROBLEMS TAB -->
-            <div v-show="activeTab === 'problems'">
-              <div v-if="loadingProblems" class="text-center py-12">
-                <div class="inline-block w-8 h-8 border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p class="font-mono text-gray-500 text-xs uppercase">Loading problems...</p>
-              </div>
-              <div v-else-if="problems.length === 0" class="text-center py-12 text-gray-500">
-                <FileText :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
-                <p class="font-mono text-sm uppercase">No problems found</p>
-              </div>
-              <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div
-                  v-for="problem in problems"
-                  :key="problem._id"
-                  class="mission-card p-6 bg-mission-gray hover:border-mission-accent transition-all duration-300"
-                >
-                  <div class="flex items-center gap-2 mb-3">
-                    <span class="text-mission-accent">●</span>
-                    <h3 class="font-mono font-semibold uppercase text-sm">{{ problem.displayName || problem.code }}</h3>
-                    <span v-if="problem.displayName" class="font-mono text-[10px] text-gray-500 uppercase">({{ problem.code }})</span>
-                  </div>
+        <!-- Pagination Controls -->
+        <div v-if="totalPages > 1" class="flex flex-wrap items-center justify-between gap-3">
+          <span class="text-sm text-mission-muted tabular-nums">Page {{ currentPage }} of {{ totalPages }}</span>
 
-                  <!-- Display-name mapping editor -->
-                  <div class="mb-4">
-                    <label class="tech-label block mb-1">DISPLAY NAME</label>
-                    <div class="flex items-center gap-2">
-                      <input
-                        v-model="problemNameDrafts[problem._id]"
-                        type="text"
-                        :placeholder="problem.code"
-                        class="flex-1 min-w-0 bg-mission-dark border border-white/10 px-2 py-1 font-mono text-xs text-white focus:border-mission-accent focus:outline-none"
-                        @keyup.enter="saveProblemName(problem)"
-                      />
-                      <button
-                        @click="saveProblemName(problem)"
-                        :disabled="savingProblemId === problem._id || (problemNameDrafts[problem._id] ?? '').trim() === (problem.displayName ?? '')"
-                        class="px-3 py-1 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
-                        :class="savingProblemId === problem._id || (problemNameDrafts[problem._id] ?? '').trim() === (problem.displayName ?? '')
-                          ? 'border-white/10 text-gray-600 cursor-not-allowed'
-                          : 'border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark'"
-                      >
-                        {{ savingProblemId === problem._id ? '...' : 'SAVE' }}
-                      </button>
-                    </div>
-                  </div>
+          <div class="flex items-center gap-1">
+            <!-- Previous Button -->
+            <button
+              @click="prevPage"
+              :disabled="currentPage === 1"
+              class="btn-secondary !px-2.5 !py-1.5"
+              title="Previous page"
+            >
+              <ChevronLeft :size="16" :stroke-width="2" />
+            </button>
 
-                  <div class="space-y-2 text-xs">
-                    <div class="flex items-center justify-between">
-                      <span class="tech-label">SUBMISSIONS</span>
-                      <span class="data-value">{{ getProblemSubmissionCount(problem.code) }}</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                      <span class="tech-label">AC RATE</span>
-                      <span class="data-value">{{ getProblemACRate(problem.code) }}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <!-- Page Numbers -->
+            <button
+              v-for="(page, index) in getPageNumbers()"
+              :key="`${page}-${index}`"
+              @click="page !== '...' && goToPage(Number(page))"
+              :disabled="page === '...'"
+              class="min-w-[2rem] px-2 py-1.5 rounded-lg text-sm tabular-nums transition-colors"
+              :class="page === currentPage
+                ? 'bg-mission-accent text-mission-ink font-medium'
+                : page === '...'
+                ? 'text-mission-muted cursor-default'
+                : 'text-mission-muted hover:text-gray-100 hover:bg-white/5'"
+            >
+              {{ page }}
+            </button>
+
+            <!-- Next Button -->
+            <button
+              @click="nextPage"
+              :disabled="currentPage === totalPages"
+              class="btn-secondary !px-2.5 !py-1.5"
+              title="Next page"
+            >
+              <ChevronRight :size="16" :stroke-width="2" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-show="activeTab === 'scoring'" class="max-w-3xl space-y-4">
+        <section class="mission-card p-4 md:p-6 space-y-3">
+          <h2 class="font-semibold">Ranking format</h2>
+          <FilterButtonGroup
+            :model-value="formatSelectValue"
+            :options="FORMATS"
+            :formatter="(f) => f === 'VNOJ' ? 'VNOJ · ranked by points' : 'ICPC · ranked by problems solved'"
+            @update:model-value="selectFormat"
+          />
+          <p class="text-sm text-mission-muted">
+            Changing the format immediately recomputes standings, ranks and the rank history of every submission.
+          </p>
+        </section>
+
+        <section class="mission-card p-4 md:p-6 space-y-3">
+          <h2 class="font-semibold">Penalty per attempt</h2>
+          <div class="flex items-center gap-2 max-w-sm">
+            <input
+              v-model.number="penaltyInput"
+              type="number"
+              min="0"
+              :disabled="savingScoring"
+              class="input-mission tabular-nums"
+              :placeholder="String(defaultPenalty)"
+            />
+            <span class="text-sm text-mission-muted whitespace-nowrap">minutes</span>
+            <button
+              class="btn-secondary shrink-0"
+              :disabled="savingScoring || penaltyValue === (contest.penalty ?? null)"
+              @click="applyPenalty"
+            >
+              {{ savingScoring ? 'Saving…' : 'Set' }}
+            </button>
+          </div>
+          <p class="text-sm text-mission-muted">
+            Every attempt before the first maximum-score submission is charged. Leave blank to use the
+            format default ({{ defaultPenalty }} minutes for {{ formatSelectValue }}).
+          </p>
+        </section>
+
+        <section v-if="formatSelectValue === 'VNOJ'" class="mission-card p-4 md:p-6 space-y-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 class="font-semibold flex-1">Last submission only</h2>
+            <ToggleButton
+              :model-value="contest.lso === true"
+              :label="contest.lso ? 'On' : 'Off'"
+              :disabled="savingScoring"
+              @update:model-value="applyLso"
+            />
+          </div>
+          <p class="text-sm text-mission-muted">
+            Cumulative time counts only the latest scoring submission instead of the sum across problems.
+            Penalties still apply.
+          </p>
+        </section>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <MissionModal
+      :show="showDeleteModal"
+      title="Delete contest"
+      :loading="deleting"
+      :error="deleteError"
+      max-width="md"
+      @close="closeDeleteModal"
+    >
+      <div class="space-y-4 text-sm">
+        <p class="text-gray-300">
+          This permanently deletes <span class="font-mono text-gray-100">{{ contest?.code }}</span> and everything synced for it:
+        </p>
+
+        <ul class="list-disc pl-5 space-y-1 text-mission-muted">
+          <li>{{ participants.length }} participants</li>
+          <li>{{ totalSubmissions }} submissions</li>
+          <li>{{ problems.length }} problems</li>
+          <li>Contest details and settings</li>
+        </ul>
+
+        <p class="text-mission-red">This can't be undone.</p>
+
+        <div class="space-y-2">
+          <label for="delete-confirm" class="tech-label block">
+            Type <span class="font-mono text-gray-100">{{ contest?.code }}</span> to confirm
+          </label>
+          <input
+            id="delete-confirm"
+            v-model="deleteConfirmText"
+            type="text"
+            :placeholder="contest?.code"
+            class="input-mission font-mono"
+            autocomplete="off"
+            @keyup.enter="deleteConfirmText === contest?.code && handleDeleteContest()"
+          />
+        </div>
+      </div>
+
+      <template #actions>
+        <button
+          type="button"
+          @click="closeDeleteModal"
+          :disabled="deleting"
+          class="btn-secondary"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          @click="handleDeleteContest"
+          :disabled="deleting || deleteConfirmText !== contest?.code"
+          class="btn-danger"
+        >
+          <RotateCw
+            v-if="deleting"
+            :size="16"
+            :stroke-width="2"
+            class="animate-spin"
+          />
+          <Trash2 v-else :size="16" :stroke-width="2" />
+          <span>{{ deleting ? 'Deleting…' : 'Delete contest' }}</span>
+        </button>
+      </template>
+    </MissionModal>
+
+    <!-- Add Participant Modal -->
+    <MissionModal
+      :show="showAddParticipantModal"
+      title="Add participants"
+      :loading="addingParticipant"
+      :error="addParticipantError"
+      max-width="2xl"
+      @close="closeAddParticipantModal"
+    >
+      <div class="space-y-5">
+        <!-- Mode Selection -->
+        <div class="space-y-2">
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="mode in ADD_MODES"
+              :key="mode.id"
+              type="button"
+              @click="addParticipantMode = mode.id"
+              class="px-3 py-1.5 border rounded-full text-sm transition-colors"
+              :class="addParticipantMode === mode.id
+                ? 'border-gray-100 bg-gray-100 text-mission-ink'
+                : 'border-white/10 bg-mission-dark text-mission-muted hover:text-gray-100'"
+            >
+              {{ mode.label }}
+            </button>
+          </div>
+          <p class="text-sm text-mission-muted">
+            {{ ADD_MODES.find(m => m.id === addParticipantMode)?.hint }}
+          </p>
+        </div>
+
+        <!-- Modal Body -->
+        <!-- Mode: Existing User -->
+        <div v-if="addParticipantMode === 'existing_user'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="tech-label mb-2 block">VNOJ username</label>
+            <input
+              v-model="newParticipant.participantUsername"
+              type="text"
+              placeholder="e.g. team_hanoi_01"
+              class="input-mission font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="tech-label mb-2 block">Account</label>
+            <MissionSelect
+              v-model="newParticipant.userId"
+              :options="availableUsers"
+              :option-label="(user: any) => `${user.fullName} (${user.username})`"
+              option-value="username"
+              placeholder="Choose an account"
+            />
+          </div>
+        </div>
+
+        <!-- Mode: CSV Import -->
+        <div v-if="addParticipantMode === 'csv_import'" class="space-y-2">
+          <label class="tech-label block">CSV rows: VNOJ username, account username</label>
+          <textarea
+            v-model="newParticipant.csvData"
+            rows="8"
+            placeholder="john_vnoj,john&#10;jane_vnoj,jane"
+            class="input-mission font-mono resize-y"
+          ></textarea>
+          <p class="text-xs text-mission-muted tabular-nums">
+            {{ (newParticipant.csvData || '').split('\n').filter(l => l.trim()).length }} rows
+          </p>
+        </div>
+
+        <!-- Mode: Create User -->
+        <div v-if="addParticipantMode === 'create_user'" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="tech-label mb-2 block">VNOJ username</label>
+            <input
+              v-model="newParticipant.participantUsername"
+              type="text"
+              placeholder="VNOJ username"
+              class="input-mission font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="tech-label mb-2 block">Account username</label>
+            <input
+              v-model="newParticipant.backendUsername"
+              type="text"
+              placeholder="Account username"
+              class="input-mission font-mono"
+            />
+          </div>
+
+          <div>
+            <label class="tech-label mb-2 block">Full name</label>
+            <input
+              v-model="newParticipant.fullName"
+              type="text"
+              placeholder="Full name"
+              class="input-mission"
+            />
+          </div>
+
+          <div>
+            <label class="tech-label mb-2 block">Password</label>
+            <input
+              v-model="newParticipant.password"
+              type="password"
+              placeholder="Password"
+              class="input-mission"
+              autocomplete="new-password"
+            />
+          </div>
+        </div>
+
+        <!-- Mode: Auto Create User -->
+        <div v-if="addParticipantMode === 'auto_create_user'" class="rounded-xl bg-mission-gray p-4 text-sm space-y-1">
+          <div>
+            <span class="text-2xl font-semibold tabular-nums">{{ unmappedParticipantsCount }}</span>
+            <span class="text-mission-muted"> unlinked participants will get a new account with a random password.</span>
+          </div>
+          <p class="text-mission-muted">The passwords are shown once, right after creation. Copy them before closing.</p>
+        </div>
+
+        <!-- Success Stats (after submission) -->
+        <div v-if="addParticipantResult" class="space-y-3">
+          <div class="rounded-xl bg-mission-ok/10 px-4 py-3 text-sm flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span class="flex items-center gap-2 text-mission-ok font-medium">
+              <Check :size="16" :stroke-width="2" />
+              Done
+            </span>
+            <span class="tabular-nums"><span class="font-semibold">{{ addParticipantResult.added }}</span> <span class="text-mission-muted">added</span></span>
+            <span class="tabular-nums"><span class="font-semibold">{{ addParticipantResult.skipped }}</span> <span class="text-mission-muted">skipped</span></span>
+            <span class="tabular-nums"><span class="font-semibold">{{ addParticipantResult.total }}</span> <span class="text-mission-muted">total</span></span>
+          </div>
+
+          <!-- Error details -->
+          <div v-if="addParticipantResult.errors && addParticipantResult.errors.length > 0" class="rounded-xl bg-mission-amber/10 px-4 py-3 text-sm">
+            <div class="font-medium text-mission-amber mb-2">
+              {{ addParticipantResult.errors.length }} {{ addParticipantResult.errors.length === 1 ? 'issue' : 'issues' }}
             </div>
+            <ul class="max-h-32 overflow-y-auto space-y-1 text-mission-amber/90 list-disc pl-5">
+              <li
+                v-for="(error, index) in addParticipantResult.errors"
+                :key="index"
+              >
+                {{ error }}
+              </li>
+            </ul>
+          </div>
 
-            <!-- RANKING TAB -->
-            <div v-show="activeTab === 'ranking'">
-              <div v-if="loadingParticipants || loadingProblems" class="text-center py-12">
-                <div class="inline-block w-8 h-8 border-4 border-mission-accent border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p class="font-mono text-gray-500 text-xs uppercase">Loading ranking...</p>
-              </div>
-              <div v-else-if="participants.length === 0" class="text-center py-12 text-gray-500">
-                <Trophy :size="64" :stroke-width="2" class="mx-auto mb-3 text-gray-600" />
-                <p class="font-mono text-sm uppercase">No participants found</p>
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="w-full text-sm">
-                  <thead>
-                    <tr class="border-b border-white/10 bg-mission-gray">
-                      <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 w-12">#</th>
-                      <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 min-w-[150px]">Participant</th>
-                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20">{{ primaryLabel(rankingFormat) }}</th>
-                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-24">{{ secondaryLabel(rankingFormat) }}</th>
-                      <th
-                        v-for="problem in sortedProblems"
-                        :key="problem._id"
-                        class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20"
-                        :title="problem.displayName ? problem.code : undefined"
-                      >
-                        {{ problem.displayName || problem.code }}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="row in rankingData"
-                      :key="row.participant._id"
-                      class="border-b border-white/5 hover:bg-white/5 transition-colors"
-                    >
-                      <!-- Rank -->
-                      <td class="px-3 py-3 font-mono text-sm text-gray-400">
-                        {{ row.rank }}
-                      </td>
-                      <!-- Display Name -->
-                      <td class="px-3 py-3">
-                        <div class="font-mono text-sm">{{ row.participant.displayName }}</div>
-                        <div class="text-xs text-gray-500">
-                          @{{ row.participant.username }}
-                        </div>
-                      </td>
-                      <!-- Primary metric (Score for VNOJ, Solved for ICPC) -->
-                      <td class="px-3 py-3 text-center">
-                        <span class="font-mono text-sm data-value">{{ row.primary }}</span>
-                      </td>
-                      <!-- Secondary metric (Time for VNOJ, Penalty for ICPC) -->
-                      <td class="px-3 py-3 text-center">
-                        <span class="font-mono text-sm text-gray-400">{{ row.secondary }}</span>
-                      </td>
-                      <!-- Problem Cells -->
-                      <td
-                        v-for="problem in sortedProblems"
-                        :key="problem._id"
-                        class="px-2 py-3 text-center"
-                      >
-                        <div
-                          v-if="row.problemStates[problem.code]?.attempted"
-                          class="inline-flex flex-col items-center justify-center min-w-[50px] px-2 py-1 rounded text-xs font-mono"
-                          :class="row.problemStates[problem.code]?.solved
-                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                            : 'bg-red-500/20 text-red-400 border border-red-500/30'"
-                        >
-                          <span class="font-semibold">
-                            <template v-if="rankingFormat === 'VNOJ'">{{ row.problemStates[problem.code]?.points }}</template>
-                            <template v-else>{{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}</template>
-                          </span>
-                          <span v-if="row.problemStates[problem.code]?.solved" class="text-[10px] opacity-75">
-                            {{ row.problemStates[problem.code]?.time }}'
-                          </span>
-                        </div>
-                        <span v-else class="text-gray-600">-</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+          <!-- Generated Credentials (for auto_create_user mode) -->
+          <div v-if="addParticipantResult.generatedCredentials && addParticipantResult.generatedCredentials.length > 0" class="rounded-xl border border-white/[0.06] overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06]">
+              <span class="text-sm font-medium">
+                New accounts · {{ addParticipantResult.generatedCredentials.length }}
+              </span>
+              <button
+                @click="copyCredentialsToClipboard"
+                class="btn-secondary !px-3 !py-1.5 text-xs"
+              >
+                Copy all
+              </button>
+            </div>
+            <div class="max-h-48 overflow-y-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="text-xs text-mission-muted border-b border-white/[0.06]">
+                    <th class="text-left font-medium px-4 py-2">Username</th>
+                    <th class="text-left font-medium px-4 py-2">Password</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-white/[0.06]">
+                  <tr
+                    v-for="cred in addParticipantResult.generatedCredentials"
+                    :key="cred.username"
+                  >
+                    <td class="px-4 py-2 font-mono">{{ cred.username }}</td>
+                    <td class="px-4 py-2 font-mono">{{ cred.password }}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
-    </main>
 
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="showDeleteModal"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          @click.self="closeDeleteModal"
+      <!-- Modal Footer -->
+      <template #actions>
+        <button
+          type="button"
+          @click="closeAddParticipantModal"
+          :disabled="addingParticipant"
+          class="btn-secondary"
         >
-          <div class="mission-card w-full max-w-lg mx-4 border-mission-red overflow-hidden" style="animation: slideInModal 0.3s ease-out">
-            <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
-              <div class="flex items-center justify-between">
-                <h2 class="text-xl font-display font-bold flex items-center gap-2 text-mission-red">
-                  <AlertCircle :size="24" :stroke-width="2" />
-                  DELETE CONTEST
-                </h2>
-                <button
-                  @click="closeDeleteModal"
-                  class="text-gray-400 hover:text-mission-red transition-colors"
-                >
-                  <X :size="24" :stroke-width="2" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="p-6 space-y-4">
-              <div class="p-4 border border-mission-red bg-mission-red/10">
-                <p class="text-sm font-mono text-mission-red">
-                  ⚠️ WARNING: This action cannot be undone!
-                </p>
-              </div>
-
-              <div class="space-y-3">
-                <p class="text-sm text-gray-300">
-                  You are about to permanently delete the contest <span class="font-mono text-mission-accent">{{ contest?.code }}</span> and all of its related data:
-                </p>
-
-                <ul class="space-y-2 text-sm text-gray-400 font-mono">
-                  <li class="flex items-center gap-2">
-                    <span class="text-mission-red">•</span>
-                    <span>{{ participants.length }} Participant(s)</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <span class="text-mission-red">•</span>
-                    <span>{{ totalSubmissions }} Submission(s)</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <span class="text-mission-red">•</span>
-                    <span>{{ problems.length }} Problem(s)</span>
-                  </li>
-                  <li class="flex items-center gap-2">
-                    <span class="text-mission-red">•</span>
-                    <span>Contest metadata and settings</span>
-                  </li>
-                </ul>
-
-                <p class="text-sm text-gray-400 mt-4">
-                  To confirm deletion, type the contest code below:
-                </p>
-
-                <input
-                  v-model="deleteConfirmText"
-                  type="text"
-                  :placeholder="`Type '${contest?.code}' to confirm`"
-                  class="input-mission font-mono uppercase w-full"
-                  @keyup.enter="deleteConfirmText === contest?.code && handleDeleteContest()"
-                />
-              </div>
-
-              <!-- Error Message -->
-              <div v-if="deleteError" class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono">
-                {{ deleteError }}
-              </div>
-
-              <!-- Actions -->
-              <div class="flex items-center gap-3 pt-4">
-                <button
-                  type="button"
-                  @click="handleDeleteContest"
-                  :disabled="deleting || deleteConfirmText !== contest?.code"
-                  class="flex-1 px-6 py-3 border font-mono text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2"
-                  :class="deleting || deleteConfirmText !== contest?.code
-                    ? 'border-white/10 text-gray-600 cursor-not-allowed'
-                    : 'border-mission-red text-mission-red hover:bg-mission-red hover:text-white'"
-                >
-                  <RotateCw
-                    v-if="deleting"
-                    :size="20"
-                    :stroke-width="2"
-                    class="animate-spin"
-                  />
-                  <Trash2 v-else :size="20" :stroke-width="2" />
-                  <span>{{ deleting ? 'DELETING...' : 'CONFIRM DELETE' }}</span>
-                </button>
-                <button
-                  type="button"
-                  @click="closeDeleteModal"
-                  :disabled="deleting"
-                  class="btn-secondary px-8"
-                >
-                  CANCEL
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Change Format Confirmation Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="showFormatConfirm"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          @click.self="cancelFormatChange"
+          {{ addParticipantResult ? 'Close' : 'Cancel' }}
+        </button>
+        <button
+          v-if="!addParticipantResult"
+          type="button"
+          @click="handleAddParticipants"
+          :disabled="addingParticipant || !canSubmitParticipant"
+          class="btn-primary"
         >
-          <div class="mission-card w-full max-w-lg mx-4 border-mission-amber overflow-hidden" style="animation: slideInModal 0.3s ease-out">
-            <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
-              <div class="flex items-center justify-between">
-                <h2 class="text-xl font-display font-bold flex items-center gap-2 text-mission-amber">
-                  <AlertCircle :size="24" :stroke-width="2" />
-                  CHANGE CONTEST FORMAT
-                </h2>
-                <button
-                  @click="cancelFormatChange"
-                  class="text-gray-400 hover:text-mission-amber transition-colors"
-                >
-                  <X :size="24" :stroke-width="2" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="p-6 space-y-4">
-              <div class="p-4 border border-mission-amber bg-mission-amber/10">
-                <p class="text-sm font-mono text-mission-amber">
-                  ⚠️ This contest is currently {{ contestStatus.toUpperCase() }}.
-                </p>
-              </div>
-
-              <p class="text-sm text-gray-300">
-                Switching <span class="font-mono text-mission-accent">{{ contest?.code }}</span> from
-                <span class="font-mono text-white">{{ contest?.format ?? 'ICPC' }}</span> to
-                <span class="font-mono text-white">{{ pendingFormat }}</span>
-                immediately recomputes participant standings, ranks, and every submission's rank
-                history using different ranking rules. This can visibly reshuffle the live leaderboard
-                and may take a moment for large contests.
-              </p>
-
-              <!-- Actions -->
-              <div class="flex items-center gap-3 pt-4">
-                <button
-                  type="button"
-                  @click="confirmFormatChange"
-                  :disabled="savingFormat"
-                  class="flex-1 px-6 py-3 border font-mono text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 border-mission-amber text-mission-amber hover:bg-mission-amber hover:text-black disabled:opacity-50"
-                >
-                  <RotateCw
-                    v-if="savingFormat"
-                    :size="20"
-                    :stroke-width="2"
-                    class="animate-spin"
-                  />
-                  <span>{{ savingFormat ? 'APPLYING...' : `SWITCH TO ${pendingFormat}` }}</span>
-                </button>
-                <button
-                  type="button"
-                  @click="cancelFormatChange"
-                  :disabled="savingFormat"
-                  class="btn-secondary px-8"
-                >
-                  CANCEL
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
-
-    <!-- Add Participant Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="showAddParticipantModal"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          @click.self="closeAddParticipantModal"
-        >
-          <div class="mission-card w-full max-w-3xl mx-4 border-mission-accent overflow-hidden" style="animation: slideInModal 0.3s ease-out">
-            <!-- Modal Header -->
-            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray relative overflow-hidden">
-              <!-- Decorative corner elements -->
-              <div class="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-mission-accent opacity-30"></div>
-              <div class="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-mission-accent opacity-30"></div>
-
-              <div class="flex items-center justify-between relative z-10">
-                <div>
-                  <h2 class="text-xl font-display font-bold flex items-center gap-3 text-mission-accent mb-1">
-                    <UserPlus :size="24" :stroke-width="2" />
-                    PERSONNEL INTAKE
-                  </h2>
-                  <p class="text-xs font-mono text-gray-500 uppercase tracking-wider">CLASSIFIED :: AUTHORIZED ACCESS ONLY</p>
-                </div>
-                <button
-                  @click="closeAddParticipantModal"
-                  class="text-gray-400 hover:text-mission-accent transition-colors"
-                >
-                  <X :size="24" :stroke-width="2" />
-                </button>
-              </div>
-            </div>
-
-            <!-- Mode Selection -->
-            <div class="p-6 border-b border-white/10 bg-mission-dark">
-              <div class="tech-label mb-3">SELECT INTAKE PROTOCOL</div>
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <button
-                  @click="addParticipantMode = 'existing_user'"
-                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
-                  :class="addParticipantMode === 'existing_user'
-                    ? 'border-mission-accent bg-mission-accent/10 text-mission-accent'
-                    : 'border-white/20 hover:border-mission-accent/50 text-gray-400 hover:text-gray-200'"
-                >
-                  <div class="absolute inset-0 bg-gradient-to-br from-mission-accent/0 to-mission-accent/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div class="relative z-10">
-                    <Users :size="32" :stroke-width="2" class="mx-auto mb-2" />
-                    <div class="font-mono text-xs uppercase tracking-wider font-bold">Existing User</div>
-                    <div class="text-[10px] text-gray-500 mt-1">Link to registered personnel</div>
-                  </div>
-                </button>
-
-                <button
-                  @click="addParticipantMode = 'csv_import'"
-                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
-                  :class="addParticipantMode === 'csv_import'
-                    ? 'border-mission-cyan bg-mission-cyan/10 text-mission-cyan'
-                    : 'border-white/20 hover:border-mission-cyan/50 text-gray-400 hover:text-gray-200'"
-                >
-                  <div class="absolute inset-0 bg-gradient-to-br from-mission-cyan/0 to-mission-cyan/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div class="relative z-10">
-                    <Download :size="32" :stroke-width="2" class="mx-auto mb-2" />
-                    <div class="font-mono text-xs uppercase tracking-wider font-bold">Batch Import</div>
-                    <div class="text-[10px] text-gray-500 mt-1">CSV bulk assignment</div>
-                  </div>
-                </button>
-
-                <button
-                  @click="addParticipantMode = 'create_user'"
-                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
-                  :class="addParticipantMode === 'create_user'
-                    ? 'border-mission-amber bg-mission-amber/10 text-mission-amber'
-                    : 'border-white/20 hover:border-mission-amber/50 text-gray-400 hover:text-gray-200'"
-                >
-                  <div class="absolute inset-0 bg-gradient-to-br from-mission-amber/0 to-mission-amber/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div class="relative z-10">
-                    <UserPlus :size="32" :stroke-width="2" class="mx-auto mb-2" />
-                    <div class="font-mono text-xs uppercase tracking-wider font-bold">New Recruit</div>
-                    <div class="text-[10px] text-gray-500 mt-1">Create user + participant</div>
-                  </div>
-                </button>
-
-                <button
-                  @click="addParticipantMode = 'auto_create_user'"
-                  class="p-4 border-2 transition-all duration-300 relative overflow-hidden group"
-                  :class="addParticipantMode === 'auto_create_user'
-                    ? 'border-purple-500 bg-purple-500/10 text-purple-400'
-                    : 'border-white/20 hover:border-purple-500/50 text-gray-400 hover:text-gray-200'"
-                >
-                  <div class="absolute inset-0 bg-gradient-to-br from-purple-500/0 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <div class="relative z-10">
-                    <UserPlus :size="32" :stroke-width="2" class="mx-auto mb-2" />
-                    <div class="font-mono text-xs uppercase tracking-wider font-bold">Auto Create</div>
-                    <div class="text-[10px] text-gray-500 mt-1">Bulk create users + random passwords</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            <!-- Modal Body -->
-            <div class="p-6 space-y-6 bg-mission-dark max-h-[60vh] overflow-y-auto custom-scrollbar">
-              <!-- Mode: Existing User -->
-              <div v-if="addParticipantMode === 'existing_user'" class="space-y-4">
-                <div class="p-4 border border-mission-accent/30 bg-mission-accent/5">
-                  <p class="text-xs font-mono text-mission-accent flex items-center gap-2">
-                    <Info :size="16" :stroke-width="2" />
-                    Link a participant to an existing user in the system
-                  </p>
-                </div>
-
-                <div>
-                  <label class="tech-label mb-2 block">PARTICIPANT USERNAME (VNOJ)</label>
-                  <input
-                    v-model="newParticipant.participantUsername"
-                    type="text"
-                    placeholder="Enter VNOJ username"
-                    class="input-mission w-full font-mono"
-                  />
-                </div>
-
-                <div>
-                  <label class="tech-label mb-2 block">SELECT BACKEND USER</label>
-                  <MissionSelect
-                    v-model="newParticipant.userId"
-                    :options="availableUsers"
-                    :option-label="(user: any) => `${user.fullName} (@${user.username})`"
-                    option-value="username"
-                    placeholder="-- Select User --"
-                  />
-                </div>
-              </div>
-
-              <!-- Mode: CSV Import -->
-              <div v-if="addParticipantMode === 'csv_import'" class="space-y-4">
-                <div class="p-4 border border-mission-cyan/30 bg-mission-cyan/5">
-                  <p class="text-xs font-mono text-mission-cyan flex items-center gap-2 mb-2">
-                    <Info :size="16" :stroke-width="2" />
-                    Batch import participants from CSV data
-                  </p>
-                  <p class="text-[11px] font-mono text-gray-400">
-                    Format: participant_username,backend_username (one per line)
-                  </p>
-                  <div class="mt-2 p-2 bg-mission-dark border-l-2 border-mission-cyan font-mono text-[10px] text-gray-500">
-                    Example:<br/>
-                    john_vnoj,john_backend<br/>
-                    jane_vnoj,jane_backend
-                  </div>
-                </div>
-
-                <div>
-                  <label class="tech-label mb-2 block">CSV DATA</label>
-                  <textarea
-                    v-model="newParticipant.csvData"
-                    rows="10"
-                    placeholder="participant1,user1&#10;participant2,user2"
-                    class="input-mission w-full font-mono text-sm resize-none"
-                  ></textarea>
-                  <div class="mt-2 flex items-center gap-2 text-xs font-mono text-gray-500">
-                    <span class="tech-label">LINES:</span>
-                    <span class="data-value">{{ (newParticipant.csvData || '').split('\n').filter(l => l.trim()).length }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Mode: Create User -->
-              <div v-if="addParticipantMode === 'create_user'" class="space-y-4">
-                <div class="p-4 border border-mission-amber/30 bg-mission-amber/5">
-                  <p class="text-xs font-mono text-mission-amber flex items-center gap-2">
-                    <AlertCircle :size="16" :stroke-width="2" />
-                    Create a new user and link to participant automatically
-                  </p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label class="tech-label mb-2 block">PARTICIPANT USERNAME (VNOJ)</label>
-                    <input
-                      v-model="newParticipant.participantUsername"
-                      type="text"
-                      placeholder="VNOJ username"
-                      class="input-mission w-full font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label class="tech-label mb-2 block">BACKEND USERNAME</label>
-                    <input
-                      v-model="newParticipant.backendUsername"
-                      type="text"
-                      placeholder="Backend username"
-                      class="input-mission w-full font-mono"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label class="tech-label mb-2 block">FULL NAME</label>
-                  <input
-                    v-model="newParticipant.fullName"
-                    type="text"
-                    placeholder="Enter full name"
-                    class="input-mission w-full"
-                  />
-                </div>
-
-                <div>
-                  <label class="tech-label mb-2 block">PASSWORD</label>
-                  <input
-                    v-model="newParticipant.password"
-                    type="password"
-                    placeholder="Enter password"
-                    class="input-mission w-full font-mono"
-                  />
-                </div>
-              </div>
-
-              <!-- Mode: Auto Create User -->
-              <div v-if="addParticipantMode === 'auto_create_user'" class="space-y-4">
-                <div class="p-4 border border-purple-500/30 bg-purple-500/5">
-                  <p class="text-xs font-mono text-purple-400 flex items-center gap-2 mb-2">
-                    <Info :size="16" :stroke-width="2" />
-                    Auto-create users for unmapped participants
-                  </p>
-                  <p class="text-[11px] font-mono text-gray-400">
-                    This will automatically find all participants without a mapped user and create backend users for them with random passwords.
-                  </p>
-                </div>
-
-                <div class="p-4 border border-white/10 bg-mission-gray">
-                  <div class="tech-label mb-2">UNMAPPED PARTICIPANTS</div>
-                  <div class="data-value text-2xl text-purple-400">{{ unmappedParticipantsCount }}</div>
-                  <p class="text-[10px] text-gray-500 mt-1 font-mono">
-                    participant(s) will have users created for them
-                  </p>
-                </div>
-
-                <div class="p-3 border border-purple-500/20 bg-purple-500/5">
-                  <p class="text-[11px] font-mono text-purple-300">
-                    <strong>Note:</strong> Generated credentials will be shown after creation. Make sure to copy them!
-                  </p>
-                </div>
-              </div>
-
-              <!-- Error Display -->
-              <div v-if="addParticipantError" class="p-3 border border-mission-red bg-mission-red/10">
-                <p class="text-sm font-mono text-mission-red">{{ addParticipantError }}</p>
-              </div>
-
-              <!-- Success Stats (after submission) -->
-              <div v-if="addParticipantResult" class="space-y-3">
-                <div class="p-4 border border-mission-accent bg-mission-accent/10">
-                  <div class="flex items-center gap-2 mb-3">
-                    <Check :size="20" :stroke-width="2" class="text-mission-accent" />
-                    <span class="font-mono text-sm text-mission-accent uppercase font-bold">Operation Complete</span>
-                  </div>
-                  <div class="grid grid-cols-3 gap-4 font-mono text-xs">
-                    <div>
-                      <div class="tech-label mb-1">ADDED</div>
-                      <div class="data-value text-mission-accent text-lg">{{ addParticipantResult.added }}</div>
-                    </div>
-                    <div>
-                      <div class="tech-label mb-1">SKIPPED</div>
-                      <div class="data-value text-mission-amber text-lg">{{ addParticipantResult.skipped }}</div>
-                    </div>
-                    <div>
-                      <div class="tech-label mb-1">TOTAL</div>
-                      <div class="data-value text-lg">{{ addParticipantResult.total }}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Error details -->
-                <div v-if="addParticipantResult.errors && addParticipantResult.errors.length > 0" class="p-3 border border-mission-amber bg-mission-amber/5">
-                  <div class="tech-label mb-2 flex items-center gap-2">
-                    <AlertCircle :size="16" :stroke-width="2" />
-                    ISSUES ENCOUNTERED ({{ addParticipantResult.errors.length }})
-                  </div>
-                  <div class="max-h-32 overflow-y-auto custom-scrollbar space-y-1">
-                    <div
-                      v-for="(error, index) in addParticipantResult.errors"
-                      :key="index"
-                      class="text-xs font-mono text-mission-amber pl-6"
-                    >
-                      • {{ error }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Generated Credentials (for auto_create_user mode) -->
-                <div v-if="addParticipantResult.generatedCredentials && addParticipantResult.generatedCredentials.length > 0" class="p-4 border border-purple-500/30 bg-purple-500/5">
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="tech-label flex items-center gap-2 text-purple-400">
-                      <UserPlus :size="16" :stroke-width="2" />
-                      GENERATED CREDENTIALS ({{ addParticipantResult.generatedCredentials.length }})
-                    </div>
-                    <button
-                      @click="copyCredentialsToClipboard"
-                      class="px-3 py-1 text-xs font-mono border border-purple-500/50 text-purple-400 hover:bg-purple-500/20 transition-colors"
-                    >
-                      COPY ALL
-                    </button>
-                  </div>
-                  <div class="max-h-48 overflow-y-auto custom-scrollbar">
-                    <table class="w-full text-xs font-mono">
-                      <thead>
-                        <tr class="border-b border-purple-500/20">
-                          <th class="text-left py-2 text-gray-400">USERNAME</th>
-                          <th class="text-left py-2 text-gray-400">PASSWORD</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr
-                          v-for="cred in addParticipantResult.generatedCredentials"
-                          :key="cred.username"
-                          class="border-b border-purple-500/10"
-                        >
-                          <td class="py-2 text-purple-300">{{ cred.username }}</td>
-                          <td class="py-2 text-purple-300">{{ cred.password }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Modal Footer -->
-            <div class="px-6 py-4 border-t border-white/10 bg-mission-gray flex items-center justify-between">
-              <div class="text-xs font-mono text-gray-500 uppercase tracking-wider">
-                MODE: <span class="text-mission-accent">{{ addParticipantMode.replace('_', ' ') }}</span>
-              </div>
-              <div class="flex items-center gap-3">
-                <button
-                  type="button"
-                  @click="closeAddParticipantModal"
-                  :disabled="addingParticipant"
-                  class="btn-secondary px-6"
-                >
-                  {{ addParticipantResult ? 'CLOSE' : 'CANCEL' }}
-                </button>
-                <button
-                  v-if="!addParticipantResult"
-                  type="button"
-                  @click="handleAddParticipants"
-                  :disabled="addingParticipant || !canSubmitParticipant"
-                  class="px-6 py-3 border-2 font-mono text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2"
-                  :class="addingParticipant || !canSubmitParticipant
-                    ? 'border-white/10 text-gray-600 cursor-not-allowed bg-mission-gray'
-                    : 'border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark shadow-[0_0_20px_rgba(0,255,157,0.3)] hover:shadow-[0_0_30px_rgba(0,255,157,0.5)]'"
-                >
-                  <RotateCw
-                    v-if="addingParticipant"
-                    :size="20"
-                    :stroke-width="2"
-                    class="animate-spin"
-                  />
-                  <Check v-else :size="20" :stroke-width="2" />
-                  <span>{{ addingParticipant ? 'PROCESSING...' : 'EXECUTE' }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+          <RotateCw
+            v-if="addingParticipant"
+            :size="16"
+            :stroke-width="2"
+            class="animate-spin"
+          />
+          <span>{{ addingParticipant ? 'Working…' : ADD_MODES.find(m => m.id === addParticipantMode)?.action }}</span>
+        </button>
+      </template>
+    </MissionModal>
 
     <!-- Delete Participant Confirmation Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="showDeleteParticipantModal"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          @click.self="closeDeleteParticipantModal"
+    <MissionModal
+      :show="showDeleteParticipantModal"
+      title="Remove participant"
+      :loading="deletingParticipant"
+      max-width="md"
+      @close="closeDeleteParticipantModal"
+    >
+      <p class="text-sm text-gray-300">
+        Remove <span class="font-medium text-gray-100">{{ participantToDelete?.displayName }}</span> from this contest? This can't be undone.
+      </p>
+      <template #actions>
+        <button
+          @click="closeDeleteParticipantModal"
+          :disabled="deletingParticipant"
+          class="btn-secondary"
         >
-          <div class="mission-card w-full max-w-md mx-4 border-mission-red overflow-hidden" style="animation: slideInModal 0.3s ease-out">
-            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
-              <h2 class="text-xl font-display font-bold flex items-center gap-2 text-mission-red">
-                <AlertCircle :size="24" :stroke-width="2" />
-                REMOVE PARTICIPANT
-              </h2>
-            </div>
-            <div class="p-6 space-y-4">
-              <p class="text-sm text-gray-300">
-                Are you sure you want to remove participant <span class="font-mono text-mission-accent">{{ participantToDelete?.displayName }}</span> from this contest?
-              </p>
-              <p class="text-xs text-mission-red font-mono">This action cannot be undone.</p>
-              <div class="flex items-center gap-3 pt-4">
-                <button
-                  @click="handleDeleteParticipant"
-                  :disabled="deletingParticipant"
-                  class="flex-1 px-6 py-3 border font-mono text-sm uppercase tracking-wider transition-all duration-300"
-                  :class="deletingParticipant
-                    ? 'border-white/10 text-gray-600 cursor-not-allowed'
-                    : 'border-mission-red text-mission-red hover:bg-mission-red hover:text-white'"
-                >
-                  {{ deletingParticipant ? 'REMOVING...' : 'CONFIRM' }}
-                </button>
-                <button
-                  @click="closeDeleteParticipantModal"
-                  :disabled="deletingParticipant"
-                  class="btn-secondary px-8"
-                >
-                  CANCEL
-                </button>
-              </div>
-            </div>
-          </div>
+          Cancel
+        </button>
+        <button
+          @click="handleDeleteParticipant"
+          :disabled="deletingParticipant"
+          class="btn-danger"
+        >
+          {{ deletingParticipant ? 'Removing…' : 'Remove' }}
+        </button>
+      </template>
+    </MissionModal>
+
+    <!-- Change Format Confirmation Modal -->
+    <MissionModal
+      :show="showFormatConfirm"
+      title="Change contest format"
+      :loading="savingFormat"
+      max-width="lg"
+      @close="cancelFormatChange"
+    >
+      <div class="space-y-4 text-sm">
+        <div class="rounded-xl bg-mission-amber/10 px-4 py-3 text-mission-amber">
+          This contest is {{ contestStatusBadge(contestStatus).text.toLowerCase() }}.
         </div>
-      </Transition>
-    </Teleport>
+        <p class="text-gray-300">
+          Switching <span class="font-mono text-gray-100">{{ contest?.code }}</span> from
+          {{ contest?.format ?? 'ICPC' }} to {{ pendingFormat }}
+          immediately recomputes participant standings, ranks and every submission's rank
+          history under different ranking rules. This can visibly reshuffle the live leaderboard
+          and may take a moment for large contests.
+        </p>
+      </div>
+      <template #actions>
+        <button
+          type="button"
+          @click="cancelFormatChange"
+          :disabled="savingFormat"
+          class="btn-secondary"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          @click="confirmFormatChange"
+          :disabled="savingFormat"
+          class="btn-primary"
+        >
+          <RotateCw
+            v-if="savingFormat"
+            :size="16"
+            :stroke-width="2"
+            class="animate-spin"
+          />
+          <span>{{ savingFormat ? 'Applying…' : `Switch to ${pendingFormat}` }}</span>
+        </button>
+      </template>
+    </MissionModal>
 
     <!-- Quick view of a rendered reaction -->
     <MissionModal
       :show="previewSubmission !== null"
-      :title="previewSubmission ? `REACTION · ${previewSubmission.author} · ${problemName(previewSubmission.problem_code)}` : ''"
+      :title="previewSubmission ? `Reaction · ${previewSubmission.author} · ${problemName(previewSubmission.problem_code)}` : ''"
       max-width="sm"
       :show-actions="false"
       @close="closeReactionPreview"
@@ -1351,29 +986,29 @@
       <div v-if="previewSubmission">
         <video
           :src="previewSubmission.data.reaction"
-          class="w-full rounded-lg bg-black border border-white/10"
+          class="w-full rounded-xl bg-black"
           controls
           autoplay
           playsinline
         />
-        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs font-mono">
-          <dt class="tech-label">RANK CHANGE</dt>
-          <dd class="text-gray-300">
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+          <dt class="tech-label">Rank change</dt>
+          <dd class="tabular-nums">
             {{ previewSubmission.data.old_rank }} → {{ previewSubmission.data.new_rank }}
           </dd>
-          <dt class="tech-label">SCORE</dt>
-          <dd class="text-gray-300">{{ previewSubmission.data.score }}</dd>
-          <dt class="tech-label">SUBMITTED</dt>
-          <dd class="text-gray-300">{{ formatFullDateTime(previewSubmission.submittedAt) }}</dd>
+          <dt class="tech-label">Score</dt>
+          <dd class="tabular-nums">{{ previewSubmission.data.score }}</dd>
+          <dt class="tech-label">Submitted</dt>
+          <dd class="tabular-nums">{{ formatFullDateTime(previewSubmission.submittedAt) }}</dd>
         </dl>
         <div class="flex gap-3 pt-4">
           <a
             :href="previewSubmission.data.reaction"
             target="_blank"
             rel="noopener noreferrer"
-            class="btn-primary flex-1 text-sm text-center"
+            class="btn-secondary flex-1"
           >
-            OPEN
+            Open in new tab
           </a>
         </div>
       </div>
@@ -1382,30 +1017,24 @@
     <!-- Confirmation for a single re-render -->
     <MissionModal
       :show="regenTarget !== null"
-      title="REGENERATE REACTION"
+      title="Regenerate reaction"
       max-width="lg"
-      confirm-text="REGENERATE"
-      cancel-text="CANCEL"
-      loading-text="QUEUEING..."
+      confirm-text="Regenerate"
+      cancel-text="Cancel"
+      loading-text="Queueing…"
       :loading="regenTarget !== null && regeneratingReactionIds.has(regenTarget._id)"
       @confirm="confirmRegenerateSubmissionReaction"
       @close="regenTarget = null"
     >
-      <div v-if="regenTarget" class="space-y-4">
-        <p class="text-sm text-gray-300">
+      <div v-if="regenTarget" class="space-y-4 text-sm">
+        <p class="text-gray-300">
           Queue a fresh render for
-          <span class="font-mono text-mission-accent">{{ regenTarget.author }}</span> on
-          <span class="font-mono text-mission-cyan">{{ problemName(regenTarget.problem_code) }}</span>?
+          <span class="font-medium text-gray-100">{{ regenTarget.author }}</span> on
+          <span class="font-medium text-gray-100">{{ problemName(regenTarget.problem_code) }}</span>?
         </p>
-        <ul class="space-y-2 text-sm text-gray-400 font-mono">
-          <li class="flex items-center gap-2">
-            <span class="text-mission-amber">•</span>
-            <span>The stored clip is discarded and re-rendered from the raw feeds</span>
-          </li>
-          <li class="flex items-center gap-2">
-            <span class="text-mission-amber">•</span>
-            <span>It will use the current rank change {{ regenTarget.data.old_rank }} → {{ regenTarget.data.new_rank }}</span>
-          </li>
+        <ul class="list-disc pl-5 space-y-1 text-mission-muted">
+          <li>The stored clip is discarded and rendered again from the raw feeds.</li>
+          <li>It will use the current rank change {{ regenTarget.data.old_rank }} → {{ regenTarget.data.new_rank }}.</li>
         </ul>
       </div>
     </MissionModal>
@@ -1413,29 +1042,23 @@
     <!-- Confirmation for the contest-wide re-render -->
     <MissionModal
       :show="showRegenAllConfirm"
-      title="REGENERATE ALL REACTIONS"
+      title="Regenerate all reactions"
       max-width="lg"
-      confirm-text="REGENERATE ALL"
-      cancel-text="CANCEL"
-      loading-text="QUEUEING..."
+      confirm-text="Regenerate all"
+      cancel-text="Cancel"
+      loading-text="Queueing…"
       :loading="regeneratingAllReactions"
       @confirm="confirmRegenerateAllReactions"
       @close="showRegenAllConfirm = false"
     >
-      <div class="space-y-4">
-        <p class="text-sm text-gray-300">
+      <div class="space-y-4 text-sm">
+        <p class="text-gray-300">
           Queue a fresh render for every accepted submission in
-          <span class="font-mono text-mission-accent">{{ contest?.code }}</span>.
+          <span class="font-mono text-gray-100">{{ contest?.code }}</span>.
         </p>
-        <ul class="space-y-2 text-sm text-gray-400 font-mono">
-          <li class="flex items-center gap-2">
-            <span class="text-mission-amber">•</span>
-            <span>{{ acceptedSubmissionCount }} accepted submission(s) on this page's contest</span>
-          </li>
-          <li class="flex items-center gap-2">
-            <span class="text-mission-amber">•</span>
-            <span>Every stored clip is discarded; rendering is serialized and can take a while</span>
-          </li>
+        <ul class="list-disc pl-5 space-y-1 text-mission-muted">
+          <li>{{ acceptedSubmissionCount }} accepted {{ acceptedSubmissionCount === 1 ? 'submission' : 'submissions' }} on the loaded page.</li>
+          <li>Every stored clip is discarded. Rendering runs one at a time and can take a while.</li>
         </ul>
       </div>
     </MissionModal>
@@ -1444,22 +1067,26 @@
     <Teleport to="body">
       <div
         v-if="reactionLog.length > 0"
-        class="fixed bottom-4 right-4 z-40 w-96 max-w-[calc(100vw-2rem)] mission-card bg-mission-gray border border-white/10"
+        class="fixed bottom-4 right-4 z-40 w-96 max-w-[calc(100vw-2rem)] mission-card overflow-hidden shadow-2xl"
       >
-        <div class="flex items-center justify-between px-4 py-2 border-b border-white/10">
-          <span class="tech-label">REACTION ACTIVITY</span>
-          <button @click="reactionLog = []" class="text-gray-500 hover:text-mission-red transition-colors">
+        <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.06]">
+          <span class="text-sm font-medium">Reaction activity</span>
+          <button
+            @click="reactionLog = []"
+            class="p-1 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/5 transition-colors"
+            title="Clear"
+          >
             <X :size="14" :stroke-width="2" />
           </button>
         </div>
-        <div class="max-h-48 overflow-y-auto divide-y divide-white/5">
+        <div class="max-h-48 overflow-y-auto divide-y divide-white/[0.06]">
           <div
             v-for="entry in reactionLog"
             :key="entry.id"
-            class="px-4 py-2 text-xs font-mono flex gap-2"
+            class="px-4 py-2 text-xs flex gap-2"
             :class="entry.ok ? 'text-gray-300' : 'text-mission-red'"
           >
-            <span class="text-gray-500 shrink-0">{{ entry.time }}</span>
+            <span class="text-mission-muted tabular-nums shrink-0">{{ entry.time }}</span>
             <span>{{ entry.message }}</span>
           </div>
         </div>
@@ -1469,30 +1096,15 @@
 </template>
 
 <script setup lang="ts">
-import type { ParticipantResponse, UserEntity } from '@libs/api/internal';
-import {
-  AlertCircle,
-  Calculator,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardList,
-  Download,
-  EyeOff,
-  FileText,
-  Info,
-  Play,
-  RotateCw,
-  Trash2,
-  Trophy,
-  UserPlus,
-  Users,
-  Video,
-  X,
-} from 'lucide-vue-next';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useContestsStore } from '~/stores/contests';
+import type { ContestEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
+import { internalApi, internalClient } from '~/services/api';
+import type { UserEntity, ParticipantResponse } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
+import { RotateCw, Trash2, UserPlus, AlertCircle, Check, ChevronRight, ChevronLeft, Link2, Calculator, Video, Play, X } from 'lucide-vue-next';
+import { contestStatusBadge, formatClock, formatFullDateTime, formatSchedule } from '~/composables/useContestDisplay';
 import {
   type ProblemState,
   type RankingFormat,
@@ -1503,11 +1115,18 @@ import {
   secondaryLabel,
   secondaryMetric,
 } from '~/common/ranking';
-import MissionModal from '~/components/MissionModal.vue';
-import { internalApi, internalClient } from '~/services/api';
-import { useContestsStore } from '~/stores/contests';
-import type { ContestEntity, ProblemEntity, SubmissionEntity } from '~/stores/contests';
 import { resolveProblemName } from '~/utils/problemName';
+
+type AddMode = 'existing_user' | 'csv_import' | 'create_user' | 'auto_create_user';
+const ADD_MODES: { id: AddMode; label: string; hint: string; action: string }[] = [
+  { id: 'existing_user', label: 'Link existing user', hint: 'Add one VNOJ participant and link it to an account that already exists.', action: 'Add participant' },
+  { id: 'csv_import', label: 'Import CSV', hint: 'Add many participants at once, one row per participant.', action: 'Import' },
+  { id: 'create_user', label: 'Create new user', hint: 'Create a new account and add it as a participant.', action: 'Create and add' },
+  { id: 'auto_create_user', label: 'Create accounts for unlinked', hint: 'Create an account for every participant that has no linked account yet.', action: 'Create accounts' },
+];
+
+const ALL_VERDICTS = ['AC', 'PAC', 'WA', 'TLE', 'RTE', 'CE', 'RE', 'MLE', 'OLE', 'IR', 'SC', 'IE', 'AB', 'UNKNOWN'];
+const FORMATS: RankingFormat[] = ['ICPC', 'VNOJ'];
 
 const route = useRoute();
 const router = useRouter();
@@ -1536,7 +1155,8 @@ const showFormatConfirm = ref(false);
 
 const savingScoring = ref(false);
 // null means "unset" — the contest falls back to the format's default penalty.
-const penaltyInput = ref<number | null>(null);
+const penaltyInput = ref<number | '' | null>(null);
+const penaltyValue = computed(() => (penaltyInput.value === '' ? null : penaltyInput.value));
 
 // Judge defaults: ICPC charges 20 minutes per attempt, VNOJ only 5.
 const defaultPenalty = computed(() => (formatSelectValue.value === 'VNOJ' ? 5 : 20));
@@ -1559,8 +1179,8 @@ watch(
 );
 
 // Tab state
-const validTabs = ['details', 'participants', 'submissions', 'problems', 'ranking'] as const;
-type TabType = (typeof validTabs)[number];
+const validTabs = ['ranking', 'participants', 'problems', 'submissions', 'scoring'] as const;
+type TabType = typeof validTabs[number];
 
 // Initialize activeTab from URL query parameter
 const getInitialTab = (): TabType => {
@@ -1568,20 +1188,21 @@ const getInitialTab = (): TabType => {
   if (tabFromQuery && validTabs.includes(tabFromQuery as TabType)) {
     return tabFromQuery as TabType;
   }
-  return 'details';
+  return 'ranking';
 };
 
 const activeTab = ref<TabType>(getInitialTab());
-const tabs = [
-  { id: 'details', label: 'Details', iconComponent: Info },
-  { id: 'participants', label: 'Participants', iconComponent: Users },
-  { id: 'submissions', label: 'Submissions', iconComponent: ClipboardList },
-  { id: 'problems', label: 'Problems', iconComponent: FileText },
-  { id: 'ranking', label: 'Ranking', iconComponent: Trophy },
-];
+const tabs = computed<{ id: TabType; label: string; count?: number }[]>(() => [
+  { id: 'ranking', label: 'Ranking' },
+  { id: 'participants', label: 'Participants', count: participants.value.length },
+  { id: 'problems', label: 'Problems', count: problems.value.length },
+  { id: 'submissions', label: 'Submissions', count: totalSubmissions.value },
+  { id: 'scoring', label: 'Scoring' },
+]);
 
 // Participant state
 const participantSearch = ref('');
+const unlinkedOnly = ref(false);
 const editingParticipant = ref<string | null>(null);
 const selectedUser = ref<Record<string, string>>({});
 const linkingParticipant = ref<string | null>(null);
@@ -1631,16 +1252,10 @@ const deleteConfirmText = ref('');
 
 // Add participant modal state
 const showAddParticipantModal = ref(false);
-const addParticipantMode = ref<'existing_user' | 'csv_import' | 'create_user' | 'auto_create_user'>('existing_user');
+const addParticipantMode = ref<AddMode>('existing_user');
 const addingParticipant = ref(false);
 const addParticipantError = ref('');
-const addParticipantResult = ref<{
-  added: number;
-  skipped: number;
-  total: number;
-  errors: string[];
-  generatedCredentials?: { username: string; password: string }[];
-} | null>(null);
+const addParticipantResult = ref<{added: number; skipped: number; total: number; errors: string[]; generatedCredentials?: {username: string; password: string}[]} | null>(null);
 const newParticipant = ref({
   participantUsername: '',
   userId: '',
@@ -1656,7 +1271,7 @@ const quickMappingAll = ref(false);
 // Delete participant modal state
 const showDeleteParticipantModal = ref(false);
 const deletingParticipant = ref(false);
-const participantToDelete = ref<{ id: string; displayName: string } | null>(null);
+const participantToDelete = ref<{id: string; displayName: string} | null>(null);
 
 // Computed
 const contestStatus = computed(() => {
@@ -1665,19 +1280,25 @@ const contestStatus = computed(() => {
 });
 
 const filteredParticipants = computed(() => {
-  if (!participantSearch.value) return participants.value;
+  const pool = unlinkedOnly.value ? participants.value.filter(p => !p.mapToUser) : participants.value;
+  if (!participantSearch.value) return pool;
   const query = participantSearch.value.toLowerCase();
-  return participants.value.filter(
-    (p) =>
-      p.displayName.toLowerCase().includes(query) ||
-      p.username.toLowerCase().includes(query) ||
-      p.mapToUser?.toLowerCase().includes(query),
+  return pool.filter(p =>
+    p.displayName.toLowerCase().includes(query) ||
+    p.username.toLowerCase().includes(query) ||
+    (p.mapToUser && p.mapToUser.toLowerCase().includes(query))
   );
 });
 
+const participantsByUsername = computed(() => new Map(participants.value.map(p => [p.username, p])));
+
+function groupLabel(participant: ParticipantResponse): string {
+  return participant.groupName || participant.groupCode || '';
+}
+
 // Count of participants without mapped users
 const unmappedParticipantsCount = computed(() => {
-  return participants.value.filter((p) => !p.mapToUser).length;
+  return participants.value.filter(p => !p.mapToUser).length;
 });
 
 const canSubmitParticipant = computed(() => {
@@ -1703,6 +1324,10 @@ const sortedProblems = computed(() => {
   return [...problems.value].sort((a, b) => a.code.localeCompare(b.code));
 });
 
+const problemLetters = computed(() =>
+  new Map(sortedProblems.value.map((p, i) => [p.code, String.fromCharCode(65 + i)]))
+);
+
 // Map problem code -> display name, so surfaces that only carry a code
 // (e.g. the submissions table) can show the mapped name.
 const problemNameByCode = computed(() => {
@@ -1717,8 +1342,66 @@ function problemName(code: string): string {
   return problemNameByCode.value.get(code) ?? code;
 }
 
+function problemLabel(code: string): string {
+  const name = problemName(code);
+  return name !== code ? name : (problemLetters.value.get(code) ?? code);
+}
+
 // Ranking format for this contest (VNOJ: score/time; ICPC: solved/penalty).
 const rankingFormat = computed<RankingFormat>(() => resolveFormat(contest.value ?? participants.value[0]));
+
+const mainVerdicts = computed(() =>
+  rankingFormat.value === 'VNOJ' ? ['all', 'AC', 'PAC', 'WA', 'TLE', 'RTE', 'CE'] : ['all', 'AC', 'WA', 'TLE', 'RTE', 'CE'],
+);
+const otherVerdicts = computed(() => ALL_VERDICTS.filter((v) => !mainVerdicts.value.includes(v)));
+
+const problemStatsByCode = computed(() => {
+  const fmt = rankingFormat.value;
+  const stats = new Map<string, { solved: number; attempts: number; rate: number }>();
+  for (const problem of sortedProblems.value) {
+    let solved = 0;
+    let attempts = 0;
+    for (const participant of participants.value) {
+      const state = buildProblemState(participant, problem.code, fmt);
+      if (state.solved) solved++;
+      attempts += state.tries;
+    }
+    stats.set(problem.code, { solved, attempts, rate: attempts ? (solved / attempts) * 100 : 0 });
+  }
+  return stats;
+});
+
+function problemStats(code: string) {
+  return problemStatsByCode.value.get(code) ?? { solved: 0, attempts: 0, rate: 0 };
+}
+
+function rankCellClass(cell: ProblemState | undefined): string {
+  if (cell?.solved) return 'bg-mission-ok/15 text-mission-ok';
+  if (cell?.pending) return 'bg-mission-amber/15 text-mission-amber';
+  if (cell?.attempted) return 'bg-mission-red/15 text-mission-red';
+  return '';
+}
+
+function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
+function rankCellTitle(label: string, cell: ProblemState | undefined): string {
+  if (!cell?.attempted) return `${label}: not tried`;
+  const pending = cell.pending ? `, ${cell.pending} pending` : '';
+  if (rankingFormat.value === 'VNOJ') {
+    if (cell.solved) {
+      const earlier = cell.tries - 1;
+      return `${label}: ${plural(cell.points, 'point', 'points')} at ${cell.time}′${earlier ? ` after ${plural(earlier, 'earlier try', 'earlier tries')}` : ''}${pending}`;
+    }
+    return `${label}: 0 points${cell.tries ? ` after ${plural(cell.tries, 'try', 'tries')}` : ''}${pending}`;
+  }
+  if (cell.solved) {
+    const wrong = cell.tries - 1;
+    return `${label}: solved at ${cell.time}′${wrong ? ` after ${plural(wrong, 'wrong try', 'wrong tries')}` : ''}`;
+  }
+  return `${label}: ${plural(cell.tries, 'wrong try', 'wrong tries')}`;
+}
 
 // Ranking computed - participants ordered by the server-computed rank (which is
 // already format-aware), enriched with per-problem display state.
@@ -1761,16 +1444,6 @@ const rankingData = computed(() => {
 //   return 'Just now';
 // }
 
-function formatFullDateTime(date: string | Date): string {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-}
-
 // Unused - may be needed for future features
 // function formatTime(date: string | Date): string {
 //   const d = new Date(date);
@@ -1782,33 +1455,22 @@ function formatFullDateTime(date: string | Date): string {
 
 function getStatusClass(status: string): string {
   const classes: Record<string, string> = {
-    AC: 'border-mission-accent text-mission-accent bg-mission-accent/10',
-    PAC: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
-    WA: 'border-mission-red text-mission-red bg-mission-red/10',
-    RTE: 'border-mission-red text-mission-red bg-mission-red/10',
-    RE: 'border-mission-red text-mission-red bg-mission-red/10',
-    IR: 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    OLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    MLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    TLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    SC: 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    IE: 'border-gray-600 text-gray-500 bg-gray-600/10',
-    AB: 'border-gray-600 text-gray-500 bg-gray-600/10',
-    CE: 'border-gray-600 text-gray-500 bg-gray-600/10',
-    UNKNOWN: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
+    'AC': 'text-mission-ok',
+    'PAC': 'text-mission-cyan',
+    'WA': 'text-mission-red',
+    'RTE': 'text-mission-red',
+    'RE': 'text-mission-red',
+    'IR': 'text-mission-red',
+    'OLE': 'text-mission-amber',
+    'MLE': 'text-mission-amber',
+    'TLE': 'text-mission-amber',
+    'SC': 'text-mission-amber',
+    'CE': 'text-mission-amber',
+    'IE': 'text-mission-muted',
+    'AB': 'text-mission-muted',
+    'UNKNOWN': 'text-mission-cyan',
   };
-  return classes[status] || 'border-gray-600 text-gray-500';
-}
-
-function getProblemSubmissionCount(problemCode: string): number {
-  return submissions.value.filter((s) => s.problem_code === problemCode).length;
-}
-
-function getProblemACRate(problemCode: string): string {
-  const problemSubmissions = submissions.value.filter((s) => s.problem_code === problemCode);
-  if (problemSubmissions.length === 0) return '0.0';
-  const acCount = problemSubmissions.filter((s) => s.submissionStatus === 'AC').length;
-  return ((acCount / problemSubmissions.length) * 100).toFixed(1);
+  return classes[status] || 'text-mission-muted';
 }
 
 // Tab navigation
@@ -1819,16 +1481,13 @@ function changeTab(tab: TabType) {
 }
 
 // Watch for URL changes and update activeTab
-watch(
-  () => route.query.tab,
-  (newTab) => {
-    if (newTab && validTabs.includes(newTab as TabType)) {
-      activeTab.value = newTab as TabType;
-    } else if (!newTab) {
-      activeTab.value = 'details';
-    }
-  },
-);
+watch(() => route.query.tab, (newTab) => {
+  if (newTab && validTabs.includes(newTab as TabType)) {
+    activeTab.value = newTab as TabType;
+  } else if (!newTab) {
+    activeTab.value = 'ranking';
+  }
+});
 
 async function loadContest() {
   loading.value = true;
@@ -1911,9 +1570,11 @@ async function loadSubmissions() {
     totalPages.value = response.pagination.totalPages;
 
     contestsStore.setSubmissions(response.data as any[]);
+    return true;
   } catch (err: any) {
     toast.error('Failed to load submissions');
     console.error('Load submissions error:', err);
+    return false;
   } finally {
     loadingSubmissions.value = false;
   }
@@ -1954,13 +1615,19 @@ async function saveProblemName(problem: ProblemEntity) {
     problems.value = updated;
     contestsStore.setProblems(updated);
     problemNameDrafts.value[problem._id] = draft;
-    toast.success(draft ? `Renamed ${problem.code} → ${draft}` : `Cleared display name for ${problem.code}`);
+    toast.success(draft ? `Renamed ${problem.code} to ${draft}` : `Cleared the display name of ${problem.code}`);
   } catch (err: any) {
     toast.error('Failed to update problem name');
     console.error('Update problem name error:', err);
   } finally {
     savingProblemId.value = null;
   }
+}
+
+function selectFormat(format: RankingFormat) {
+  if (savingFormat.value) return;
+  formatSelectValue.value = format;
+  onFormatChange();
 }
 
 function onFormatChange() {
@@ -1996,17 +1663,20 @@ function cancelFormatChange() {
  * Push a scoring-rule change. The API recomputes standings, ranks and the
  * per-submission rank history itself, so reload both lists afterwards.
  */
-async function applyScoringChange(updates: { penalty?: number; lso?: boolean }, label: string) {
+async function applyScoringChange(updates: { penalty?: number | null; lso?: boolean }, label: string) {
   if (!contest.value) return;
 
   savingScoring.value = true;
   try {
-    const updated = await internalApi.contest.update(contest.value.code, updates);
+    const updated = await internalApi.contest.update(
+      contest.value.code,
+      updates as Parameters<typeof internalApi.contest.update>[1],
+    );
     contest.value = updated;
     contestsStore.setCurrentContest(updated);
-    contestsStore.updateContest(updated.code, updates);
+    contestsStore.updateContest(updated.code, updated);
     await Promise.all([loadSubmissions(), loadParticipants()]);
-    toast.success(`${label} updated — standings recalculated`);
+    toast.success(`${label} updated, standings recalculated`);
   } catch (err: any) {
     // Revert the inputs to whatever the contest actually holds.
     penaltyInput.value = contest.value?.penalty ?? null;
@@ -2018,15 +1688,15 @@ async function applyScoringChange(updates: { penalty?: number; lso?: boolean }, 
 }
 
 function applyPenalty() {
-  if (penaltyInput.value === null || penaltyInput.value < 0) {
+  if (penaltyValue.value !== null && penaltyValue.value < 0) {
     toast.error('Penalty must be zero or more minutes');
     return;
   }
-  applyScoringChange({ penalty: penaltyInput.value }, 'Penalty');
+  applyScoringChange({ penalty: penaltyValue.value }, 'Penalty');
 }
 
 function applyLso(enabled: boolean) {
-  applyScoringChange({ lso: enabled }, 'LSO');
+  applyScoringChange({ lso: enabled }, 'Last submission only');
 }
 
 async function applyFormat(format: 'ICPC' | 'VNOJ') {
@@ -2062,8 +1732,7 @@ async function loadUsers() {
 }
 
 async function refreshSubmissions() {
-  await loadSubmissions();
-  toast.success('Submissions refreshed');
+  if (await loadSubmissions()) toast.success('Submissions refreshed');
 }
 
 // Pagination handlers
@@ -2178,12 +1847,12 @@ async function saveParticipantMapping(participantId: string) {
 
     // Update local state
     contestsStore.updateParticipant(participantId, { mapToUser: userToLink || undefined });
-    const index = participants.value.findIndex((p) => p._id === participantId);
+    const index = participants.value.findIndex(p => p._id === participantId);
     if (index !== -1) {
       participants.value[index].mapToUser = userToLink || undefined;
     }
 
-    toast.success(userToLink ? 'Participant mapped successfully' : 'Participant unmapped successfully');
+    toast.success(userToLink ? 'Participant linked' : 'Participant unlinked');
     editingParticipant.value = null;
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to link participant');
@@ -2201,7 +1870,7 @@ async function unlinkParticipant(participantId: string) {
 
     // Update local state
     contestsStore.updateParticipant(participantId, { mapToUser: undefined });
-    const index = participants.value.findIndex((p) => p._id === participantId);
+    const index = participants.value.findIndex(p => p._id === participantId);
     if (index !== -1) {
       participants.value[index].mapToUser = undefined;
     }
@@ -2227,7 +1896,9 @@ async function syncParticipants() {
     await loadParticipants();
 
     // Show success message with stats
-    toast.success(`Participants synced: ${result.added} added, ${result.skipped} skipped (${result.total} total)`);
+    toast.success(
+      `Participants synced: ${result.added} added, ${result.skipped} skipped (${result.total} total)`
+    );
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to sync participants');
     console.error('Sync participants error:', err);
@@ -2249,11 +1920,14 @@ async function resyncContest() {
     contestsStore.setCurrentContest(result.contest);
 
     // Reload all data
-    await Promise.all([loadParticipants(), loadProblems()]);
+    await Promise.all([
+      loadParticipants(),
+      loadProblems(),
+    ]);
 
     // Show detailed success message
     toast.success(
-      `Contest resynced! Problems: ${result.problems.added} added (${result.problems.total} total), Participants: ${result.participants.added} added (${result.participants.total} total)`,
+      `Contest resynced! Problems: ${result.problems.added} added (${result.problems.total} total), Participants: ${result.participants.added} added (${result.participants.total} total)`
     );
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to resync contest');
@@ -2272,7 +1946,10 @@ async function forceSyncSubmissions() {
     const result = await internalApi.contest.forceSyncSubmissions(contest.value.code);
 
     // Reload submissions and participants to reflect updated data
-    await Promise.all([loadSubmissions(), loadParticipants()]);
+    await Promise.all([
+      loadSubmissions(),
+      loadParticipants(),
+    ]);
 
     // Show detailed success message
     toast.success(result.message);
@@ -2363,13 +2040,13 @@ async function confirmRegenerateSubmissionReaction() {
       `/reactions/submissions/${submissionId}/regenerate`,
     );
     toast.success(data.message);
-    logReaction(`${submission.author} / ${problemName(submission.problem_code)} — ${data.message}`);
+    logReaction(`${submission.author} / ${problemName(submission.problem_code)}: ${data.message}`);
     regenTarget.value = null;
     await loadSubmissions();
   } catch (err: any) {
     const message = err.response?.data?.message || 'Failed to queue reaction render';
     toast.error(message);
-    logReaction(`${submission.author} / ${problemName(submission.problem_code)} — ${message}`, false);
+    logReaction(`${submission.author} / ${problemName(submission.problem_code)}: ${message}`, false);
     console.error('Regenerate submission reaction error:', err);
   } finally {
     const next = new Set(regeneratingReactionIds.value);
@@ -2379,7 +2056,7 @@ async function confirmRegenerateSubmissionReaction() {
 }
 
 function startAutoRefresh() {
-  if (contestStatus.value === 'ongoing') {
+  if (contestStatus.value === 'ongoing' || contestStatus.value === 'frozen') {
     autoRefresh.value = true;
     refreshInterval = setInterval(() => {
       loadSubmissions();
@@ -2417,7 +2094,7 @@ async function handleDeleteContest() {
 
     // Show success message with deletion counts
     toast.success(
-      `Contest deleted successfully! Removed: ${result.deletedCounts.participants} participants, ${result.deletedCounts.submissions} submissions, ${result.deletedCounts.problems} problems`,
+      `Contest deleted successfully! Removed: ${result.deletedCounts.participants} participants, ${result.deletedCounts.submissions} submissions, ${result.deletedCounts.problems} problems`
     );
 
     // Navigate back to contests list
@@ -2450,17 +2127,14 @@ function copyCredentialsToClipboard() {
   if (!addParticipantResult.value?.generatedCredentials) return;
 
   const text = addParticipantResult.value.generatedCredentials
-    .map((cred) => `${cred.username},${cred.password}`)
+    .map(cred => `${cred.username},${cred.password}`)
     .join('\n');
 
-  navigator.clipboard
-    .writeText(text)
-    .then(() => {
-      toast.success('Credentials copied to clipboard');
-    })
-    .catch(() => {
-      toast.error('Failed to copy credentials');
-    });
+  navigator.clipboard.writeText(text).then(() => {
+    toast.success('Credentials copied to clipboard');
+  }).catch(() => {
+    toast.error('Failed to copy credentials');
+  });
 }
 
 async function handleAddParticipants() {
@@ -2525,10 +2199,11 @@ async function handleDeleteParticipant() {
     await internalApi.contest.removeParticipant(participantToDelete.value.id);
 
     // Remove from local state
-    const index = participants.value.findIndex((p) => p._id === participantToDelete.value?.id);
+    const index = participants.value.findIndex(p => p._id === participantToDelete.value?.id);
     if (index !== -1) {
       participants.value.splice(index, 1);
     }
+    contestsStore.setParticipants(participants.value);
 
     toast.success(`Participant ${participantToDelete.value.displayName} removed successfully`);
     closeDeleteParticipantModal();
@@ -2545,10 +2220,10 @@ async function quickMapAll() {
 
   try {
     // Get all unmapped participants
-    const unmappedParticipants = participants.value.filter((p) => !p.mapToUser);
+    const unmappedParticipants = participants.value.filter(p => !p.mapToUser);
 
     if (unmappedParticipants.length === 0) {
-      toast.info('No unmapped participants found');
+      toast.info('Every participant is already linked');
       return;
     }
 
@@ -2560,7 +2235,7 @@ async function quickMapAll() {
     for (const participant of unmappedParticipants) {
       // Find users with matching username and CONTESTANT role
       const matchingUsers = availableUsers.value.filter(
-        (user) => user.username === participant.username && user.role === 'contestant',
+        user => user.username === participant.username && user.role === 'contestant'
       );
 
       if (matchingUsers.length === 0) {
@@ -2575,7 +2250,7 @@ async function quickMapAll() {
 
           // Update local state
           contestsStore.updateParticipant(participant._id, { mapToUser: matchingUsers[0].username });
-          const index = participants.value.findIndex((p) => p._id === participant._id);
+          const index = participants.value.findIndex(p => p._id === participant._id);
           if (index !== -1) {
             participants.value[index].mapToUser = matchingUsers[0].username;
           }
@@ -2589,16 +2264,16 @@ async function quickMapAll() {
       } else {
         // Error if multiple matching users found
         errors.push(
-          `Multiple CONTESTANT users found for participant "${participant.username}" (${matchingUsers.length} matches). Please map manually.`,
+          `${matchingUsers.length} contestant accounts match "${participant.username}". Link it by hand.`
         );
       }
     }
 
     // Show summary toast
     if (mapped > 0) {
-      toast.success(`Quick map complete: ${mapped} mapped, ${skipped} skipped`);
+      toast.success(`Auto-link done: ${mapped} linked, ${skipped} skipped`);
     } else {
-      toast.info(`Quick map complete: ${mapped} mapped, ${skipped} skipped`);
+      toast.info(`Auto-link done: ${mapped} linked, ${skipped} skipped`);
     }
 
     // Show errors if any
@@ -2608,7 +2283,7 @@ async function quickMapAll() {
       }
     }
   } catch (error: unknown) {
-    toast.error('Failed to quick map participants');
+    toast.error('Failed to auto-link participants');
     console.error('Quick map all error:', error);
   } finally {
     quickMappingAll.value = false;
@@ -2618,7 +2293,12 @@ async function quickMapAll() {
 onMounted(async () => {
   await loadContest();
   if (contest.value) {
-    await Promise.all([loadParticipants(), loadSubmissions(), loadProblems(), loadUsers()]);
+    await Promise.all([
+      loadParticipants(),
+      loadSubmissions(),
+      loadProblems(),
+      loadUsers(),
+    ]);
     startAutoRefresh();
   }
 });
@@ -2628,63 +2308,3 @@ onUnmounted(() => {
   contestsStore.clearContestData();
 });
 </script>
-
-<style scoped>
-/* Add custom scrollbar for submissions table */
-.max-h-\[600px\]::-webkit-scrollbar {
-  width: 8px;
-}
-
-.max-h-\[600px\]::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.max-h-\[600px\]::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 157, 0.3);
-  border-radius: 4px;
-}
-
-.max-h-\[600px\]::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 157, 0.5);
-}
-
-/* Custom scrollbar for modals */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 157, 0.3);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 157, 0.5);
-}
-
-/* Modal animations */
-@keyframes slideInModal {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-</style>

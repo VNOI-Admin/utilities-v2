@@ -47,30 +47,30 @@ export function rankDelta(item: ReactionVideoItem): string {
 export function rankClass(item: ReactionVideoItem): string {
   const { rankBefore, rankAfter } = item;
   if (!rankBefore || !rankAfter || rankBefore === rankAfter) {
-    return 'text-gray-500';
+    return 'text-mission-muted';
   }
-  return rankAfter < rankBefore ? 'text-mission-accent' : 'text-mission-red';
+  return rankAfter < rankBefore ? 'text-mission-ok' : 'text-mission-red';
 }
 
 export function verdictClass(status: string): string {
   switch (status.toUpperCase()) {
     case 'AC':
-      return 'bg-mission-accent/15 border-mission-accent/60 text-mission-accent';
+      return 'bg-mission-ok/15 text-mission-ok';
     case 'PAC':
-      return 'bg-mission-cyan/15 border-mission-cyan/60 text-mission-cyan';
+      return 'bg-mission-cyan/15 text-mission-cyan';
     case 'WA':
     case 'RTE':
     case 'RE':
     case 'IR':
-      return 'bg-mission-red/15 border-mission-red/60 text-mission-red';
+      return 'bg-mission-red/15 text-mission-red';
     case 'TLE':
     case 'MLE':
     case 'OLE':
     case 'SC':
     case 'CE':
-      return 'bg-mission-amber/15 border-mission-amber/60 text-mission-amber';
+      return 'bg-mission-amber/15 text-mission-amber';
     default:
-      return 'bg-white/10 border-white/30 text-gray-300';
+      return 'bg-white/10 text-gray-300';
   }
 }
 
@@ -81,22 +81,22 @@ export function verdictClass(status: string): string {
 export function verdictColor(status?: string): string {
   switch ((status ?? '').toUpperCase()) {
     case 'AC':
-      return '#00ff9d';
+      return '#7ee2b8';
     case 'PAC':
-      return '#00d4ff';
+      return '#9fd8ff';
     case 'WA':
     case 'RTE':
     case 'RE':
     case 'IR':
-      return '#ff3366';
+      return '#ff9bb3';
     case 'TLE':
     case 'MLE':
     case 'OLE':
     case 'SC':
     case 'CE':
-      return '#ffb830';
+      return '#f5c98a';
     default:
-      return '#7a7a7a';
+      return '#8b8b9a';
   }
 }
 
@@ -106,34 +106,6 @@ export function formatDuration(seconds: number): string {
   }
   const total = Math.round(seconds);
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
-}
-
-export function relativeTime(iso?: string): string {
-  if (!iso) {
-    return '—';
-  }
-  const then = Date.parse(iso);
-  if (Number.isNaN(then)) {
-    return iso;
-  }
-  const seconds = Math.max(0, (Date.now() - then) / 1000);
-  const units: [number, string][] = [
-    [60, 'second'],
-    [3600, 'minute'],
-    [86400, 'hour'],
-    [2592000, 'day'],
-  ];
-  if (seconds < 60) {
-    return 'just now';
-  }
-  for (let i = 1; i < units.length; ++i) {
-    if (seconds < units[i][0]) {
-      const value = Math.floor(seconds / units[i - 1][0]);
-      return `${value} ${units[i][1]}${value === 1 ? '' : 's'} ago`;
-    }
-  }
-  const days = Math.floor(seconds / 86400);
-  return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
 export function formatDateTime(iso: string): string {

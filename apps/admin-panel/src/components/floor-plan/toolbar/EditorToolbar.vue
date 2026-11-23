@@ -15,7 +15,7 @@ interface Tool {
 
 const tools: Tool[] = [
   { mode: 'select', icon: MousePointer2, label: 'Select', shortcut: 'V' },
-  { mode: 'area-select', icon: MousePointerSquareDashed, label: 'Area Select', shortcut: 'A' },
+  { mode: 'area-select', icon: MousePointerSquareDashed, label: 'Area select', shortcut: 'A' },
   { mode: 'table', icon: Square, label: 'Table', shortcut: 'T' },
   { mode: 'wall', icon: Slash, label: 'Wall', shortcut: 'W' },
   { mode: 'comment', icon: MessageSquare, label: 'Comment', shortcut: 'M' },
@@ -42,9 +42,9 @@ function resetZoom() {
 </script>
 
 <template>
-  <div class="editor-toolbar flex items-center gap-2 px-4 py-2 bg-mission-dark border-b border-white/10">
+  <div class="editor-toolbar flex items-center gap-3 px-4 py-2 bg-mission-dark border-b border-white/[0.06] overflow-x-auto">
     <!-- Tools -->
-    <div class="flex items-center gap-1 border-r border-white/10 pr-4">
+    <div class="flex items-center gap-1 border-r border-white/[0.06] pr-3">
       <button
         v-for="tool in tools"
         :key="tool.mode"
@@ -58,11 +58,11 @@ function resetZoom() {
     </div>
 
     <!-- View Options -->
-    <div class="flex items-center gap-1 border-r border-white/10 pr-4">
+    <div class="flex items-center gap-1 border-r border-white/[0.06] pr-3">
       <button
         class="toolbar-btn"
         :class="{ active: store.gridVisible }"
-        title="Toggle Grid (G)"
+        title="Toggle grid (G)"
         @click="store.toggleGrid()"
       >
         <Grid3x3 :size="18" />
@@ -70,7 +70,7 @@ function resetZoom() {
       <button
         class="toolbar-btn"
         :class="{ active: store.snapToGrid }"
-        title="Snap to Grid"
+        title="Snap to grid"
         @click="store.toggleSnapToGrid()"
       >
         <Magnet :size="18" />
@@ -78,17 +78,17 @@ function resetZoom() {
     </div>
 
     <!-- Zoom Controls -->
-    <div class="flex items-center gap-1 border-r border-white/10 pr-4">
-      <button class="toolbar-btn" title="Zoom Out (-)" @click="zoomOut">
+    <div class="flex items-center gap-1 border-r border-white/[0.06] pr-3">
+      <button class="toolbar-btn" title="Zoom out (-)" @click="zoomOut">
         <ZoomOut :size="18" />
       </button>
-      <span class="text-white/60 text-sm font-mono w-12 text-center">
+      <span class="text-mission-muted text-xs tabular-nums w-12 text-center">
         {{ Math.round(store.zoom * 100) }}%
       </span>
-      <button class="toolbar-btn" title="Zoom In (+)" @click="zoomIn">
+      <button class="toolbar-btn" title="Zoom in (+)" @click="zoomIn">
         <ZoomIn :size="18" />
       </button>
-      <button class="toolbar-btn" title="Reset Zoom" @click="resetZoom">
+      <button class="toolbar-btn" title="Reset zoom" @click="resetZoom">
         <RotateCcw :size="18" />
       </button>
     </div>
@@ -126,10 +126,10 @@ function resetZoom() {
 
 <style scoped>
 .toolbar-btn {
-  @apply p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed;
+  @apply p-2 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/[0.06] transition-colors disabled:opacity-30 disabled:cursor-not-allowed;
 }
 
 .toolbar-btn.active {
-  @apply text-mission-accent bg-mission-accent/20;
+  @apply text-mission-accent bg-mission-accent/15;
 }
 </style>

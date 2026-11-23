@@ -3,7 +3,7 @@
     :is="to ? 'router-link' : 'button'"
     :to="to"
     @click="handleClick"
-    class="px-4 py-2 border border-white/20 hover:border-mission-accent hover:text-mission-accent transition-all duration-300 uppercase text-sm tracking-wider flex items-center gap-2"
+    class="btn-secondary"
     :class="buttonClass"
   >
     <ArrowLeft :size="16" :stroke-width="2" />
@@ -12,6 +12,7 @@
 </template>
 
 <script setup lang="ts">
+import { getCurrentInstance } from 'vue';
 import { useRouter } from 'vue-router';
 import { ArrowLeft } from 'lucide-vue-next';
 
@@ -22,7 +23,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  label: 'BACK',
+  label: 'Back',
   buttonClass: '',
 });
 
@@ -31,9 +32,10 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
+const hasClickListener = !!getCurrentInstance()?.vnode.props?.onClick;
 
 function handleClick() {
-  if (!props.to) {
+  if (!props.to && !hasClickListener) {
     // If no route specified, go back in history
     router.back();
   }

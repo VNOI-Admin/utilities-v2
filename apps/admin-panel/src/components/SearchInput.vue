@@ -9,9 +9,9 @@
       class="input-mission w-full pl-10"
     />
     <Search
-      :size="20"
+      :size="16"
       :stroke-width="2"
-      class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-mission-accent transition-colors"
+      class="absolute left-3 top-1/2 -translate-y-1/2 text-mission-muted group-focus-within:text-gray-100 transition-colors"
     />
   </div>
 </template>
@@ -27,7 +27,7 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
-  placeholder: 'SEARCH...',
+  placeholder: 'Search',
   minWidth: '300px',
   inputClass: '',
   containerClass: 'w-full md:flex-1 md:min-w-[300px]',

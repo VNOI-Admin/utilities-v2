@@ -34,7 +34,7 @@ export class UpdateUserDto {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
-  group?: string;
+  group?: string | null;
 
   @ApiProperty({ required: false })
   @ToBoolean()

@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/users/:username',
       name: 'UserDetail',
-      component: () => import('~/views/UserDetail.vue'),
+      component: () => import('~/views/Users.vue'),
       meta: { requiresAuth: true, allowedRoles: ['admin'] },
     },
     {
@@ -136,7 +136,7 @@ const router = createRouter({
       path: '/floor-plans/:code/view',
       name: 'FloorPlanViewer',
       component: () => import('~/views/FloorPlanViewerView.vue'),
-      meta: { requiresAuth: true, allowedRoles: ['admin', 'coach'], layout: false },
+      meta: { requiresAuth: true, allowedRoles: ['admin'], layout: false },
     },
   ]),
 });

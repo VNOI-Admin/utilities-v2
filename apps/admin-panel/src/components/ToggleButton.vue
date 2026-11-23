@@ -2,11 +2,11 @@
   <button
     @click="$emit('update:modelValue', !modelValue)"
     type="button"
-    class="px-4 py-2 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
+    class="px-3 py-1.5 border rounded-full text-sm inline-flex items-center transition-colors"
     :class="[
       modelValue
-        ? 'border-mission-accent text-mission-accent bg-mission-accent/10'
-        : 'border-white/20 text-gray-400 hover:border-white/40',
+        ? 'border-gray-100 bg-gray-100 text-mission-ink'
+        : 'border-white/10 bg-mission-dark text-mission-muted hover:text-gray-100',
       buttonClass
     ]"
   >
@@ -44,7 +44,7 @@ defineEmits<{
 
 const indicatorColor = computed(() => {
   const colorMap = {
-    accent: 'bg-mission-accent',
+    accent: 'bg-mission-ok',
     cyan: 'bg-mission-cyan',
     red: 'bg-mission-red',
     amber: 'bg-mission-amber',

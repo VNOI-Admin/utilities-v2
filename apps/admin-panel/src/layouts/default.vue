@@ -1,18 +1,18 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background flex">
+  <div class="min-h-screen bg-mission-black lg:pl-60">
     <!-- Top Header Bar (Always visible) -->
-    <div class="fixed top-0 left-0 right-0 h-14 bg-mission-dark border-b border-white/10 flex items-center px-4 z-50">
+    <div class="fixed top-0 left-0 right-0 h-14 bg-mission-black/90 backdrop-blur border-b border-white/[0.06] flex items-center px-4 z-40 lg:hidden">
       <button
         @click="isSidebarOpen = !isSidebarOpen"
-        class="p-2 -ml-2 text-gray-400 hover:text-white transition-colors"
+        class="p-2 -ml-2 rounded-lg text-mission-muted hover:text-white transition-colors"
         :title="isSidebarOpen ? 'Close sidebar' : 'Open sidebar'"
       >
-        <Menu v-if="!isSidebarOpen" :size="24" />
-        <X v-else :size="24" />
+        <Menu v-if="!isSidebarOpen" :size="20" />
+        <X v-else :size="20" />
       </button>
-      <div class="ml-3 flex items-center gap-2">
-        <span class="text-mission-accent text-lg font-bold">█</span>
-        <span class="font-display font-bold text-white">MISSION<span class="text-mission-accent">_</span>CONTROL</span>
+      <div class="ml-2 flex items-center gap-2">
+        <span class="grid place-items-center w-6 h-6 rounded-lg bg-mission-accent text-mission-ink text-xs font-bold">V</span>
+        <span class="font-semibold">VNOI Ops</span>
       </div>
     </div>
 
@@ -21,73 +21,70 @@
       <div
         v-if="isSidebarOpen"
         @click="isSidebarOpen = false"
-        class="fixed inset-0 bg-black/50 z-40"
+        class="fixed inset-0 bg-black/50 z-40 lg:hidden"
       />
     </Transition>
 
     <!-- Sidebar (Always collapsible) -->
     <aside
       :class="[
-        'w-72 bg-mission-dark border-r border-white/10 flex flex-col z-50',
-        'fixed inset-y-0 left-0 pt-14 transform transition-transform duration-300 ease-in-out',
+        'w-60 bg-mission-black border-r border-white/[0.06] flex flex-col z-50',
+        'fixed inset-y-0 left-0 transform transition-transform duration-200 ease-out lg:translate-x-0',
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
       ]"
     >
       <!-- Scrollable sidebar content -->
       <div class="flex-1 flex flex-col min-h-0 overflow-y-auto">
         <!-- Logo/Brand -->
-        <div class="p-6 border-b border-white/10 flex-shrink-0">
-          <div class="flex items-center gap-3 mb-2">
-            <span class="text-mission-accent text-2xl font-bold">█</span>
-            <h1 class="text-2xl font-display font-bold text-glow">
-              MISSION<span class="text-mission-accent">_</span>CONTROL
-            </h1>
-          </div>
-          <p class="text-xs font-mono text-gray-600 uppercase tracking-wider">ADMIN INTERFACE v2.0</p>
+        <div class="px-5 pt-5 pb-3 flex items-center gap-2.5 flex-shrink-0">
+          <span class="grid place-items-center w-7 h-7 rounded-lg bg-mission-accent text-mission-ink text-sm font-bold">V</span>
+          <span class="font-semibold">VNOI <span class="font-normal text-mission-muted">Ops</span></span>
         </div>
 
         <!-- Navigation Menu -->
-        <nav class="flex-1 p-4 space-y-1">
-          <router-link
-            v-for="item in menuItems"
-            :key="item.path"
-            :to="item.path"
-            class="flex items-center gap-3 px-4 py-3 rounded transition-all duration-300 group"
-            :class="isActive(item.path)
-              ? 'bg-mission-accent/10 border-l-2 border-mission-accent text-mission-accent'
-              : 'text-gray-400 hover:bg-white/5 hover:text-white border-l-2 border-transparent'"
-          >
-            <component :is="item.iconComponent" class="w-5 h-5" :size="20" :stroke-width="2" />
-            <span class="font-medium uppercase text-sm tracking-wide">{{ item.label }}</span>
-            <span v-if="isActive(item.path)" class="ml-auto text-mission-accent text-xs">●</span>
-          </router-link>
+        <nav class="flex-1 px-3 py-2 space-y-4">
+          <div v-for="section in menuSections" :key="section.title" class="space-y-0.5">
+            <div v-if="section.title" class="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-mission-muted">{{ section.title }}</div>
+            <router-link
+              v-for="item in section.items"
+              :key="item.path"
+              :to="item.path"
+              class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors"
+              :class="isActive(item.path)
+                ? 'bg-mission-gray text-white font-medium'
+                : 'text-mission-muted hover:bg-white/[0.04] hover:text-white'"
+            >
+              <component :is="item.iconComponent" :size="16" :stroke-width="2" :class="isActive(item.path) ? 'text-mission-accent' : ''" />
+              <span>{{ item.label }}</span>
+            </router-link>
+          </div>
         </nav>
 
         <!-- User section -->
-        <div class="p-4 border-t border-white/10 flex-shrink-0">
-          <div v-if="authStore.isAuthenticated" class="space-y-3">
-            <div class="px-4 py-2 bg-mission-gray rounded">
-              <div class="tech-label mb-1">USER</div>
-              <div class="text-sm font-mono text-white">{{ authStore.user?.username || 'ADMIN' }}</div>
-              <div class="text-xs text-mission-accent uppercase">{{ authStore.user?.role || 'OPERATOR' }}</div>
+        <div class="p-3 border-t border-white/[0.06] flex-shrink-0">
+          <div v-if="authStore.isAuthenticated" class="flex items-center gap-3 px-2 py-1">
+            <span class="grid place-items-center w-8 h-8 rounded-full bg-mission-purple/20 text-mission-purple text-xs font-semibold uppercase">{{ (authStore.user?.username || '?').slice(0, 2) }}</span>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium truncate">{{ authStore.user?.username }}</div>
+              <div class="text-xs text-mission-muted capitalize">{{ authStore.user?.role }}</div>
             </div>
             <button
               @click="handleLogout"
-              class="w-full px-4 py-2 border border-mission-red/30 text-mission-red hover:bg-mission-red/10 hover:border-mission-red transition-all duration-300 uppercase text-sm tracking-wider flex items-center justify-center gap-2"
+              class="p-2 rounded-lg text-mission-muted hover:text-mission-red hover:bg-white/5 transition-colors"
+              title="Sign out"
             >
-              <LogOut class="w-4 h-4" :size="16" :stroke-width="2" />
-              <span>DISCONNECT</span>
+              <LogOut :size="16" :stroke-width="2" />
             </button>
           </div>
-          <router-link v-else to="/login" class="block w-full px-4 py-2 border border-mission-accent text-mission-accent hover:bg-mission-accent/10 transition-all duration-300 text-center uppercase text-sm tracking-wider">
-            CONNECT
+          <router-link v-else to="/login" class="btn-primary w-full">
+            Sign in
           </router-link>
         </div>
       </div>
     </aside>
 
     <!-- Main Content Area -->
-    <main class="flex-1 overflow-auto pt-14">
+    <main class="min-w-0 pt-14 lg:pt-0">
       <router-view />
     </main>
   </div>
@@ -110,6 +107,7 @@ import { computed, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { authService } from '~/services/auth';
+import { useCoachFreezeWatch } from '~/composables/useCoachFreezeWatch';
 import { useToast } from 'vue-toastification';
 import {
   CheckCircle,
@@ -153,6 +151,8 @@ const isSidebarOpen = ref(false);
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+
+if (authStore.user?.role === 'coach') useCoachFreezeWatch();
 const toast = useToast();
 
 // Sidebar starts closed by default for all devices
@@ -167,88 +167,102 @@ watch(() => route.path, () => {
 
 const allMenuItems = [
   {
-    label: 'Dashboard',
+    label: 'Overview',
     path: '/',
     iconComponent: Home,
-    roles: ['admin']
+    roles: ['admin'],
+    section: '',
   },
   {
     label: 'Users',
     path: '/users',
     iconComponent: Users,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'People',
   },
   {
     label: 'Groups',
     path: '/groups',
     iconComponent: UsersRound,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'People',
   },
   {
-    label: 'Guests',
+    label: 'Guest VPN',
     path: '/guests',
     iconComponent: UserPlus,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'People',
   },
   {
     label: 'Contests',
     path: '/contests',
     iconComponent: CheckCircle,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Contest day',
   },
   {
-    label: 'Coach View',
+    label: 'Coach view',
     path: '/coach-view',
     iconComponent: Video,
-    roles: ['coach', 'admin']
+    roles: ['coach', 'admin'],
+    section: 'Contest day',
   },
   {
-    label: 'Print Jobs',
+    label: 'Printing',
     path: '/printing',
     iconComponent: Printer,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Operations',
   },
   {
     label: 'Reactions',
     path: '/reactions',
     iconComponent: Play,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Contest day',
   },
   {
     label: 'Scripts',
     path: '/remote-control/scripts',
     iconComponent: FileCode,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Operations',
   },
   {
-    label: 'Jobs',
+    label: 'Remote jobs',
     path: '/remote-control/jobs',
     iconComponent: ListChecks,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Operations',
   },
   {
     label: 'Machines',
     path: '/machines',
     iconComponent: MonitorCheck,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Operations',
   },
   {
     label: 'Settings',
     path: '/settings',
     iconComponent: Settings,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'System',
   },
   {
     label: 'Overlay',
     path: '/overlay',
     iconComponent: Monitor,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Contest day',
   },
   {
-    label: 'Floor Plans',
+    label: 'Floor plans',
     path: '/floor-plans',
     iconComponent: Map,
-    roles: ['admin']
+    roles: ['admin'],
+    section: 'Contest day',
   },
 ];
 
@@ -259,6 +273,14 @@ const menuItems = computed(() => {
 
   return allMenuItems.filter(item => item.roles.includes(userRole));
 });
+
+const SECTION_ORDER = ['', 'Contest day', 'Operations', 'People', 'System'];
+
+const menuSections = computed(() =>
+  SECTION_ORDER
+    .map(title => ({ title, items: menuItems.value.filter(item => item.section === title) }))
+    .filter(section => section.items.length > 0)
+);
 
 function isActive(path: string): boolean {
   if (path === '/') {
@@ -272,7 +294,7 @@ async function handleLogout() {
     await authService.logout();
     authStore.clearUser();
     router.push('/login');
-    toast.info('Disconnected from system');
+    toast.info('Signed out');
   } catch (error) {
     console.error('Logout error:', error);
   }

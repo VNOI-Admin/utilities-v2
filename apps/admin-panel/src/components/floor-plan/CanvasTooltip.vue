@@ -36,9 +36,9 @@ const style = computed(() => {
 
 <style scoped>
 .canvas-tooltip {
-  @apply absolute pointer-events-none z-50 px-2 py-1 text-xs font-mono;
-  @apply bg-mission-dark border border-white/20 rounded shadow-lg;
-  @apply text-white whitespace-nowrap;
+  @apply absolute pointer-events-none z-50 px-2.5 py-1.5 text-xs;
+  @apply bg-mission-gray border border-white/10 rounded-lg shadow-lg;
+  @apply text-gray-100 whitespace-nowrap;
 }
 
 .tooltip-enter-active,

@@ -21,10 +21,21 @@ describe('AuthService.login', () => {
   });
 });
 
+const dbFrozenAt = (frozenAt: Date | null) => ({
+  models: {
+    Contest: {
+      findOne: (q: { frozen_at: { $lte?: Date } }) => ({
+        sort: () => ({ lean: async () => (frozenAt && q.frozen_at.$lte ? { frozen_at: frozenAt } : null) }),
+      }),
+    },
+    SystemConfig: { findOne: () => ({ lean: async () => null }) },
+  },
+});
+
 describe('AuthService.login from a machine that is not approved', () => {
-  const login = async (role: string, machineOk: boolean) => {
+  const login = async (role: string, machineOk: boolean, frozenAt: Date | null = null) => {
     const user = { username: role, password: await argon2.hash('right'), isActive: true, role };
-    const userModel = { findOne: () => ({ lean: async () => user }), updateOne: async () => ({}) };
+    const userModel = { db: dbFrozenAt(frozenAt), findOne: () => ({ lean: async () => user }), updateOne: async () => ({}) };
     const systemConfigModel = { findOne: () => ({ lean: async () => null }) };
     const jwt = { signAsync: async () => 'token' };
     const service = new AuthService(userModel as any, systemConfigModel as any, jwt as any, { get: () => '1m' } as any);
@@ -37,6 +48,12 @@ describe('AuthService.login from a machine that is not approved', () => {
 
   it.each(['admin', 'coach'])('still signs in an %s', async (role) => {
     await expect(login(role, false)).resolves.toHaveProperty('accessToken', 'token');
+  });
+
+  it('refuses a coach while the scoreboard is frozen', async () => {
+    await expect(login('coach', true, new Date(Date.now() - 60_000))).rejects.toThrow(
+      'Coach access is closed while the scoreboard is frozen',
+    );
   });
 
   it('signs in a contestant from an approved machine', async () => {

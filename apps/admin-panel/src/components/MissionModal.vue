@@ -3,27 +3,26 @@
     <Transition name="modal">
       <div
         v-if="show"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
         @click.self="handleClose"
       >
         <div
-          class="mission-card w-full mx-2 md:mx-4 glow-border overflow-hidden max-h-[90vh] overflow-y-auto"
+          class="mission-card w-full mx-2 md:mx-4 border-white/10 overflow-hidden max-h-[90vh] overflow-y-auto shadow-2xl"
           :class="maxWidthClass"
           style="animation: slideInModal 0.3s ease-out"
         >
           <!-- Modal Header -->
-          <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray sticky top-0 z-10">
+          <div class="px-4 md:px-6 py-4 border-b border-white/[0.06] bg-mission-dark sticky top-0 z-10">
             <div class="flex items-center justify-between">
-              <h2 class="text-xl font-display font-bold text-glow flex items-center gap-2">
-                <span class="text-mission-accent">█</span>
+              <h2 class="text-lg font-semibold">
                 {{ title }}
               </h2>
               <button
                 @click="handleClose"
-                class="text-gray-400 hover:text-mission-red transition-colors"
+                class="p-1 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/5 transition-colors"
                 type="button"
               >
-                <X :size="24" :stroke-width="2" />
+                <X :size="20" :stroke-width="2" />
               </button>
             </div>
           </div>
@@ -33,7 +32,7 @@
             <slot />
 
             <!-- Error Message -->
-            <div v-if="error" class="mt-4 p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono">
+            <div v-if="error" class="mt-4 p-3 rounded-xl bg-mission-red/10 text-mission-red text-sm">
               {{ error }}
             </div>
 
@@ -101,8 +100,8 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
   maxWidth: 'lg',
   confirmText: '',
-  cancelText: 'CANCEL',
-  loadingText: 'LOADING...',
+  cancelText: 'Cancel',
+  loadingText: 'Working…',
   showActions: true,
 });
 

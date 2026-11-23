@@ -1,7 +1,7 @@
 <template>
   <div ref="containerRef" class="relative">
     <div
-      class="input-mission min-h-[50px] cursor-text"
+      class="input-mission min-h-[44px] cursor-text"
       :class="{ 'border-mission-accent': isOpen }"
       @click="openDropdown"
     >
@@ -9,12 +9,12 @@
         <span
           v-for="target in selectedTargets"
           :key="target.username"
-          class="inline-flex items-center gap-1 px-2 py-1 text-xs font-mono rounded border border-mission-accent/60 bg-mission-accent/10 text-mission-accent"
+          class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 text-xs font-mono rounded-full bg-mission-accent/15 text-mission-accent"
         >
           <span class="truncate max-w-[180px]">{{ target.username }}</span>
           <button
             type="button"
-            class="text-mission-accent/80 hover:text-mission-red transition-colors"
+            class="text-mission-accent/70 hover:text-mission-red transition-colors"
             @click.stop="removeTarget(target.username)"
           >
             <X :size="12" :stroke-width="2" />
@@ -25,8 +25,8 @@
           ref="searchInputRef"
           v-model="query"
           type="text"
-          class="flex-1 min-w-[160px] bg-transparent border-none outline-none font-mono text-sm text-white placeholder-gray-500"
-          :placeholder="selectedTargets.length === 0 ? placeholder : 'Search targets...'"
+          class="flex-1 min-w-[160px] bg-transparent border-none outline-none text-sm text-gray-100 placeholder-mission-muted"
+          :placeholder="selectedTargets.length === 0 ? placeholder : 'Search machines'"
           @focus="isOpen = true"
           @keydown.esc.prevent="isOpen = false"
         />
@@ -38,33 +38,33 @@
         <div
           v-if="isOpen"
           ref="dropdownRef"
-          class="fixed z-[10001] mission-card border border-white/20 overflow-hidden shadow-2xl flex flex-col"
+          class="fixed z-[10001] mission-card !rounded-xl border-white/10 overflow-hidden shadow-2xl flex flex-col"
           :style="dropdownStyle"
         >
-          <div class="p-2 border-b border-white/10 bg-black/20 shrink-0">
-            <div class="grid grid-cols-1 gap-2">
+          <div class="p-2 border-b border-white/[0.06] shrink-0">
+            <div class="flex flex-wrap gap-2">
               <button
                 type="button"
-                class="w-full px-3 py-2 text-xs font-mono uppercase tracking-wider border transition-all duration-200 flex items-center justify-between"
+                class="px-3 py-1 rounded-full border text-xs inline-flex items-center gap-1.5 transition-colors"
                 :class="allContestantsSelected
-                  ? 'border-mission-accent bg-mission-accent/10 text-mission-accent'
-                  : 'border-white/20 text-gray-300 hover:border-mission-accent/50 hover:text-white'"
+                  ? 'border-gray-100 bg-gray-100 text-mission-ink'
+                  : 'border-white/10 text-mission-muted hover:text-gray-100'"
                 @click.stop="toggleContestants"
               >
                 <span>All contestants</span>
-                <span class="text-[10px] opacity-80">{{ contestantUsernames.length }}</span>
+                <span class="opacity-70 tabular-nums">{{ contestantUsernames.length }}</span>
               </button>
 
               <button
                 type="button"
-                class="w-full px-3 py-2 text-xs font-mono uppercase tracking-wider border transition-all duration-200 flex items-center justify-between"
+                class="px-3 py-1 rounded-full border text-xs inline-flex items-center gap-1.5 transition-colors"
                 :class="allGuestsSelected
-                  ? 'border-mission-accent bg-mission-accent/10 text-mission-accent'
-                  : 'border-white/20 text-gray-300 hover:border-mission-accent/50 hover:text-white'"
+                  ? 'border-gray-100 bg-gray-100 text-mission-ink'
+                  : 'border-white/10 text-mission-muted hover:text-gray-100'"
                 @click.stop="toggleGuests"
               >
                 <span>All guests</span>
-                <span class="text-[10px] opacity-80">{{ guestUsernames.length }}</span>
+                <span class="opacity-70 tabular-nums">{{ guestUsernames.length }}</span>
               </button>
             </div>
           </div>
@@ -74,15 +74,15 @@
               v-for="option in filteredOptions"
               :key="option.username"
               type="button"
-              class="w-full px-4 py-2.5 flex items-center justify-between gap-3 text-left border-l-2 border-transparent transition-all duration-200"
+              class="w-full px-3 py-2 flex items-center justify-between gap-3 text-left transition-colors"
               :class="isSelected(option.username)
-                ? 'bg-mission-accent/10 border-mission-accent text-mission-accent'
-                : 'text-gray-300 hover:bg-mission-accent/5 hover:border-mission-accent/50 hover:text-white'"
+                ? 'bg-mission-accent/10 text-mission-accent'
+                : 'text-gray-100 hover:bg-white/[0.04]'"
               @click="toggleTarget(option.username)"
             >
               <div class="min-w-0">
                 <p class="font-mono text-sm truncate">{{ option.username }}</p>
-                <p class="text-xs text-gray-500 truncate">{{ option.fullName }}</p>
+                <p class="text-xs text-mission-muted truncate">{{ option.fullName }}</p>
               </div>
               <Check
                 v-if="isSelected(option.username)"
@@ -93,9 +93,9 @@
 
             <div
               v-if="filteredOptions.length === 0"
-              class="px-4 py-8 text-center text-gray-500 text-sm font-mono"
+              class="px-4 py-8 text-center text-mission-muted text-sm"
             >
-              NO TARGETS FOUND
+              No machines found
             </div>
           </div>
         </div>
@@ -116,7 +116,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Select targets...',
+  placeholder: 'Select machines',
 });
 
 const emit = defineEmits<{
@@ -289,15 +289,15 @@ onBeforeUnmount(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 157, 0.3);
+  background: #2a2a34;
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 157, 0.5);
+  background: rgba(139, 139, 154, 0.5);
 }
 </style>

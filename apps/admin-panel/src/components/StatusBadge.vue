@@ -1,6 +1,6 @@
 <template>
   <span
-    class="px-2 py-1 text-xs font-mono uppercase border rounded-sm inline-flex items-center gap-1.5"
+    class="px-2.5 py-0.5 text-xs font-medium rounded-full inline-flex items-center gap-1.5"
     :class="badgeClasses"
   >
     <span
@@ -8,14 +8,14 @@
       class="inline-block w-2 h-2 rounded-full"
       :class="[dotColor, { 'animate-pulse': pulse }]"
     ></span>
-    <slot>{{ text }}</slot>
+    <slot>{{ text.charAt(0).toUpperCase() + text.slice(1) }}</slot>
   </span>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 
-type Variant = 'accent' | 'cyan' | 'red' | 'amber' | 'gray' | 'purple';
+type Variant = 'accent' | 'ok' | 'cyan' | 'red' | 'amber' | 'gray' | 'purple';
 type RoleType = 'admin' | 'coach' | 'contestant' | 'guest';
 type StatusType = 'pending' | 'running' | 'completed' | 'failed';
 
@@ -39,10 +39,10 @@ const badgeClasses = computed(() => {
   // If role is specified, use role-based styling
   if (props.role) {
     const roleMap = {
-      admin: 'border-mission-red text-mission-red bg-mission-red/10',
-      coach: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
-      contestant: 'border-mission-accent text-mission-accent bg-mission-accent/10',
-      guest: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+      admin: 'text-mission-pink bg-mission-pink/15',
+      coach: 'text-mission-blue bg-mission-blue/15',
+      contestant: 'text-mission-mint bg-mission-mint/15',
+      guest: 'text-mission-amber bg-mission-amber/15',
     };
     return roleMap[props.role];
   }
@@ -50,22 +50,23 @@ const badgeClasses = computed(() => {
   // If status is specified, use status-based styling
   if (props.status) {
     const statusMap = {
-      pending: 'border-mission-amber text-mission-amber bg-mission-amber/10',
-      running: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
-      completed: 'border-mission-accent text-mission-accent bg-mission-accent/10',
-      failed: 'border-mission-red text-mission-red bg-mission-red/10',
+      pending: 'text-mission-amber bg-mission-amber/15',
+      running: 'text-mission-cyan bg-mission-cyan/15',
+      completed: 'text-mission-ok bg-mission-ok/15',
+      failed: 'text-mission-red bg-mission-red/15',
     };
     return statusMap[props.status];
   }
 
   // Otherwise use variant
   const variantMap = {
-    accent: 'border-mission-accent text-mission-accent bg-mission-accent/10',
-    cyan: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
-    red: 'border-mission-red text-mission-red bg-mission-red/10',
-    amber: 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    gray: 'border-gray-500 text-gray-500 bg-gray-500/10',
-    purple: 'border-purple-500 text-purple-500 bg-purple-500/10',
+    accent: 'text-mission-accent bg-mission-accent/15',
+    ok: 'text-mission-ok bg-mission-ok/15',
+    cyan: 'text-mission-cyan bg-mission-cyan/15',
+    red: 'text-mission-red bg-mission-red/15',
+    amber: 'text-mission-amber bg-mission-amber/15',
+    gray: 'text-mission-muted bg-white/5',
+    purple: 'text-mission-purple bg-mission-purple/15',
   };
   return variantMap[props.variant];
 });
@@ -73,9 +74,9 @@ const badgeClasses = computed(() => {
 const dotColor = computed(() => {
   if (props.role) {
     const roleMap = {
-      admin: 'bg-mission-red',
-      coach: 'bg-mission-cyan',
-      contestant: 'bg-mission-accent',
+      admin: 'bg-mission-pink',
+      coach: 'bg-mission-blue',
+      contestant: 'bg-mission-mint',
       guest: 'bg-mission-amber',
     };
     return roleMap[props.role];
@@ -85,7 +86,7 @@ const dotColor = computed(() => {
     const statusMap = {
       pending: 'bg-mission-amber',
       running: 'bg-mission-cyan',
-      completed: 'bg-mission-accent',
+      completed: 'bg-mission-ok',
       failed: 'bg-mission-red',
     };
     return statusMap[props.status];
@@ -93,11 +94,12 @@ const dotColor = computed(() => {
 
   const variantMap = {
     accent: 'bg-mission-accent',
+    ok: 'bg-mission-ok',
     cyan: 'bg-mission-cyan',
     red: 'bg-mission-red',
     amber: 'bg-mission-amber',
-    gray: 'bg-gray-500',
-    purple: 'bg-purple-500',
+    gray: 'bg-mission-muted',
+    purple: 'bg-mission-purple',
   };
   return variantMap[props.variant];
 });

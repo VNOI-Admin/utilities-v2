@@ -31,7 +31,7 @@ const linePoints = computed(() => {
     <v-line
       :config="{
         points: linePoints,
-        stroke: '#00d4ff',
+        stroke: '#a8b8ff',
         strokeWidth: 3,
         dash: [10, 5],
         lineCap: 'round',
@@ -48,7 +48,7 @@ const linePoints = computed(() => {
         x: pos.x,
         y: pos.y,
         radius: 4,
-        fill: '#00d4ff',
+        fill: '#a8b8ff',
         listening: false,
       }"
     />

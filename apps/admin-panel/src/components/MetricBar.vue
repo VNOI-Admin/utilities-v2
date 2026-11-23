@@ -6,7 +6,7 @@
         {{ formattedValue }}
       </div>
     </div>
-    <div class="h-2 bg-mission-gray rounded-full overflow-hidden">
+    <div class="h-1.5 bg-mission-gray rounded-full overflow-hidden">
       <div
         class="h-full transition-all duration-500"
         :class="gradientClass"
@@ -46,9 +46,9 @@ const formattedValue = computed(() => {
 
 const gradientClass = computed(() => {
   const gradientMap = {
-    'accent-cyan': 'bg-gradient-to-r from-mission-accent to-mission-cyan',
-    'cyan-amber': 'bg-gradient-to-r from-mission-cyan to-mission-amber',
-    'amber-red': 'bg-gradient-to-r from-mission-amber to-mission-red',
+    'accent-cyan': 'bg-mission-ok',
+    'cyan-amber': 'bg-mission-amber',
+    'amber-red': 'bg-mission-red',
     'accent': 'bg-mission-accent',
     'cyan': 'bg-mission-cyan',
     'red': 'bg-mission-red',

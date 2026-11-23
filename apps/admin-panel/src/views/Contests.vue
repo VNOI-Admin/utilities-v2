@@ -1,251 +1,134 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
+  <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <PageHeader
-          title="CONTEST_ARENA"
-          subtitle="COMPETITION CONTROL / VNOJ SYNC INTERFACE"
-        />
-        <button
-          @click="showCreateModal = true"
-          class="btn-primary flex items-center gap-2"
-        >
-          <Plus :size="20" :stroke-width="2" />
-          <span class="hidden md:inline">CREATE CONTEST</span>
-        </button>
-      </div>
+    <div class="flex flex-wrap items-end gap-3">
+      <PageHeader class="flex-1 min-w-0" title="Contests" />
+      <RefreshButton :loading="loading" @click="refreshContests" />
+      <button @click="showCreateModal = true" class="btn-primary">
+        <Plus :size="16" :stroke-width="2" />
+        <span>Sync from VNOJ</span>
+      </button>
+    </div>
 
-      <!-- Filter Bar -->
-      <div class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center">
-        <!-- Search -->
-        <SearchInput
-          v-model="searchQuery"
-          placeholder="SEARCH CONTEST CODE OR NAME..."
-        />
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Status Filter -->
+      <FilterButtonGroup
+        v-model="selectedFilter"
+        :options="FILTERS"
+        :formatter="(f) => `${FILTER_LABELS[f]} · ${filterCounts[f]}`"
+      />
 
-        <!-- Status Filter -->
-        <FilterButtonGroup
-          v-model="selectedFilter"
-          :options="['all', 'ongoing', 'future', 'past']"
-          label="STATUS:"
-        />
-
-        <!-- Stats -->
-        <div class="flex items-center gap-4 w-full md:w-auto md:ml-auto">
-          <StatCounter
-            label="TOTAL:"
-            :value="filteredContests.length"
-          />
-          <RefreshButton
-            :loading="loading"
-            @click="refreshContests"
-          />
-        </div>
-      </div>
+      <!-- Search -->
+      <SearchInput
+        v-model="searchQuery"
+        placeholder="Search code or name"
+        container-class="w-full md:w-72 md:ml-auto"
+      />
     </div>
 
     <!-- Main Content -->
-    <div class="p-4 md:p-8">
-      <!-- Loading State -->
-      <div v-if="loading && contests.length === 0" class="mission-card overflow-hidden">
-        <div class="animate-pulse">
-          <div class="h-12 bg-white/5 border-b border-white/10"></div>
-          <div v-for="i in 8" :key="i" class="h-20 bg-white/5 border-b border-white/5"></div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <EmptyState
-        v-else-if="filteredContests.length === 0"
-        title="NO CONTESTS FOUND"
-        :subtitle="searchQuery ? 'Try adjusting your search or filters' : 'Create your first contest to get started'"
-        icon="contests"
-      />
-
-      <!-- Contests Table -->
-      <div v-else class="mission-card overflow-hidden">
-        <!-- Scrollable wrapper for mobile -->
-        <div class="overflow-x-auto">
-          <div class="min-w-[700px]">
-            <!-- Table Header -->
-            <div class="grid grid-cols-12 gap-4 px-4 md:px-6 py-4 bg-mission-gray border-b border-white/10">
-              <div class="col-span-2 tech-label">CODE</div>
-              <div class="col-span-3 tech-label">NAME</div>
-              <div class="col-span-2 tech-label">STATUS</div>
-              <div class="col-span-2 tech-label">START TIME</div>
-              <div class="col-span-2 tech-label">END TIME</div>
-              <div class="col-span-1 tech-label text-center">STATS</div>
-            </div>
-
-            <!-- Table Rows -->
-            <div class="divide-y divide-white/5">
-              <div
-                v-for="(contest, index) in filteredContests"
-                :key="contest.code"
-                @click="navigateToContest(contest.code)"
-                class="grid grid-cols-12 gap-4 px-4 md:px-6 py-4 cursor-pointer transition-all duration-300 hover:bg-mission-accent/5 hover:border-l-4 hover:border-mission-accent group relative overflow-hidden"
-                :style="{ animationDelay: `${index * 30}ms` }"
-                style="animation: slideInRow 0.4s ease-out backwards"
-              >
-            <!-- Scan line effect on hover -->
-            <div class="absolute inset-0 border-l-4 border-transparent group-hover:border-mission-accent transition-all duration-300"></div>
-
-            <!-- Code -->
-            <div class="col-span-2 font-mono text-sm font-semibold group-hover:text-mission-accent transition-colors uppercase">
-              {{ contest.code }}
-            </div>
-
-            <!-- Name -->
-            <div class="col-span-3 text-sm truncate">
-              {{ contest.name }}
-            </div>
-
-            <!-- Status -->
-            <div class="col-span-2">
-              <div class="flex items-center gap-2">
-                <span
-                  class="inline-block w-2 h-2 rounded-full"
-                  :class="{
-                    'bg-mission-accent animate-pulse': contest.status === 'ongoing',
-                    'bg-mission-cyan': contest.status === 'upcoming',
-                    'bg-mission-amber': contest.status === 'frozen',
-                    'bg-gray-600': contest.status === 'past'
-                  }"
-                ></span>
-                <span
-                  class="px-2 py-1 text-xs font-mono uppercase border rounded-sm"
-                  :class="{
-                    'border-mission-accent text-mission-accent bg-mission-accent/10': contest.status === 'ongoing',
-                    'border-mission-cyan text-mission-cyan bg-mission-cyan/10': contest.status === 'upcoming',
-                    'border-mission-amber text-mission-amber bg-mission-amber/10': contest.status === 'frozen',
-                    'border-gray-600 text-gray-500 bg-gray-600/10': contest.status === 'past'
-                  }"
-                >
-                  {{ contest.status }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Start Time -->
-            <div class="col-span-2 font-mono text-xs text-gray-400">
-              {{ formatDateTime(contest.start_time) }}
-            </div>
-
-            <!-- End Time -->
-            <div class="col-span-2 font-mono text-xs text-gray-400">
-              {{ formatDateTime(contest.end_time) }}
-            </div>
-
-            <!-- Stats -->
-            <div class="col-span-1 flex items-center justify-center gap-2">
-              <div class="flex items-center gap-1 text-xs font-mono">
-                <Users :size="12" class="text-mission-cyan" stroke-width="2" />
-                <span class="text-gray-500">—</span>
-              </div>
-            </div>
-
-            <!-- Hover arrow -->
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-0 translate-x-2">
-              <ChevronRight :size="20" class="text-mission-accent" stroke-width="2" />
-            </div>
-
-              <!-- Bottom glow line -->
-              <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-mission-accent to-transparent opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+    <!-- Loading State -->
+    <div v-if="loading && contests.length === 0" class="mission-card overflow-hidden">
+      <div class="animate-pulse divide-y divide-white/[0.06]">
+        <div v-for="i in 6" :key="i" class="h-16"></div>
       </div>
     </div>
 
-    <!-- Create Contest Modal -->
-    <Teleport to="body">
-      <Transition name="modal">
-        <div
-          v-if="showCreateModal"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          @click.self="closeCreateModal"
-        >
-          <div class="mission-card w-full max-w-lg mx-2 md:mx-4 glow-border overflow-hidden max-h-[90vh] overflow-y-auto" style="animation: slideInModal 0.3s ease-out">
-            <!-- Modal Header -->
-            <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray sticky top-0 z-10">
-              <div class="flex items-center justify-between">
-                <h2 class="text-xl font-display font-bold text-glow flex items-center gap-2">
-                  <span class="text-mission-accent">█</span>
-                  SYNC NEW CONTEST
-                </h2>
-                <button
-                  @click="closeCreateModal"
-                  class="text-gray-400 hover:text-mission-red transition-colors"
-                >
-                  <X :size="24" stroke-width="2" />
-                </button>
-              </div>
-            </div>
+    <!-- Empty State -->
+    <EmptyState
+      v-else-if="filteredContests.length === 0"
+      :title="contests.length ? 'No contests match' : 'No contests yet'"
+      :subtitle="contests.length ? 'Try another status or search.' : 'Sync a contest from VNOJ to get started.'"
+      icon="contests"
+    />
 
-            <!-- Modal Body -->
-            <form @submit.prevent="handleCreateContest" class="p-4 md:p-6 space-y-4">
-              <!-- Contest Code -->
-              <div>
-                <label class="tech-label block mb-2">VNOJ CONTEST CODE *</label>
-                <input
-                  v-model="contestCode"
-                  type="text"
-                  required
-                  class="input-mission font-mono uppercase"
-                  placeholder="e.g., vnoicup25_r2"
-                  pattern="[a-zA-Z0-9_-]+"
-                />
-                <p class="text-xs text-gray-500 font-mono mt-2">
-                  The contest will be automatically fetched from VNOJ API
-                </p>
-              </div>
-
-              <!-- Error Message -->
-              <div v-if="createError" class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono">
-                {{ createError }}
-              </div>
-
-              <!-- Actions -->
-              <div class="flex items-center gap-3 pt-4">
-                <button
-                  type="submit"
-                  :disabled="creating"
-                  class="btn-primary flex-1 flex items-center justify-center gap-2"
-                >
-                  <Loader2
-                    v-if="creating"
-                    :size="20"
-                    class="animate-spin"
-                    stroke-width="2"
-                  />
-                  <span>{{ creating ? 'SYNCING FROM VNOJ...' : 'SYNC CONTEST' }}</span>
-                </button>
-                <button
-                  type="button"
-                  @click="closeCreateModal"
-                  class="btn-secondary px-8"
-                >
-                  CANCEL
-                </button>
-              </div>
-            </form>
-          </div>
+    <!-- Contests Table -->
+    <MissionTable
+      v-else
+      :items="filteredContests"
+      item-key="code"
+      grid-template-columns="minmax(0, 2fr) 120px minmax(0, 1.4fr)"
+      min-width="600px"
+      clickable
+      @row-click="(contest) => navigateToContest(contest.code)"
+    >
+      <template #header>
+        <div>Contest</div>
+        <div>Status</div>
+        <div>Schedule</div>
+      </template>
+      <template #row="{ item: contest }">
+        <div class="min-w-0">
+          <div class="font-semibold truncate">{{ contest.name }}</div>
+          <div class="font-mono text-xs text-mission-muted truncate">{{ contest.code }}</div>
         </div>
-      </Transition>
-    </Teleport>
+        <div>
+          <StatusBadge v-bind="contestStatusBadge(contest.status)" />
+        </div>
+        <div class="text-sm text-mission-muted tabular-nums pr-6">
+          {{ formatSchedule(contest.start_time, contest.end_time) }}
+          <span v-if="contest.frozen_at" class="block text-xs">Freeze at {{ formatClock(contest.frozen_at) }}</span>
+        </div>
+      </template>
+    </MissionTable>
+
+    <!-- Create Contest Modal -->
+    <MissionModal
+      :show="showCreateModal"
+      title="Sync contest from VNOJ"
+      :loading="creating"
+      :error="createError"
+      max-width="md"
+      @close="closeCreateModal"
+    >
+      <form id="create-contest-form" @submit.prevent="handleCreateContest" class="space-y-2">
+        <label for="contest-code" class="tech-label block">VNOJ contest code</label>
+        <input
+          id="contest-code"
+          v-model="contestCode"
+          type="text"
+          required
+          class="input-mission font-mono"
+          placeholder="e.g. vnoicup25_r2"
+          pattern="[a-zA-Z0-9_-]+"
+          autofocus
+        />
+        <p class="text-xs text-mission-muted">
+          Name, schedule, problems and participants are fetched from VNOJ.
+        </p>
+      </form>
+
+      <template #actions>
+        <button type="button" @click="closeCreateModal" :disabled="creating" class="btn-secondary">
+          Cancel
+        </button>
+        <button type="submit" form="create-contest-form" :disabled="creating" class="btn-primary">
+          <Loader2 v-if="creating" :size="16" :stroke-width="2" class="animate-spin" />
+          <span>{{ creating ? 'Syncing…' : 'Sync contest' }}</span>
+        </button>
+      </template>
+    </MissionModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { Plus, Users, ChevronRight, X, Loader2 } from 'lucide-vue-next';
+import { Plus, Loader2 } from 'lucide-vue-next';
 import { useContestsStore } from '~/stores/contests';
 import type { ContestFilter } from '~/stores/contests';
 import { internalApi } from '~/services/api';
 import { useToast } from 'vue-toastification';
+import { contestStatusBadge, formatClock, formatSchedule } from '~/composables/useContestDisplay';
+
+const FILTERS: ContestFilter[] = ['all', 'ongoing', 'future', 'past'];
+const FILTER_LABELS: Record<ContestFilter, string> = {
+  all: 'All',
+  ongoing: 'Ongoing',
+  future: 'Upcoming',
+  past: 'Ended',
+};
 
 const router = useRouter();
 const contestsStore = useContestsStore();
@@ -265,6 +148,10 @@ const contestCode = ref('');
 // Computed
 const contests = computed(() => contestsStore.contestsWithStatus);
 
+const filterCounts = computed(() =>
+  Object.fromEntries(FILTERS.map((f) => [f, contestsStore.getContestsByFilter(f).length])) as Record<ContestFilter, number>
+);
+
 const filteredContests = computed(() => {
   let filtered = contestsStore.getContestsByFilter(selectedFilter.value);
 
@@ -282,32 +169,23 @@ const filteredContests = computed(() => {
 });
 
 // Methods
-function formatDateTime(date: string | Date): string {
-  const d = new Date(date);
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  const hours = d.getHours().toString().padStart(2, '0');
-  const minutes = d.getMinutes().toString().padStart(2, '0');
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
-}
-
 async function loadContests() {
   loading.value = true;
   try {
     const data = await internalApi.contest.findAll({ filter: 'all' });
     contestsStore.setContests(data);
+    return true;
   } catch (error: any) {
     toast.error('Failed to load contests');
     console.error('Load contests error:', error);
+    return false;
   } finally {
     loading.value = false;
   }
 }
 
 async function refreshContests() {
-  await loadContests();
-  toast.success('Contest data synchronized');
+  if (await loadContests()) toast.success('Contests refreshed');
 }
 
 function navigateToContest(code: string) {
@@ -343,37 +221,3 @@ onMounted(() => {
   loadContests();
 });
 </script>
-
-<style scoped>
-@keyframes slideInRow {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideInModal {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
-}
-</style>

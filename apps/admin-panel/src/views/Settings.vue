@@ -1,10 +1,9 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
+  <div class="min-h-screen">
+    <div class="px-4 md:px-8 pt-4 md:pt-8">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <PageHeader
-          title="SETTINGS"
-          subtitle="SYSTEM CONFIGURATION"
+          title="Settings"
         />
 
         <div class="flex flex-wrap items-center gap-2">
@@ -14,7 +13,7 @@
             @click="resetDraft"
           >
             <X :size="18" :stroke-width="2" />
-            <span>CANCEL</span>
+            <span>Cancel</span>
           </button>
           <button
             class="btn-primary flex items-center gap-2"
@@ -28,24 +27,21 @@
               class="animate-spin"
             />
             <Save v-else :size="18" :stroke-width="2" />
-            <span>{{ saving ? 'SAVING...' : 'SAVE' }}</span>
+            <span>{{ saving ? 'Saving…' : 'Save' }}</span>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="p-4 md:p-8 max-w-4xl">
+    <div class="p-4 md:p-8 max-w-4xl space-y-4">
       <section class="mission-card overflow-hidden">
-        <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray">
-          <h2 class="text-lg font-display font-semibold text-white flex items-center gap-2">
-            <span class="text-mission-accent">█</span>
-            LOGIN CONTROL
-          </h2>
+        <div class="px-4 md:px-6 pt-5">
+          <h2 class="font-semibold">Contestant sign-in</h2>
         </div>
 
         <div class="p-4 md:p-6 space-y-4">
           <div>
-            <label class="tech-label block mb-2">CONTESTANT LOGIN LOCKED UNTIL</label>
+            <label class="tech-label block mb-2">Locked until</label>
             <input
               v-model="lockedUntilDraft"
               type="datetime-local"
@@ -54,42 +50,68 @@
             />
           </div>
 
-          <div class="text-xs font-mono text-gray-500">
+          <div class="text-sm text-mission-muted">
             {{ lockedUntilDraft ? `Contestants cannot password-login before ${formatDraft(lockedUntilDraft)}` : 'Contestant password login is open' }}
           </div>
 
           <div
             v-if="errorText"
-            class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono"
+            class="p-3 rounded-xl bg-mission-red/10 text-mission-red text-sm"
           >
             {{ errorText }}
           </div>
         </div>
       </section>
 
+      <section class="mission-card p-4 md:p-6 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <h2 class="font-semibold flex-1">Coach access</h2>
+          <StatusBadge
+            v-if="coachAccess"
+            :variant="coachAccess.locked ? 'red' : 'accent'"
+            :show-dot="true"
+            :text="coachAccess.locked ? 'Closed' : 'Open'"
+          />
+        </div>
+        <p class="text-sm text-mission-muted">
+          Coaches are signed out and blocked, feeds included, the moment a contest's scoreboard freezes.
+          They stay out until you reopen access, for example after the results ceremony.
+        </p>
+        <div v-if="coachAccess" class="text-sm space-y-1">
+          <div v-if="coachAccess.locked && coachAccess.frozenAt">Closed since the freeze at {{ formatDraft(coachAccess.frozenAt) }}.</div>
+          <div v-if="coachAccess.nextFreezeAt">Next freeze: {{ formatDraft(coachAccess.nextFreezeAt) }}.</div>
+          <div v-if="coachAccess.reopenedAt" class="text-mission-muted">Last reopened {{ formatDraft(coachAccess.reopenedAt) }}.</div>
+        </div>
+        <div v-if="coachAccess?.locked" class="flex flex-wrap items-center gap-2">
+          <button v-if="!confirmingReopen" class="btn-secondary" @click="confirmingReopen = true">Reopen coach access</button>
+          <template v-else>
+            <span class="text-sm text-mission-amber">Coaches will see current standings and live feeds again.</span>
+            <button class="btn-primary" :disabled="reopening" @click="reopenCoachAccess">{{ reopening ? 'Reopening…' : 'Reopen now' }}</button>
+            <button class="btn-secondary" :disabled="reopening" @click="confirmingReopen = false">Cancel</button>
+          </template>
+        </div>
+      </section>
+
       <!-- Reaction timing. Fields, ranges and defaults come from the server so
            the bounds are defined once, next to the code that clamps them. -->
-      <section class="mission-card overflow-hidden mt-6">
-        <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray">
-          <h2 class="text-lg font-display font-semibold text-white flex items-center gap-2">
-            <span class="text-mission-accent">█</span>
-            REACTION TIMING
-          </h2>
-          <p class="text-xs font-mono text-gray-500 mt-1">
+      <section class="mission-card overflow-hidden">
+        <div class="px-4 md:px-6 pt-5">
+          <h2 class="font-semibold">Reaction timing</h2>
+          <p class="text-sm text-mission-muted mt-1">
             Applies to the next render. Leave a field blank to fall back to the environment value or built-in default.
           </p>
         </div>
 
-        <div class="p-4 md:p-6 space-y-8">
+        <div class="p-4 md:p-6 space-y-6">
           <div v-for="group in timingGroups" :key="group.title">
-            <h3 class="tech-label text-mission-accent mb-1">{{ group.title }}</h3>
-            <p class="text-xs font-mono text-gray-500 mb-4">{{ group.blurb }}</p>
+            <h3 class="text-sm font-medium">{{ group.title }}</h3>
+            <p class="text-sm text-mission-muted mt-0.5 mb-4">{{ group.blurb }}</p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div v-for="field in group.fields" :key="field.key">
                 <label class="tech-label block mb-2">
                   {{ field.label }}
-                  <span class="text-gray-600 normal-case">({{ field.unit }})</span>
+                  <span v-if="field.unit" class="font-normal">({{ field.unit }})</span>
                 </label>
                 <input
                   v-model="timingDraft[field.key]"
@@ -98,14 +120,14 @@
                   :max="field.max"
                   :step="field.step"
                   :placeholder="String(field.default)"
-                  class="input-mission w-full"
+                  class="input-mission w-full tabular-nums"
                   :disabled="loading || saving"
                 />
-                <div class="mt-1 text-xs font-mono text-gray-500">
+                <div class="mt-1 text-xs text-mission-muted">
                   {{ field.hint }}
                 </div>
-                <div class="mt-1 text-[11px] font-mono text-gray-600">
-                  range {{ field.min }}–{{ field.max }} · default {{ field.default }} ·
+                <div class="mt-1 text-xs text-mission-muted tabular-nums">
+                  Range {{ field.min }}–{{ field.max }} · default {{ field.default }} ·
                   <span :class="sourceClass(field.source)">{{ sourceLabel(field) }}</span>
                 </div>
               </div>
@@ -114,7 +136,7 @@
 
           <div
             v-if="timingError"
-            class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono"
+            class="p-3 rounded-xl bg-mission-red/10 text-mission-red text-sm"
           >
             {{ timingError }}
           </div>
@@ -130,6 +152,7 @@ import { RotateCw, Save, X } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import PageHeader from '~/components/PageHeader.vue';
 import { internalClient } from '~/services/api';
+import type { CoachAccessStatus } from '~/composables/useCoachFreezeWatch';
 
 const CONFIG_KEY = 'contestantLoginLockedUntil';
 
@@ -162,42 +185,42 @@ type TimingResponse = {
  */
 const TIMING_LABELS: Record<string, { label: string; unit: string; hint: string }> = {
   beforeSeconds: {
-    label: 'BEFORE SUBMISSION',
+    label: 'Before submission',
     unit: 'seconds',
     hint: 'How much lead-in is captured before the submission.',
   },
   afterSeconds: {
-    label: 'AFTER VERDICT',
+    label: 'After verdict',
     unit: 'seconds',
     hint: 'How much of the reaction is captured past the verdict.',
   },
   renderDelaySeconds: {
-    label: 'HOLD BEFORE RENDER',
+    label: 'Hold before render',
     unit: 'seconds',
     hint: 'Wait past the estimated reveal before rendering, so the tail is actually recorded.',
   },
   revealDelaySeconds: {
-    label: 'REVEAL BUFFER',
+    label: 'Reveal buffer',
     unit: 'seconds',
     hint: 'Safety margin after the judge finishes before the verdict flips.',
   },
   blinkHalfPeriod: {
-    label: 'BLINK HALF-PERIOD',
+    label: 'Blink half-period',
     unit: 'seconds',
     hint: 'Time the banner spends in each colour while blinking.',
   },
   blinkCount: {
-    label: 'BLINK COUNT',
+    label: 'Blink count',
     unit: 'half-cycles',
     hint: 'How many colour flips before the banner settles.',
   },
   rankCountDuration: {
-    label: 'RANK COUNT-UP',
+    label: 'Rank count-up',
     unit: 'seconds',
     hint: 'How long the place pill takes to tick to the new rank.',
   },
   dotPeriod: {
-    label: 'PENDING DOTS',
+    label: 'Pending dots',
     unit: 'seconds',
     hint: 'Cycle time of the ". / .. / ..." judging indicator.',
   },
@@ -205,12 +228,12 @@ const TIMING_LABELS: Record<string, { label: string; unit: string; hint: string 
 
 const GROUPS: { title: string; blurb: string; keys: string[] }[] = [
   {
-    title: 'CAPTURE WINDOW',
+    title: 'Capture window',
     blurb: 'Which slice of the stream is pulled for the clip, and when it is safe to render.',
     keys: ['beforeSeconds', 'afterSeconds', 'renderDelaySeconds'],
   },
   {
-    title: 'VERDICT REVEAL',
+    title: 'Verdict reveal',
     blurb: 'How the banner animates from pending to the verdict, and how the rank counts up.',
     keys: ['revealDelaySeconds', 'blinkHalfPeriod', 'blinkCount', 'rankCountDuration', 'dotPeriod'],
   },
@@ -257,7 +280,7 @@ function sourceLabel(field: TimingField): string {
 function sourceClass(source: TimingField['source']): string {
   if (source === 'setting') return 'text-mission-accent';
   if (source === 'env') return 'text-mission-amber';
-  return 'text-gray-600';
+  return 'text-mission-muted';
 }
 
 const timingChanged = computed(() =>
@@ -386,5 +409,33 @@ async function saveSettings() {
   }
 }
 
-onMounted(loadSettings);
+const coachAccess = ref<CoachAccessStatus | null>(null);
+const confirmingReopen = ref(false);
+const reopening = ref(false);
+
+async function loadCoachAccess() {
+  try {
+    coachAccess.value = (await internalClient.get<CoachAccessStatus>('/config/coach-access')).data;
+  } catch (error: any) {
+    errorText.value = error.response?.data?.message || error.message || 'Failed to load coach access';
+  }
+}
+
+async function reopenCoachAccess() {
+  reopening.value = true;
+  try {
+    coachAccess.value = (await internalClient.post<CoachAccessStatus>('/config/coach-access/reopen')).data;
+    confirmingReopen.value = false;
+    toast.success('Coach access reopened');
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to reopen coach access');
+  } finally {
+    reopening.value = false;
+  }
+}
+
+onMounted(() => {
+  loadSettings();
+  loadCoachAccess();
+});
 </script>

@@ -1,57 +1,49 @@
 <template>
   <div class="config-panel">
-    <h2 class="panel-title">Ranking View Configuration</h2>
+    <h2 class="panel-title">Ranking</h2>
 
-    <div class="info-box">
-      <div class="info-icon">
-        <Info :size="20" />
-      </div>
-      <div class="info-text">
-        The ranking view displays 15 contestants per page. Use the controls below to navigate between sections.
-      </div>
+    <div class="flex items-start gap-3 p-3 mb-5 rounded-xl bg-mission-cyan/10 text-mission-cyan text-sm">
+      <Info :size="16" :stroke-width="2" class="flex-shrink-0 mt-0.5" />
+      <span>The ranking view shows 15 contestants per page. Move between pages here.</span>
     </div>
 
     <div class="form-grid">
       <!-- Current Page Display -->
-      <div class="form-group col-span-2">
-        <label class="form-label mb-2">Current Section</label>
-        <div class="page-display">
-          <div class="page-indicator">
-            <span class="page-label">Page</span>
-            <span class="page-number">{{ localConfig.currentPage + 1 }}</span>
-          </div>
-          <div class="page-range">
-            <span class="range-text">Showing ranks {{ rangeStart }}-{{ rangeEnd }}</span>
-          </div>
+      <div class="form-group md:col-span-2">
+        <label class="tech-label">On air</label>
+        <div class="flex items-baseline gap-3">
+          <span class="text-3xl font-semibold tabular-nums">Page {{ localConfig.currentPage + 1 }}</span>
+          <span class="text-sm text-mission-muted tabular-nums">ranks {{ rangeStart }}–{{ rangeEnd }} · {{ maxPages }} {{ maxPages === 1 ? 'page' : 'pages' }}</span>
         </div>
       </div>
 
       <!-- Navigation Controls -->
-      <div class="form-group col-span-2">
-        <label class="form-label mb-2">Navigation</label>
-        <div class="nav-controls">
+      <div class="form-group md:col-span-2">
+        <label class="tech-label">Navigate</label>
+        <div class="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            class="nav-button"
+            class="btn-secondary"
             :disabled="localConfig.currentPage === 0 || loading"
             @click="previousPage"
           >
-            <ChevronLeft :size="20" />
+            <ChevronLeft :size="16" :stroke-width="2" />
             Previous
           </button>
 
-          <div class="page-input-group">
+          <div class="flex items-center gap-2">
             <input
               v-model.number="pageInput"
               type="number"
               min="1"
               :max="maxPages"
-              class="page-input"
+              aria-label="Page number"
+              class="input-mission !w-20 text-center tabular-nums"
               @keyup.enter="goToPage"
             />
             <button
               type="button"
-              class="go-button"
+              class="btn-secondary"
               :disabled="loading"
               @click="goToPage"
             >
@@ -61,26 +53,28 @@
 
           <button
             type="button"
-            class="nav-button"
-            :disabled="loading"
+            class="btn-secondary"
+            :disabled="loading || localConfig.currentPage >= maxPages - 1"
             @click="nextPage"
           >
             Next
-            <ChevronRight :size="20" />
+            <ChevronRight :size="16" :stroke-width="2" />
           </button>
         </div>
       </div>
 
       <!-- Quick Jump Buttons -->
-      <div class="form-group col-span-2">
-        <label class="form-label mb-2">Quick Jump</label>
-        <div class="quick-jump">
+      <div class="form-group md:col-span-2">
+        <label class="tech-label">Jump to ranks</label>
+        <div class="flex flex-wrap gap-2">
           <button
             v-for="page in quickJumpPages"
             :key="page"
             type="button"
-            class="jump-button"
-            :class="{ active: localConfig.currentPage === page - 1 }"
+            class="px-3 py-1.5 border rounded-full text-sm tabular-nums transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            :class="localConfig.currentPage === page - 1
+              ? 'border-gray-100 bg-gray-100 text-mission-ink'
+              : 'border-white/10 bg-mission-dark text-mission-muted hover:text-gray-100'"
             :disabled="loading"
             @click="jumpToPage(page - 1)"
           >
@@ -229,192 +223,4 @@ onMounted(async () => {
 
 <style scoped>
 @import './panel-styles.css';
-
-.info-box {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(52, 152, 219, 0.1);
-  border: 1px solid rgba(52, 152, 219, 0.3);
-  border-radius: 4px;
-  margin-bottom: 24px;
-}
-
-.info-icon {
-  flex-shrink: 0;
-  color: var(--mission-cyan);
-}
-
-.info-text {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
-  line-height: 1.5;
-}
-
-.page-display {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 20px;
-  background: var(--mission-dark);
-  border: 1px solid var(--mission-border);
-  border-radius: 4px;
-}
-
-.page-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 12px 24px;
-  background: var(--mission-cyan);
-  border-radius: 4px;
-}
-
-.page-label {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--mission-black);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.page-number {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--mission-black);
-}
-
-.page-range {
-  flex: 1;
-}
-
-.range-text {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--mission-cyan);
-}
-
-.nav-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.nav-button {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--mission-dark);
-  border: 1px solid var(--mission-border);
-  color: var(--mission-text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  font-weight: 500;
-  text-transform: uppercase;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-button:hover:not(:disabled) {
-  border-color: var(--mission-cyan);
-}
-
-.nav-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.page-input-group {
-  display: flex;
-  gap: 8px;
-}
-
-.page-input {
-  width: 80px;
-  padding: 12px 16px;
-  background: var(--mission-dark);
-  border: 1px solid var(--mission-border);
-  color: var(--mission-text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  text-align: center;
-  border-radius: 4px;
-  outline: none;
-  transition: all 0.2s ease;
-}
-
-.page-input:hover {
-  border-color: var(--mission-cyan);
-}
-
-.page-input:focus {
-  border-color: var(--mission-cyan);
-  box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.1);
-}
-
-.go-button {
-  padding: 12px 24px;
-  background: var(--mission-cyan);
-  border: 1px solid var(--mission-cyan);
-  color: var(--mission-black);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.go-button:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.go-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.quick-jump {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.jump-button {
-  padding: 12px 20px;
-  background: var(--mission-dark);
-  border: 1px solid var(--mission-border);
-  color: var(--mission-text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 600;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.jump-button:hover:not(:disabled) {
-  border-color: var(--mission-cyan);
-}
-
-.jump-button.active {
-  background: var(--mission-cyan);
-  border-color: var(--mission-cyan);
-  color: var(--mission-black);
-}
-
-.jump-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 </style>

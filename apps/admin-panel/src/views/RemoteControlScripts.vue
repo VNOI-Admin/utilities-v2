@@ -1,165 +1,141 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background xl:h-[calc(100dvh-56px)] xl:min-h-0 xl:flex xl:flex-col xl:overflow-hidden">
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
-        <PageHeader
-          title="REMOTE_SCRIPTS"
-          subtitle="SCRIPT REPOSITORY / CONTENT EDITOR"
-        />
-
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            class="btn-secondary flex items-center gap-2"
-            @click="startCreateScript"
-          >
-            <Plus :size="18" :stroke-width="2" />
-            <span>NEW SCRIPT</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-4 md:flex-row md:items-center">
-        <SearchInput
-          v-model="searchQuery"
-          placeholder="SEARCH SCRIPTS..."
-        />
-
-        <div class="flex items-center gap-4 md:ml-auto">
-          <StatCounter label="TOTAL:" :value="remoteControlStore.scripts.length" />
-          <StatCounter label="VISIBLE:" :value="filteredScripts.length" />
-        </div>
-      </div>
+  <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
+    <div class="flex flex-wrap items-end gap-3">
+      <PageHeader class="flex-1 min-w-0" title="Scripts" />
+      <button class="btn-secondary" @click="startCreateScript">
+        <Plus :size="16" :stroke-width="2" />
+        <span>New script</span>
+      </button>
     </div>
 
-    <div class="p-4 md:p-8 xl:flex-1 xl:min-h-0">
-      <div class="grid grid-cols-1 xl:grid-cols-[340px_minmax(0,1fr)] gap-4 xl:h-full xl:min-h-0">
-        <aside class="mission-card flex flex-col xl:h-full xl:min-h-0">
-          <div class="px-4 py-3 border-b border-white/10 bg-mission-gray">
-            <p class="tech-label">SCRIPT LIST</p>
+    <div class="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-4 lg:h-[calc(100dvh-9.5rem)] lg:min-h-[520px]">
+      <aside class="mission-card flex flex-col min-h-0 max-h-[40vh] lg:max-h-none">
+        <div class="p-3 border-b border-white/[0.06]">
+          <SearchInput
+            v-model="searchQuery"
+            placeholder="Search scripts"
+            container-class="w-full"
+          />
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-2 space-y-0.5">
+          <button
+            v-for="script in filteredScripts"
+            :key="script.name"
+            class="w-full px-3 py-2 rounded-xl text-left transition-colors"
+            :class="selectedScriptName === script.name && !isCreating
+              ? 'bg-mission-accent/15'
+              : 'hover:bg-white/[0.04]'"
+            @click="selectScript(script.name)"
+          >
+            <p
+              class="font-mono text-sm truncate"
+              :class="selectedScriptName === script.name && !isCreating ? 'text-mission-accent' : 'text-gray-100'"
+            >
+              {{ script.name }}
+            </p>
+            <p class="text-xs text-mission-muted truncate" :title="formatDateTime(script.updatedAt)">
+              Updated {{ timeAgo(script.updatedAt) }}
+            </p>
+          </button>
+
+          <div
+            v-if="filteredScripts.length === 0"
+            class="px-4 py-10 text-center text-sm text-mission-muted"
+          >
+            {{ searchQuery ? 'No matching scripts' : 'No scripts yet' }}
+          </div>
+        </div>
+      </aside>
+
+      <section class="mission-card flex flex-col min-h-0 overflow-hidden">
+        <div class="px-4 md:px-5 py-4 border-b border-white/[0.06] flex flex-wrap items-center gap-3">
+          <div class="flex-1 min-w-0">
+            <h2 class="font-semibold truncate" :class="{ 'font-mono': !isCreating && draftName }">
+              {{ isCreating ? 'New script' : (draftName || 'No script selected') }}
+            </h2>
+            <p class="text-xs text-mission-muted mt-0.5 truncate">
+              <template v-if="isCreating">Not saved yet</template>
+              <template v-else-if="activeScriptSummary">
+                Updated {{ timeAgo(activeScriptSummary.updatedAt) }} · <span class="font-mono" :title="activeScriptSummary.hash">{{ activeScriptSummary.hash.slice(0, 12) }}</span>
+              </template>
+            </p>
           </div>
 
-          <div class="flex-1 overflow-y-auto">
+          <div class="flex flex-wrap items-center gap-2">
             <button
-              v-for="script in filteredScripts"
-              :key="script.name"
-              class="w-full px-4 py-3 text-left border-l-2 transition-all duration-200"
-              :class="selectedScriptName === script.name
-                ? 'border-mission-accent bg-mission-accent/10'
-                : 'border-transparent hover:border-mission-accent/40 hover:bg-mission-accent/5'"
-              @click="selectScript(script.name)"
+              class="btn-danger"
+              :disabled="!canDeleteSelectedScript || deleting"
+              @click="handleDelete"
             >
-              <p class="font-mono text-sm text-white truncate">{{ script.name }}</p>
-              <p class="text-xs text-gray-500 font-mono truncate">{{ script.hash }}</p>
-              <p class="text-xs text-gray-600 font-mono mt-1">{{ formatDateTime(script.updatedAt) }}</p>
+              <Trash2 :size="16" :stroke-width="2" />
+              <span>{{ deleting ? 'Deleting…' : 'Delete' }}</span>
             </button>
 
-            <div
-              v-if="filteredScripts.length === 0"
-              class="px-4 py-10 text-center text-gray-500 font-mono text-sm"
+            <button
+              class="btn-secondary"
+              :disabled="!canRunSelectedScript"
+              @click="showCreateJobModal = true"
             >
-              {{ searchQuery ? 'NO MATCHING SCRIPTS' : 'NO SCRIPTS YET' }}
-            </div>
-          </div>
-        </aside>
+              <Play :size="16" :stroke-width="2" />
+              <span>Run on machines…</span>
+            </button>
 
-        <section class="mission-card flex flex-col overflow-hidden xl:h-full xl:min-h-0">
-          <div class="px-4 md:px-6 py-4 border-b border-white/10 bg-mission-gray">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-              <div>
-                <h2 class="text-lg font-display font-semibold text-white flex items-center gap-2">
-                  <span class="text-mission-accent">█</span>
-                  {{ isCreating ? 'NEW SCRIPT' : (draftName || 'SCRIPT EDITOR') }}
-                </h2>
-                <p class="text-xs font-mono text-gray-500 mt-1">
-                  <template v-if="isCreating">
-                    CREATE MODE
-                  </template>
-                  <template v-else>
-                    EDIT MODE
-                    <span v-if="activeScriptSummary"> • Updated {{ formatDateTime(activeScriptSummary.updatedAt) }}</span>
-                  </template>
-                </p>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-2 md:justify-end">
-                <button
-                  class="btn-secondary flex items-center gap-2"
-                  :disabled="!canRunSelectedScript"
-                  @click="showCreateJobModal = true"
-                >
-                  <Play :size="18" :stroke-width="2" />
-                  <span>RUN</span>
-                </button>
-
-                <button
-                  class="btn-danger flex items-center gap-2"
-                  :disabled="!canDeleteSelectedScript || deleting"
-                  @click="handleDelete"
-                >
-                  <Trash2 :size="18" :stroke-width="2" />
-                  <span>{{ deleting ? 'DELETING...' : 'DELETE' }}</span>
-                </button>
-
-                <button
-                  class="btn-primary flex items-center gap-2"
-                  :disabled="!canSave || saving"
-                  @click="handleSave"
-                >
-                  <RotateCw
-                    v-if="saving"
-                    :size="18"
-                    :stroke-width="2"
-                    class="animate-spin"
-                  />
-                  <Save v-else :size="18" :stroke-width="2" />
-                  <span>{{ saving ? 'SAVING...' : 'SAVE' }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 md:p-6 flex-1 flex flex-col gap-4 overflow-y-auto">
-            <div v-if="isCreating">
-              <label class="tech-label block mb-2">SCRIPT NAME *</label>
-              <input
-                v-model="draftName"
-                type="text"
-                class="input-mission"
-                placeholder="restart-nginx"
-              />
-            </div>
-
-            <div class="flex-1 flex flex-col min-h-0">
-              <label class="tech-label block mb-2">SCRIPT CONTENT *</label>
-              <ScriptContentEditor
-                v-model="draftContent"
-                class="w-full flex-1"
-                placeholder="#!/usr/bin/env bash"
-                :disabled="loadingScriptContent"
-              />
-            </div>
-
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 text-xs font-mono">
-              <span
-                :class="hasUnsavedChanges ? 'text-mission-amber' : 'text-gray-500'"
-              >
-                {{ hasUnsavedChanges ? 'UNSAVED CHANGES' : 'ALL CHANGES SAVED' }}
-              </span>
-
-              <span v-if="activeScriptSummary" class="text-gray-500">
-                Hash: {{ activeScriptSummary.hash }}
-              </span>
-            </div>
-
-            <div
-              v-if="remoteControlStore.scriptsError"
-              class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono"
+            <button
+              class="btn-primary"
+              :disabled="!canSave || saving"
+              @click="handleSave"
             >
-              {{ remoteControlStore.scriptsError }}
-            </div>
+              <RotateCw
+                v-if="saving"
+                :size="16"
+                :stroke-width="2"
+                class="animate-spin"
+              />
+              <Save v-else :size="16" :stroke-width="2" />
+              <span>{{ saving ? 'Saving…' : 'Save' }}</span>
+            </button>
           </div>
-        </section>
-      </div>
+        </div>
+
+        <div class="p-4 md:p-5 flex-1 flex flex-col gap-4 min-h-0">
+          <div v-if="isCreating">
+            <label class="tech-label block mb-2">Name</label>
+            <input
+              v-model="draftName"
+              type="text"
+              class="input-mission font-mono"
+              placeholder="restart-nginx"
+            />
+          </div>
+
+          <div class="flex-1 flex flex-col min-h-[360px] h-[60vh] lg:h-auto">
+            <ScriptContentEditor
+              v-model="draftContent"
+              class="w-full flex-1"
+              placeholder="#!/usr/bin/env bash"
+              :disabled="loadingScriptContent"
+            />
+          </div>
+
+          <div class="flex items-center gap-2 text-xs">
+            <span
+              class="w-1.5 h-1.5 rounded-full"
+              :class="hasUnsavedChanges ? 'bg-mission-amber' : 'bg-mission-ok'"
+            ></span>
+            <span :class="hasUnsavedChanges ? 'text-mission-amber' : 'text-mission-muted'">
+              {{ hasUnsavedChanges ? 'Unsaved changes' : 'All changes saved' }}
+            </span>
+          </div>
+
+          <div
+            v-if="remoteControlStore.scriptsError"
+            class="rounded-xl bg-mission-red/10 text-mission-red text-sm px-4 py-3"
+          >
+            {{ remoteControlStore.scriptsError }}
+          </div>
+        </div>
+      </section>
     </div>
 
     <CreateJobModal
@@ -172,13 +148,13 @@
 </template>
 
 <script setup lang="ts">
+import { timeAgo } from '~/common/timeAgo';
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Play, Plus, RotateCw, Save, Trash2 } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import PageHeader from '~/components/PageHeader.vue';
 import SearchInput from '~/components/SearchInput.vue';
-import StatCounter from '~/components/StatCounter.vue';
 import CreateJobModal from '~/components/remote-control/CreateJobModal.vue';
 import ScriptContentEditor from '~/components/remote-control/ScriptContentEditor.vue';
 import { useRemoteControlStore } from '~/stores/remoteControl';
@@ -253,6 +229,7 @@ function formatDateTime(value?: string) {
     second: '2-digit',
   });
 }
+
 
 function clearEditor() {
   selectedScriptName.value = null;

@@ -44,13 +44,13 @@ async function decreaseHeight() {
 
 <template>
   <div class="canvas-size-control flex items-center gap-2">
-    <span class="text-white/40 text-xs font-mono">Canvas:</span>
+    <span class="text-mission-muted text-xs whitespace-nowrap">Canvas</span>
 
     <!-- Width Controls -->
     <div class="flex items-center gap-1">
       <button
         class="size-btn"
-        title="Decrease Width"
+        title="Decrease width"
         @click="decreaseWidth"
       >
         <Minimize2 :size="14" />
@@ -58,7 +58,7 @@ async function decreaseHeight() {
       <span class="size-display">W: {{ canvasSize.width }}</span>
       <button
         class="size-btn"
-        title="Increase Width"
+        title="Increase width"
         @click="increaseWidth"
       >
         <Maximize2 :size="14" />
@@ -69,7 +69,7 @@ async function decreaseHeight() {
     <div class="flex items-center gap-1">
       <button
         class="size-btn"
-        title="Decrease Height"
+        title="Decrease height"
         @click="decreaseHeight"
       >
         <Minimize2 :size="14" class="rotate-90" />
@@ -77,7 +77,7 @@ async function decreaseHeight() {
       <span class="size-display">H: {{ canvasSize.height }}</span>
       <button
         class="size-btn"
-        title="Increase Height"
+        title="Increase height"
         @click="increaseHeight"
       >
         <Maximize2 :size="14" class="rotate-90" />
@@ -88,10 +88,10 @@ async function decreaseHeight() {
 
 <style scoped>
 .size-btn {
-  @apply p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors;
+  @apply p-1 rounded-md text-mission-muted hover:text-gray-100 hover:bg-white/[0.06] transition-colors;
 }
 
 .size-display {
-  @apply text-white/60 text-xs font-mono min-w-[3rem] text-center;
+  @apply text-gray-300 text-xs tabular-nums whitespace-nowrap min-w-[3rem] text-center;
 }
 </style>

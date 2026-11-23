@@ -55,7 +55,7 @@ export class FloorPlanController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN, Role.COACH)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Get all floor plans' })
   @ApiResponse({ status: 200, description: 'Return floor plans', type: [FloorPlanEntity] })
   @Get('/')
@@ -65,7 +65,7 @@ export class FloorPlanController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN, Role.COACH)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Get floor plan by code' })
   @ApiResponse({ status: 200, description: 'Return floor plan', type: FloorPlanEntity })
   @Get('/:code')
@@ -111,7 +111,7 @@ export class FloorPlanController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN, Role.COACH)
+  @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Get floor' })
   @ApiResponse({ status: 200, description: 'Return floor', type: FloorEntity })
   @Get('/:code/floors/:floorId')

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,12 +6,11 @@
 
 @layer base {
   * {
-    @apply border-mission-gray;
+    @apply border-mission-line;
   }
 
   body {
-    @apply bg-mission-black text-white antialiased;
-    font-family: 'Space Grotesk', sans-serif;
+    @apply bg-mission-black text-gray-100 antialiased font-sans;
   }
 
   /* Custom scrollbar */
@@ -20,59 +19,41 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-mission-dark;
+    @apply bg-transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-mission-gray hover:bg-mission-accent/50 rounded;
+    @apply bg-mission-line hover:bg-mission-muted/50 rounded;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-mission-accent/70 ring-offset-0;
   }
 }
 
 @layer components {
   /* Mission Control Grid Background */
   .grid-background {
-    background-image:
-      linear-gradient(to right, rgba(0, 255, 157, 0.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 255, 157, 0.05) 1px, transparent 1px);
-    background-size: 30px 30px;
+    background-image: none;
   }
 
   /* Glowing border effect */
   .glow-border {
-    @apply border border-mission-accent/30;
-    box-shadow: 0 0 15px rgba(0, 255, 157, 0.15);
+    @apply border border-white/10;
   }
 
   /* Technical scan line effect */
   .scan-line {
     position: relative;
-    overflow: hidden;
-  }
-
-  .scan-line::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(0, 255, 157, 0.5),
-      transparent
-    );
-    animation: scan 4s linear infinite;
   }
 
   /* Status indicators */
   .status-live {
-    @apply text-mission-accent;
-    animation: pulse 2s ease-in-out infinite;
+    @apply text-mission-ok;
   }
 
   .status-offline {
-    @apply text-gray-500;
+    @apply text-mission-muted;
   }
 
   .status-error {
@@ -81,55 +62,53 @@
 
   /* Button styles */
   .btn-primary {
-    @apply px-6 py-3 bg-mission-accent/10 border border-mission-accent text-mission-accent
-           font-medium uppercase tracking-wider transition-all duration-300
-           hover:bg-mission-accent hover:text-mission-black hover:shadow-[0_0_20px_rgba(0,255,157,0.5)];
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+           bg-mission-accent text-mission-ink border border-mission-accent
+           transition-colors hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
-    @apply px-6 py-3 bg-mission-gray border border-white/20 text-white
-           font-medium uppercase tracking-wider transition-all duration-300
-           hover:border-white/40 hover:bg-white/5;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+           bg-mission-dark border border-white/10 text-gray-100
+           transition-colors hover:border-white/25 hover:bg-mission-gray disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-danger {
-    @apply px-6 py-3 bg-mission-red/10 border border-mission-red text-mission-red
-           font-medium uppercase tracking-wider transition-all duration-300
-           hover:bg-mission-red hover:text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.5)];
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
+           bg-transparent border border-mission-red/40 text-mission-red
+           transition-colors hover:bg-mission-red/10 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Card component */
   .mission-card {
-    @apply bg-mission-dark border border-white/10 backdrop-blur-sm
-           transition-all duration-300 hover:border-mission-accent/50;
+    @apply bg-mission-dark border border-white/[0.06] rounded-card transition-colors;
   }
 
   /* Input styles */
   .input-mission {
-    @apply w-full px-4 py-3 bg-mission-gray border border-white/20
-           text-white placeholder-gray-500 font-mono
-           focus:outline-none focus:border-mission-accent focus:shadow-[0_0_15px_rgba(0,255,157,0.15)]
-           transition-all duration-300;
+    @apply w-full px-3 py-2 rounded-xl bg-mission-gray border border-white/10 text-sm
+           text-gray-100 placeholder-mission-muted
+           focus:outline-none focus:border-mission-accent transition-colors;
   }
 
   /* Tech label */
   .tech-label {
-    @apply text-xs font-mono uppercase tracking-widest text-gray-500;
+    @apply text-xs font-medium text-mission-muted;
   }
 
   /* Data display */
   .data-value {
-    @apply font-mono text-mission-accent;
+    @apply font-medium text-gray-100 tabular-nums;
   }
 }
 
 @layer utilities {
   .text-glow {
-    text-shadow: 0 0 10px currentColor;
+    text-shadow: none;
   }
 
   .border-glow {
-    box-shadow: 0 0 10px currentColor;
+    box-shadow: none;
   }
 
   /* Responsive padding utilities */

@@ -1,43 +1,27 @@
 <template>
   <MissionModal
     :show="show"
-    title="BATCH USER IMPORT"
+    title="Import users from CSV"
     max-width="4xl"
     :show-actions="false"
     @close="handleClose"
   >
     <!-- Step Indicator -->
-    <div class="flex border-b border-white/10 bg-mission-gray -mx-6 -mt-6 mb-6">
-      <div
+    <ol class="flex flex-wrap gap-2 mb-6">
+      <li
         v-for="(step, index) in steps"
         :key="step.id"
-        class="flex-1 px-4 py-3 font-mono text-xs uppercase tracking-wider transition-all relative"
+        class="px-3 py-1.5 rounded-full text-sm inline-flex items-center gap-1.5 border transition-colors"
         :class="{
-          'text-mission-accent bg-mission-accent/5': currentStep === index + 1,
-          'text-gray-400': currentStep > index + 1,
-          'text-gray-600': currentStep < index + 1,
+          'border-gray-100 bg-gray-100 text-mission-ink font-medium': currentStep === index + 1,
+          'border-transparent bg-mission-ok/15 text-mission-ok': currentStep > index + 1,
+          'border-white/10 text-mission-muted': currentStep < index + 1,
         }"
       >
-        <div class="flex items-center justify-center gap-2">
-          <span
-            class="w-6 h-6 rounded-full flex items-center justify-center text-xs border"
-            :class="{
-              'border-mission-accent text-mission-accent bg-mission-accent/10': currentStep === index + 1,
-              'border-mission-accent text-mission-dark bg-mission-accent': currentStep > index + 1,
-              'border-gray-600 text-gray-600': currentStep < index + 1,
-            }"
-          >
-            <Check v-if="currentStep > index + 1" :size="14" />
-            <span v-else>{{ index + 1 }}</span>
-          </span>
-          <span class="hidden sm:inline">{{ step.label }}</span>
-        </div>
-        <div
-          v-if="currentStep === index + 1"
-          class="absolute bottom-0 left-0 right-0 h-0.5 bg-mission-accent"
-        ></div>
-      </div>
-    </div>
+        <Check v-if="currentStep > index + 1" :size="14" :stroke-width="2.5" />
+        {{ index + 1 }}. {{ step.label }}
+      </li>
+    </ol>
 
     <!-- Step Content -->
     <div class="min-h-[400px]">
@@ -90,15 +74,15 @@
     </div>
 
     <!-- Navigation Buttons -->
-    <div class="flex items-center justify-between pt-6 border-t border-white/10 mt-6">
+    <div class="flex items-center justify-between pt-4 border-t border-white/[0.06] mt-6">
       <button
         v-if="currentStep > 1 && currentStep < 5"
         type="button"
         @click="currentStep--"
-        class="btn-secondary flex items-center gap-2"
+        class="btn-secondary"
       >
-        <ArrowLeft :size="18" />
-        BACK
+        <ArrowLeft :size="16" />
+        Back
       </button>
       <div v-else></div>
 
@@ -108,7 +92,7 @@
           @click="handleClose"
           class="btn-secondary"
         >
-          {{ currentStep === 5 ? 'CLOSE' : 'CANCEL' }}
+          {{ currentStep === 5 ? 'Close' : 'Cancel' }}
         </button>
 
         <button
@@ -116,11 +100,10 @@
           type="button"
           @click="handleNext"
           :disabled="!canProceed"
-          class="btn-primary flex items-center gap-2"
-          :class="{ 'opacity-50 cursor-not-allowed': !canProceed }"
+          class="btn-primary"
         >
-          NEXT
-          <ArrowRight :size="18" />
+          Next
+          <ArrowRight :size="16" />
         </button>
 
         <button
@@ -128,10 +111,10 @@
           type="button"
           @click="handleCreateUsers"
           :disabled="creating"
-          class="btn-primary flex items-center gap-2"
+          class="btn-primary"
         >
-          <RotateCw v-if="creating" :size="18" class="animate-spin" />
-          {{ creating ? 'CREATING...' : 'CREATE USERS' }}
+          <RotateCw v-if="creating" :size="16" class="animate-spin" />
+          {{ creating ? 'Creating…' : `Create ${validRowsCount} users` }}
         </button>
       </div>
     </div>
@@ -176,6 +159,7 @@ export interface CreationResult {
   username: string;
   success: boolean;
   error?: string;
+  password?: string;
 }
 
 interface Props {
@@ -194,7 +178,7 @@ const toast = useToast();
 
 const steps = [
   { id: 'upload', label: 'Upload' },
-  { id: 'mapping', label: 'Map Columns' },
+  { id: 'mapping', label: 'Map columns' },
   { id: 'preview', label: 'Preview' },
   { id: 'role', label: 'Role' },
   { id: 'results', label: 'Results' },
@@ -231,7 +215,7 @@ const validRowsCount = computed(() =>
 const canProceed = computed(() => {
   switch (currentStep.value) {
     case 1:
-      return csvFile.value && parsedHeaders.value.length > 0 && parsedRows.value.length > 0;
+      return parsedHeaders.value.length > 0 && parsedRows.value.length > 0;
     case 2:
       return columnMapping.value.username && columnMapping.value.fullName && columnMapping.value.password;
     case 3:
@@ -296,10 +280,12 @@ async function handleCreateUsers() {
       })),
     });
 
+    const passwords = new Map(validUsers.map((u) => [u.username, u.password]));
     creationResults.value = response.results.map((r) => ({
       username: r.username,
       success: r.success,
       error: r.error,
+      password: r.success ? passwords.get(r.username) : undefined,
     }));
 
     // Add successfully created users to the store
@@ -322,7 +308,7 @@ async function handleCreateUsers() {
     creationProgress.value = 100;
 
     toast.success(
-      `Batch import complete: ${response.successCount} created, ${response.failureCount} failed`
+      `Import finished: ${response.successCount} created, ${response.failureCount} failed`
     );
 
     emit('complete', {
@@ -330,7 +316,7 @@ async function handleCreateUsers() {
       failed: response.failureCount,
     });
   } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Batch creation failed');
+    toast.error(error.response?.data?.message || 'Import failed');
     creationResults.value = validUsers.map((u) => ({
       username: u.username,
       success: false,

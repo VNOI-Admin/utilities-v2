@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
+  <div class="min-h-screen">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
+    <div class="border-b border-white/[0.06] bg-mission-black/90 backdrop-blur sticky top-14 lg:top-0 z-30 px-4 md:px-8 py-3 md:py-4">
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 md:gap-4 min-w-0">
           <button
@@ -9,47 +9,53 @@
             class="btn-secondary flex items-center gap-2 flex-shrink-0"
           >
             <ArrowLeft :size="16" :stroke-width="2" />
-            <span class="hidden md:inline">BACK</span>
+            <span class="hidden md:inline">All teams</span>
           </button>
 
           <div class="h-8 w-px bg-white/20 hidden md:block"></div>
 
           <div v-if="user" class="flex items-center gap-2 md:gap-3 min-w-0">
-            <div
-              class="w-3 h-3 rounded-full flex-shrink-0"
-              :class="user.machineUsage?.isOnline ? 'bg-mission-accent animate-pulse' : 'bg-gray-600'"
-            ></div>
             <div class="min-w-0">
-              <h1 class="text-lg md:text-2xl font-display font-bold text-white truncate">{{ user.username }}</h1>
-              <p class="text-xs md:text-sm text-gray-500 truncate">{{ user.fullName || '—' }}</p>
+              <h1 class="text-lg md:text-xl font-semibold truncate">{{ user.fullName || user.username }}</h1>
+              <p class="text-xs md:text-sm text-mission-muted truncate">{{ user.username }}<template v-if="user.group"> · {{ user.group }}</template></p>
             </div>
           </div>
         </div>
 
         <div class="flex items-center gap-2 flex-shrink-0">
           <!-- Contest Indicator (hidden on narrow screens) -->
-          <div v-if="overlayStore.activeContestId && !isNarrowScreen" class="flex items-center gap-2 px-3 py-2 bg-mission-gray border border-mission-accent/30">
-            <div class="w-2 h-2 bg-mission-accent rounded-full animate-pulse"></div>
-            <span class="tech-label">CONTEST: {{ overlayStore.activeContestId }}</span>
+          <div v-if="overlayStore.activeContestId && !isNarrowScreen" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-mission-gray text-sm text-mission-muted">
+            <div class="w-1.5 h-1.5 bg-mission-ok rounded-full"></div>
+            <span>{{ overlayStore.activeContestId }}</span>
           </div>
+          <button
+            v-if="user"
+            @click="togglePin(user.username)"
+            class="btn-secondary"
+            :class="{ 'text-mission-accent': isPinned(user.username) }"
+            :title="isPinned(user.username) ? 'Unpin' : 'Pin to top of coach view'"
+          >
+            <Pin :size="16" :stroke-width="2" :fill="isPinned(user.username) ? 'currentColor' : 'none'" />
+            <span class="hidden md:inline">{{ isPinned(user.username) ? 'Pinned' : 'Pin' }}</span>
+          </button>
 
           <!-- Narrow Screen: Stream/Webcam Toggle -->
-          <div v-if="isNarrowScreen" class="flex border border-white/20 rounded overflow-hidden">
+          <div v-if="isNarrowScreen" class="flex border border-white/10 rounded-xl overflow-hidden">
             <button
               @click="mobileViewMode = 'stream'"
-              class="px-3 py-2 text-xs font-mono uppercase transition-all duration-300"
+              class="px-3 py-2 transition-colors"
               :class="mobileViewMode === 'stream'
-                ? 'bg-mission-accent text-black font-semibold'
-                : 'bg-transparent text-gray-400'"
+                ? 'bg-gray-100 text-mission-ink'
+                : 'bg-transparent text-mission-muted'"
             >
               <Monitor :size="16" />
             </button>
             <button
               @click="mobileViewMode = 'webcam'"
-              class="px-3 py-2 text-xs font-mono uppercase transition-all duration-300"
+              class="px-3 py-2 transition-colors"
               :class="mobileViewMode === 'webcam'
-                ? 'bg-mission-accent text-black font-semibold'
-                : 'bg-transparent text-gray-400'"
+                ? 'bg-gray-100 text-mission-ink'
+                : 'bg-transparent text-mission-muted'"
             >
               <Camera :size="16" />
             </button>
@@ -63,7 +69,7 @@
             title="Swap Streams"
           >
             <ArrowDownUp :size="16" :stroke-width="2" />
-            <span>SWAP</span>
+            <span>Swap</span>
           </button>
           <button
             @click="toggleFullscreen"
@@ -71,7 +77,7 @@
             title="Fullscreen"
           >
             <Maximize :size="16" :stroke-width="2" />
-            <span class="hidden md:inline">FULLSCREEN</span>
+            <span class="hidden md:inline">Fullscreen</span>
           </button>
         </div>
       </div>
@@ -81,15 +87,15 @@
     <div class="p-4 md:p-8">
       <!-- Loading State -->
       <div v-if="loading" class="mission-card p-8 md:p-12 text-center">
-        <div class="w-12 h-12 md:w-16 md:h-16 border-4 border-mission-gray border-t-mission-accent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-gray-500 font-mono text-sm uppercase">LOADING FEED...</p>
+        <div class="w-10 h-10 border-2 border-mission-gray border-t-mission-accent rounded-full animate-spin mx-auto mb-3"></div>
+        <p class="text-mission-muted text-sm">Loading feed…</p>
       </div>
 
       <!-- Error State -->
       <div v-else-if="error" class="mission-card p-8 md:p-12 text-center">
         <AlertCircle :size="48" class="mx-auto mb-4 text-mission-red md:w-16 md:h-16" :stroke-width="2" />
-        <p class="text-mission-red font-mono mb-4 text-sm">{{ error }}</p>
-        <button @click="loadUser" class="btn-primary">RETRY</button>
+        <p class="text-mission-red mb-4 text-sm">{{ error }}</p>
+        <button @click="loadUser" class="btn-primary">Retry</button>
       </div>
 
       <!-- Stream View -->
@@ -101,10 +107,10 @@
             <div class="mission-card overflow-hidden">
               <div class="relative aspect-video bg-black">
                 <div class="absolute top-3 left-3 z-10">
-                  <div class="bg-mission-dark/90 border border-mission-accent/50 px-2 py-1 backdrop-blur-sm">
+                  <div class="bg-black/60 rounded-full px-2.5 py-1">
                     <div class="flex items-center gap-2">
-                      <div class="w-2 h-2 bg-mission-accent rounded-full animate-pulse"></div>
-                      <span class="tech-label text-[10px]">{{ mobileViewMode === 'stream' ? 'MAIN FEED' : 'WEBCAM' }}</span>
+                      <div class="w-1.5 h-1.5 bg-mission-red rounded-full"></div>
+                      <span class="text-[11px] text-white">{{ mobileViewMode === 'stream' ? 'Screen' : 'Webcam' }}</span>
                     </div>
                   </div>
                 </div>
@@ -118,7 +124,7 @@
                 />
                 <div v-else class="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
                   <Eye :size="48" class="mb-4" :stroke-width="2" />
-                  <p class="font-mono text-xs uppercase">FEED UNAVAILABLE</p>
+                  <p class="text-sm">Feed unavailable</p>
                 </div>
               </div>
             </div>
@@ -130,10 +136,10 @@
             <div class="mission-card overflow-hidden">
               <div class="relative aspect-video bg-black">
                 <div class="absolute top-4 left-4 z-10">
-                  <div class="bg-mission-dark/90 border border-mission-accent/50 px-3 py-1.5 backdrop-blur-sm">
+                  <div class="bg-black/60 rounded-full px-3 py-1">
                     <div class="flex items-center gap-2">
-                      <div class="w-2 h-2 bg-mission-accent rounded-full animate-pulse"></div>
-                      <span class="tech-label">{{ swapped ? 'WEBCAM' : 'MAIN' }} FEED</span>
+                      <div class="w-1.5 h-1.5 bg-mission-red rounded-full"></div>
+                      <span class="text-xs text-white">{{ swapped ? 'Webcam' : 'Screen' }}</span>
                     </div>
                   </div>
                 </div>
@@ -147,7 +153,7 @@
                 />
                 <div v-else class="absolute inset-0 flex flex-col items-center justify-center text-gray-600">
                   <Eye :size="64" class="mb-4" :stroke-width="2" />
-                  <p class="font-mono text-sm uppercase">FEED UNAVAILABLE</p>
+                  <p class="text-sm">Feed unavailable</p>
                 </div>
               </div>
             </div>
@@ -156,12 +162,12 @@
             <div
               v-if="webcamStreamUrl"
               @click="swapStreams"
-              class="absolute bottom-6 right-6 w-80 mission-card overflow-hidden cursor-pointer hover:ring-2 hover:ring-mission-accent transition-all group"
+              class="absolute bottom-6 right-6 w-80 mission-card overflow-hidden cursor-pointer hover:ring-2 hover:ring-white/60 transition-all group"
             >
               <div class="relative aspect-video bg-black">
                 <div class="absolute top-2 left-2 z-10">
-                  <div class="bg-mission-dark/90 border border-mission-accent/50 px-2 py-1 backdrop-blur-sm">
-                    <span class="tech-label text-[10px]">{{ swapped ? 'MAIN' : 'WEBCAM' }}</span>
+                  <div class="bg-black/60 rounded-full px-2.5 py-1">
+                    <span class="text-[11px] text-white">{{ swapped ? 'Screen' : 'Webcam' }}</span>
                   </div>
                 </div>
 
@@ -173,8 +179,8 @@
                 />
 
                 <div class="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div class="bg-mission-dark/90 border border-mission-accent/50 px-2 py-1 backdrop-blur-sm">
-                    <span class="tech-label text-[10px]">CLICK TO SWAP</span>
+                  <div class="bg-black/60 rounded-full px-2.5 py-1">
+                    <span class="text-[11px] text-white">Click to swap</span>
                   </div>
                 </div>
               </div>
@@ -183,60 +189,29 @@
         </div>
 
         <!-- Info Bar -->
-        <div class="mission-card p-4 md:p-6">
-          <!-- Mobile: Scrollable stats -->
-          <div class="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-            <div class="flex items-center gap-4 md:gap-6 min-w-max">
-              <div>
-                <div class="tech-label mb-1">STATUS</div>
-                <div
-                  class="font-mono text-xs md:text-sm font-bold"
-                  :class="user.machineUsage?.isOnline ? 'text-mission-accent' : 'text-gray-500'"
-                >
-                  {{ user.machineUsage?.isOnline ? 'ONLINE' : 'OFFLINE' }}
-                </div>
-              </div>
-              <div class="h-8 w-px bg-white/20"></div>
-              <div>
-                <div class="tech-label mb-1">PING</div>
-                <div class="font-mono text-xs md:text-sm text-white">{{ user.machineUsage?.ping || 0 }}ms</div>
-              </div>
-              <div class="h-8 w-px bg-white/20"></div>
-              <div>
-                <div class="tech-label mb-1">CPU</div>
-                <div class="font-mono text-xs md:text-sm text-white">{{ user.machineUsage?.cpu || 0 }}%</div>
-              </div>
-              <div class="h-8 w-px bg-white/20"></div>
-              <div>
-                <div class="tech-label mb-1">MEM</div>
-                <div class="font-mono text-xs md:text-sm text-white">{{ user.machineUsage?.memory || 0 }}%</div>
-              </div>
-              <div class="h-8 w-px bg-white/20"></div>
-              <div>
-                <div class="tech-label mb-1">DISK</div>
-                <div class="font-mono text-xs md:text-sm text-white">{{ user.machineUsage?.disk || 0 }}%</div>
-              </div>
-              <template v-if="participantRank !== null && participantData">
-                <div class="h-8 w-px bg-white/20"></div>
-                <div>
-                  <div class="tech-label mb-1">RANK</div>
-                  <div class="font-mono text-xs md:text-sm text-mission-accent font-bold">#{{ participantRank }}</div>
-                </div>
-                <div class="h-8 w-px bg-white/20"></div>
-                <div>
-                  <div class="tech-label mb-1">{{ participantData.format === 'VNOJ' ? 'SCORE' : 'SOLVED' }}</div>
-                  <div class="font-mono text-xs md:text-sm text-white">
-                    {{ participantData.format === 'VNOJ' ? (participantData.score || 0) : (participantData.solvedCount || 0) }}
-                  </div>
-                </div>
-                <div class="h-8 w-px bg-white/20"></div>
-                <div>
-                  <div class="tech-label mb-1">{{ participantData.format === 'VNOJ' ? 'TIME' : 'PENALTY' }}</div>
-                  <div class="font-mono text-xs md:text-sm text-white">
-                    {{ secondaryMinutes }}m
-                  </div>
-                </div>
-              </template>
+        <div class="mission-card p-4 md:p-5 flex flex-wrap items-center gap-x-8 gap-y-4">
+          <div>
+            <div class="tech-label mb-1">Rank</div>
+            <div class="text-xl font-semibold tabular-nums">{{ participantRank ? `#${participantRank}` : '—' }}</div>
+          </div>
+          <div>
+            <div class="tech-label mb-1">{{ primaryLabel(format) }}</div>
+            <div class="text-xl font-semibold tabular-nums">{{ participantData ? primaryMetric(participantData, format) : '—' }}</div>
+          </div>
+          <div>
+            <div class="tech-label mb-1">{{ secondaryLabel(format) }}</div>
+            <div class="text-xl font-semibold tabular-nums">{{ participantData ? secondaryMetric(participantData, format) : '—' }}</div>
+          </div>
+          <div v-if="cells.length" class="flex-1 min-w-[240px]">
+            <div class="tech-label mb-1">Problems</div>
+            <div class="grid gap-1" :style="{ gridTemplateColumns: `repeat(${cells.length}, minmax(0, 1fr))` }">
+              <span
+                v-for="cell in cells"
+                :key="cell.code"
+                class="h-7 px-1 rounded-lg grid place-items-center text-xs font-semibold truncate"
+                :class="cellClass(cell)"
+                :title="cellTitle(cell)"
+              >{{ cell.label }}</span>
             </div>
           </div>
         </div>
@@ -251,8 +226,16 @@ import { useRoute, useRouter } from 'vue-router';
 import { internalApi } from '~/services/api';
 import { useOverlayStore } from '~/stores/overlay';
 import VideoPlayer from '~/components/VideoPlayer.vue';
-import { ArrowLeft, ArrowDownUp, Maximize, AlertCircle, Eye, Monitor, Camera } from 'lucide-vue-next';
-import { resolveFormat, secondaryMetric } from '~/common/ranking';
+import { ArrowLeft, ArrowDownUp, Maximize, AlertCircle, Eye, Monitor, Camera, Pin } from 'lucide-vue-next';
+import {
+  useCoachPins,
+  fetchStandings,
+  problemCells,
+  cellClass,
+  cellTitle,
+  type StandingsProblem,
+} from '~/composables/useCoachStandings';
+import { primaryLabel, primaryMetric, resolveFormat, secondaryLabel, secondaryMetric } from '~/common/ranking';
 
 const route = useRoute();
 const router = useRouter();
@@ -265,11 +248,10 @@ const swapped = ref(false);
 const streamContainerRef = ref<HTMLElement | null>(null);
 const participantRank = ref<number | null>(null);
 const participantData = ref<any>(null);
-
-// VNOJ stores cumtime in seconds, ICPC penalty in minutes; both display as minutes.
-const secondaryMinutes = computed(() =>
-  participantData.value ? secondaryMetric(participantData.value, resolveFormat(participantData.value)) : 0,
-);
+const standingsProblems = ref<StandingsProblem[]>([]);
+const { isPinned, togglePin } = useCoachPins();
+const format = computed(() => resolveFormat(participantData.value));
+const cells = computed(() => (participantData.value ? problemCells(participantData.value, standingsProblems.value) : []));
 
 // Screen width detection for custom breakpoint
 const screenWidth = ref(window.innerWidth);
@@ -340,7 +322,7 @@ async function loadUser() {
     };
 
     // Load participant rank if contest is set
-    // await loadParticipantRank(); // Disabled: coaches don't have access to contest endpoints
+    await loadParticipantRank();
   } catch (err: any) {
     console.error('Failed to load user:', err);
     error.value = err?.response?.data?.message || 'Failed to load user feed';
@@ -365,10 +347,11 @@ async function loadParticipantRank() {
     }
 
     // Fetch all participants for the contest
-    const participants = await internalApi.contest.getParticipants(overlayStore.activeContestId);
+    const { problems, byUser } = await fetchStandings(overlayStore.activeContestId);
+    standingsProblems.value = problems;
 
     // Find participant where mapToUser matches current user's username
-    const participant = participants.find((p: any) => p.mapToUser === user.value.username);
+    const participant = byUser.get(user.value.username);
 
     if (!participant) {
       participantRank.value = null;

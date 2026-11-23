@@ -1,31 +1,33 @@
 <template>
   <div class="config-panel">
-    <h2 class="panel-title">Multi Contestant Layout</h2>
+    <h2 class="panel-title">Multi contestant</h2>
 
     <div class="form-grid">
       <!-- User Selection -->
-      <div class="form-group col-span-2">
-        <label class="tech-label mb-2">Contestants (Max 4)</label>
-        <div class="flex flex-wrap gap-2 p-3 bg-mission-gray border border-white/20 rounded min-h-[60px]">
+      <div class="form-group md:col-span-2">
+        <label class="tech-label">Contestants · up to 4</label>
+        <div class="flex flex-wrap items-center gap-2">
           <div
             v-for="(username, index) in localConfig.usernames"
             :key="index"
-            class="flex items-center gap-2 px-3 py-1.5 bg-mission-dark border border-mission-accent text-white font-mono text-sm rounded"
+            class="flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full bg-mission-accent/15 text-mission-accent text-sm"
           >
-            <span>{{ username }}</span>
+            <span class="text-xs tabular-nums opacity-70">{{ index + 1 }}</span>
+            <span class="font-mono">{{ username }}</span>
             <button
               type="button"
-              class="flex items-center justify-center p-0.5 hover:text-red-500 transition-colors"
+              class="p-0.5 rounded-full hover:bg-mission-accent/20 transition-colors"
+              :title="`Remove ${username}`"
               @click="removeUser(index)"
             >
-              <X :size="16" />
+              <X :size="14" :stroke-width="2" />
             </button>
           </div>
-          <div v-if="localConfig.usernames.length < 4" class="flex-1 min-w-[200px]">
+          <div v-if="localConfig.usernames.length < 4" class="w-full sm:w-72">
             <MissionSelect
               v-model="selectedUser"
               :options="availableContestants as any"
-              placeholder="Add Contestant..."
+              placeholder="Add contestant"
               :option-label="(user: any) => `${user.fullName} (${user.username})`"
               :option-value="(user: any) => user.username"
               @update:model-value="addUser"
@@ -35,47 +37,14 @@
       </div>
 
       <!-- Layout Mode -->
-      <div class="form-group col-span-2">
-        <label class="tech-label mb-2">Layout Mode</label>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 font-mono text-sm transition-all"
-            :class="localConfig.layoutMode === 'side_by_side'
-              ? 'bg-mission-accent/10 border border-mission-accent text-mission-accent'
-              : 'bg-mission-gray border border-white/20 text-white/60 hover:text-white hover:border-white/30'"
-            @click="setLayoutMode('side_by_side')"
-          >
-            <Columns :size="16" />
-            Side by Side
-          </button>
-          <button
-            type="button"
-            class="flex-1 px-4 py-2.5 flex items-center justify-center gap-2 font-mono text-sm transition-all"
-            :class="localConfig.layoutMode === 'quad'
-              ? 'bg-mission-accent/10 border border-mission-accent text-mission-accent'
-              : 'bg-mission-gray border border-white/20 text-white/60 hover:text-white hover:border-white/30'"
-            @click="setLayoutMode('quad')"
-          >
-            <Grid2x2 :size="16" />
-            Quad (2x2)
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Preview Section -->
-    <div v-if="localConfig.usernames.length > 0" class="preview-section">
-      <h3 class="preview-title">Selected Contestants ({{ localConfig.usernames.length }})</h3>
-      <div class="preview-grid">
-        <div
-          v-for="(username, index) in localConfig.usernames"
-          :key="username"
-          class="preview-card"
-        >
-          <div class="preview-number">{{ index + 1 }}</div>
-          <div class="preview-username">{{ username }}</div>
-        </div>
+      <div class="form-group md:col-span-2">
+        <label class="tech-label">Layout</label>
+        <SegmentedControl
+          :model-value="localConfig.layoutMode"
+          :options="layoutOptions"
+          class="self-start"
+          @update:model-value="setLayoutMode"
+        />
       </div>
     </div>
 
@@ -92,6 +61,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { Columns, Grid2x2, X } from 'lucide-vue-next';
+import SegmentedControl from './SegmentedControl.vue';
 import { useOverlayStore } from '~/stores/overlay';
 import { useUsersStore } from '~/stores/users';
 import { useToast } from 'vue-toastification';
@@ -106,6 +76,11 @@ const localConfig = ref({ ...overlayStore.multiContestantConfig });
 const selectedUser = ref('');
 const loading = ref(false);
 const successMessage = ref('');
+
+const layoutOptions: { value: 'side_by_side' | 'quad'; label: string; icon: typeof Columns }[] = [
+  { value: 'side_by_side', label: 'Side by side', icon: Columns },
+  { value: 'quad', label: 'Quad (2×2)', icon: Grid2x2 },
+];
 
 const contestants = computed(() => {
   return usersStore.users.filter(u => u.role === 'contestant');
@@ -182,72 +157,4 @@ onMounted(async () => {
 
 <style scoped>
 @import './panel-styles.css';
-
-.multi-select {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 12px;
-  background: var(--mission-dark);
-  border: 1px solid var(--mission-border);
-  border-radius: 4px;
-  min-height: 60px;
-}
-
-.selected-user {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--mission-card);
-  border: 1px solid var(--mission-cyan);
-  color: var(--mission-text);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  border-radius: 4px;
-}
-
-.remove-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  background: transparent;
-  border: none;
-  color: var(--mission-text-dim);
-  cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.remove-button:hover {
-  color: #ef4444;
-}
-
-.preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-.preview-card {
-  padding: 16px;
-  background: var(--mission-card);
-  border: 1px solid var(--mission-border);
-  border-radius: 4px;
-  text-align: center;
-}
-
-.preview-number {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--mission-cyan);
-  margin-bottom: 8px;
-}
-
-.preview-username {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--mission-text);
-}
 </style>

@@ -1,19 +1,19 @@
 <template>
   <div class="text-center" :class="containerClass">
-    <div class="inline-block p-8 mission-card">
+    <div class="inline-block p-8">
       <slot name="icon">
         <component
           v-if="iconComponent"
           :is="iconComponent"
           :size="iconSizeValue"
           :stroke-width="2"
-          class="mx-auto mb-4 text-gray-600"
+          class="mx-auto mb-4 text-mission-line"
         />
       </slot>
-      <p class="text-gray-500 font-mono text-sm uppercase tracking-wider">
+      <p class="text-gray-300 text-sm font-medium">
         {{ title }}
       </p>
-      <p v-if="subtitle" class="text-gray-600 font-mono text-xs mt-2">
+      <p v-if="subtitle" class="text-mission-muted text-sm mt-1">
         {{ subtitle }}
       </p>
       <slot name="action" />
@@ -66,10 +66,10 @@ const iconComponent = computed(() => iconMap[props.icon]);
 
 const iconSizeValue = computed(() => {
   const sizeMap: Record<IconSize, number> = {
-    sm: 48,
-    md: 64,
-    lg: 80,
-    xl: 96,
+    sm: 32,
+    md: 40,
+    lg: 48,
+    xl: 56,
   };
   return sizeMap[props.iconSize];
 });

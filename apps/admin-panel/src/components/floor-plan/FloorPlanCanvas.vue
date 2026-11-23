@@ -59,7 +59,7 @@ const gridLines = computed(() => {
   for (let x = 0; x <= gridWidth.value; x++) {
     lines.push({
       points: [x * props.gridSize, 0, x * props.gridSize, height],
-      stroke: 'rgba(255, 255, 255, 0.1)',
+      stroke: 'rgba(255, 255, 255, 0.05)',
     });
   }
 
@@ -67,7 +67,7 @@ const gridLines = computed(() => {
   for (let y = 0; y <= gridHeight.value; y++) {
     lines.push({
       points: [0, y * props.gridSize, width, y * props.gridSize],
-      stroke: 'rgba(255, 255, 255, 0.1)',
+      stroke: 'rgba(255, 255, 255, 0.05)',
     });
   }
 
@@ -315,7 +315,7 @@ const previewLine = computed(() => {
   if (!isDrawing.value || !drawStart.value || !drawEnd.value) return null;
   return {
     points: [drawStart.value.x, drawStart.value.y, drawEnd.value.x, drawEnd.value.y],
-    stroke: '#ffb830',
+    stroke: '#8b8b9a',
     strokeWidth: 4,
     dash: [10, 5],
   };
@@ -471,7 +471,7 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
             y: 0,
             width: gridWidth * gridSize,
             height: gridHeight * gridSize,
-            stroke: 'rgba(255, 184, 48, 0.5)',
+            stroke: 'rgba(255, 255, 255, 0.15)',
             strokeWidth: 2,
             dash: [10, 5],
             listening: false,
@@ -508,7 +508,7 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
             y: ghostPosition.y,
             width: gridSize,
             height: gridSize,
-            fill: 'rgba(255, 255, 255, 0.1)',
+            fill: 'rgba(255, 255, 255, 0.05)',
             stroke: 'rgba(255, 255, 255, 0.5)',
             strokeWidth: 2,
             dash: [5, 5],
@@ -525,8 +525,8 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
             y: ghostPosition.y,
             width: gridSize,
             height: gridSize,
-            fill: 'rgba(0, 212, 255, 0.2)',
-            stroke: '#00d4ff',
+            fill: 'rgba(159, 216, 255, 0.15)',
+            stroke: '#9fd8ff',
             strokeWidth: 2,
             dash: [5, 5],
             cornerRadius: 4,
@@ -542,8 +542,8 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
             y: ghostPosition.y,
             width: gridSize * 4,
             height: gridSize * 2,
-            fill: 'rgba(255, 184, 48, 0.1)',
-            stroke: '#ffb830',
+            fill: 'rgba(212, 194, 255, 0.08)',
+            stroke: '#d4c2ff',
             strokeWidth: 2,
             dash: [5, 5],
             cornerRadius: 4,
@@ -558,8 +558,8 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
             x: ghostPosition.x,
             y: ghostPosition.y,
             radius: 5,
-            fill: '#ffb830',
-            stroke: '#ffb830',
+            fill: '#8b8b9a',
+            stroke: '#8b8b9a',
             strokeWidth: 2,
             opacity: 0.7,
             listening: false,
@@ -574,8 +574,8 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
             y: selectionRect.y,
             width: selectionRect.width,
             height: selectionRect.height,
-            fill: 'rgba(0, 212, 255, 0.1)',
-            stroke: '#00d4ff',
+            fill: 'rgba(168, 184, 255, 0.1)',
+            stroke: '#a8b8ff',
             strokeWidth: 2,
             dash: [5, 5],
             listening: false,
@@ -593,8 +593,8 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
                 y: ghost.y,
                 width: ghost.width,
                 height: ghost.height,
-                fill: 'rgba(255, 255, 255, 0.1)',
-                stroke: '#00d4ff',
+                fill: 'rgba(255, 255, 255, 0.05)',
+                stroke: '#a8b8ff',
                 strokeWidth: 2,
                 dash: [5, 5],
                 cornerRadius: 4,
@@ -609,7 +609,7 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
                 y: ghost.y + ghost.height / 2,
                 fontSize: 14,
                 fontFamily: 'JetBrains Mono, monospace',
-                fill: '#00d4ff',
+                fill: '#a8b8ff',
                 align: 'center',
                 verticalAlign: 'middle',
                 offsetX: ghost.label.length * 4,
@@ -625,8 +625,8 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
                 y: ghost.y,
                 width: ghost.width,
                 height: ghost.height,
-                fill: 'rgba(255, 184, 48, 0.1)',
-                stroke: '#00d4ff',
+                fill: 'rgba(212, 194, 255, 0.08)',
+                stroke: '#a8b8ff',
                 strokeWidth: 2,
                 dash: [5, 5],
                 cornerRadius: 4,
@@ -643,7 +643,7 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
                 height: ghost.height - 16,
                 fontSize: 12,
                 fontFamily: 'JetBrains Mono, monospace',
-                fill: '#00d4ff',
+                fill: '#a8b8ff',
                 align: 'left',
                 verticalAlign: 'top',
                 wrap: 'word',
@@ -657,7 +657,7 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
               v-if="ghost.type === 'wall'"
               :config="{
                 points: ghost.points,
-                stroke: '#00d4ff',
+                stroke: '#a8b8ff',
                 strokeWidth: 4,
                 dash: [5, 5],
                 listening: false,
@@ -669,7 +669,7 @@ defineExpose({ stageRef, showTooltip, hideTooltip });
     </v-stage>
 
     <!-- Zoom indicator -->
-    <div class="absolute bottom-4 right-4 text-white/50 text-sm font-mono">
+    <div class="absolute bottom-4 right-4 text-mission-muted text-xs font-mono tabular-nums">
       {{ Math.round(store.zoom * 100) }}%
     </div>
 

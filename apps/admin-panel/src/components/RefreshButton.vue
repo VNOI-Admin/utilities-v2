@@ -25,7 +25,7 @@ interface Props {
 
 withDefaults(defineProps<Props>(), {
   loading: false,
-  label: 'SYNC',
+  label: 'Refresh',
   buttonClass: '',
 });
 

@@ -6,10 +6,10 @@
       :key="String(option)"
       @click="$emit('update:modelValue', option)"
       type="button"
-      class="px-2 py-1.5 md:px-4 md:py-2 border font-mono text-[10px] md:text-xs uppercase tracking-wider transition-all duration-300"
+      class="px-3 py-1.5 border rounded-full text-sm transition-colors"
       :class="modelValue === option
-        ? 'border-mission-accent text-mission-accent bg-mission-accent/10 shadow-[0_0_10px_rgba(0,255,157,0.3)]'
-        : 'border-white/20 text-gray-400 hover:border-white/40'"
+        ? 'border-gray-100 bg-gray-100 text-mission-ink'
+        : 'border-white/10 bg-mission-dark text-mission-muted hover:text-gray-100'"
     >
       <slot name="option" :option="option">
         {{ formatOption(option) }}
@@ -38,6 +38,7 @@ function formatOption(option: T): string {
   if (props.formatter) {
     return props.formatter(option);
   }
-  return String(option);
+  const text = String(option);
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 </script>

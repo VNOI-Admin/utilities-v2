@@ -468,7 +468,7 @@ function handleHideTooltip() {
             :grid-size="gridSize"
             @select="handleStartingPointSelect"
             @update="handleStartingPointUpdate"
-            @mouseenter="(e) => handleShowTooltip('Starting Point', e)"
+            @mouseenter="(e) => handleShowTooltip('Starting point', e)"
             @mouseleave="handleHideTooltip"
           />
         </FloorPlanCanvas>
@@ -484,12 +484,12 @@ function handleHideTooltip() {
     <!-- Create Table Modal -->
     <MissionModal
       :show="showTableModal"
-      title="Create Table"
+      title="New table"
       @close="showTableModal = false"
     >
       <div class="space-y-4">
         <div>
-          <label class="tech-label">Label</label>
+          <label class="tech-label block mb-1.5">Label</label>
           <input
             v-model="newTableLabel"
             type="text"
@@ -499,13 +499,13 @@ function handleHideTooltip() {
         </div>
 
         <div>
-          <label class="tech-label">Bind to User (optional)</label>
+          <label class="tech-label block mb-1.5">Bind to user (optional)</label>
           <MissionSelect
             v-model="newTableUser"
             :options="(userOptions as any)"
             option-label="label"
             option-value="value"
-            placeholder="Select user..."
+            placeholder="Select user"
           />
         </div>
       </div>
@@ -519,16 +519,16 @@ function handleHideTooltip() {
     <!-- Create Comment Modal -->
     <MissionModal
       :show="showCommentModal"
-      title="Create Comment"
+      title="New comment"
       @close="showCommentModal = false"
     >
       <div class="space-y-4">
         <div>
-          <label class="tech-label">Comment Text</label>
+          <label class="tech-label block mb-1.5">Comment</label>
           <textarea
             v-model="newCommentText"
             class="input-mission w-full"
-            placeholder="Enter comment text..."
+            placeholder="Write a note for this spot"
             rows="4"
           />
         </div>
