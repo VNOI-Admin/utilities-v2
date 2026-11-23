@@ -2,8 +2,20 @@
   <div class="min-h-screen bg-mission-black p-6">
     <PageHeader title="MACHINES" subtitle="CONTEST MACHINE REGISTRATION" />
 
-    <div class="mission-card p-6 mb-6">
-      <form class="flex flex-col md:flex-row md:items-end gap-3" @submit.prevent="handleApprove">
+    <div class="mission-card p-6 mb-6 flex flex-col md:flex-row md:items-end gap-4">
+      <div>
+        <label class="tech-label block mb-2">QR ON THE MACHINE'S SCREEN</label>
+        <button
+          type="button"
+          class="btn-primary w-full md:w-auto px-4 py-3 md:py-2 flex items-center justify-center gap-2"
+          @click="openScanner"
+        >
+          <Camera :size="16" />
+          Scan QR
+        </button>
+      </div>
+      <span class="tech-label text-center md:pb-2">OR</span>
+      <form class="flex-1 flex flex-col md:flex-row md:items-end gap-3" @submit.prevent="handleApprove">
         <div class="flex-1 max-w-md">
           <label class="tech-label block mb-2">CODE SHOWN ON THE MACHINE</label>
           <input
@@ -90,6 +102,50 @@
       </template>
     </MissionTable>
 
+    <QrScanner v-if="scannerOpen" @detect="onDetect" @close="scannerOpen = false">
+      <p v-if="!scannedText" class="py-4 text-center text-sm font-mono text-gray-400">
+        Point the camera at the QR on the machine's screen.
+      </p>
+      <p v-else-if="!scannedFingerprint" class="py-4 text-center text-sm font-mono text-mission-red">
+        That QR isn't a machine registration code.
+      </p>
+      <p v-else-if="!scannedMachine" class="py-4 text-center text-sm font-mono text-mission-red">
+        No enrolled machine has this fingerprint. It may have been deleted and needs to re-enroll.
+      </p>
+      <div v-else class="space-y-3">
+        <div class="flex items-center justify-between gap-3">
+          <span class="font-mono text-2xl text-mission-cyan">{{ scannedMachine.code }}</span>
+          <StatusBadge :variant="statusVariant[scannedMachine.status]" :show-dot="true">
+            {{ scannedMachine.status }}
+          </StatusBadge>
+        </div>
+        <dl class="grid grid-cols-[8rem_minmax(0,1fr)] gap-y-1 text-sm">
+          <dt class="tech-label">HOSTNAME</dt>
+          <dd class="text-gray-300 break-all">{{ scannedMachine.hostname || '—' }}</dd>
+          <dt class="tech-label">ENROLLED FROM</dt>
+          <dd class="font-mono text-gray-300">{{ scannedMachine.enrollIp || '—' }}</dd>
+          <dt class="tech-label">ENROLLED AT</dt>
+          <dd class="font-mono text-gray-300">{{ new Date(scannedMachine.createdAt).toLocaleString() }}</dd>
+        </dl>
+        <p v-if="scannedMachine.status === 'approved'" class="py-2 text-sm text-mission-accent">
+          Approved{{ scannedMachine.name ? ` as ${scannedMachine.name}` : '' }}. Point the camera at the next machine.
+        </p>
+        <div v-else class="flex gap-3">
+          <button
+            v-if="scannedMachine.status === 'pending'"
+            class="btn-danger flex-1 py-3"
+            :disabled="scanBusy"
+            @click="actOnScanned(false)"
+          >
+            Reject
+          </button>
+          <button class="btn-primary flex-1 py-3" :disabled="scanBusy" @click="actOnScanned(true)">
+            {{ scanBusy ? 'Saving...' : 'Approve' }}
+          </button>
+        </div>
+      </div>
+    </QrScanner>
+
     <MissionModal
       :show="approveQuery !== null"
       title="APPROVE MACHINE"
@@ -151,6 +207,7 @@ import EmptyState from '../components/EmptyState.vue';
 import MissionModal from '../components/MissionModal.vue';
 import MissionTable from '../components/MissionTable.vue';
 import PageHeader from '../components/PageHeader.vue';
+import QrScanner from '../components/QrScanner.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 
 const store = useMachinesStore();
@@ -162,6 +219,9 @@ const code = ref('');
 const approving = ref(false);
 const loaded = ref(false);
 const approvingFromLink = ref(false);
+const scannerOpen = ref(false);
+const scannedText = ref<string | null>(null);
+const scanBusy = ref(false);
 const editingName = ref<string | null>(null);
 const nameDraft = ref('');
 const statusVariant: Record<MachineStatus, 'accent' | 'amber' | 'red'> = {
@@ -178,6 +238,8 @@ const approveQuery = computed(() => {
   return typeof value === 'string' && value ? value : null;
 });
 const approveTarget = computed(() => store.machines.find((m) => m.fingerprint === approveQuery.value) ?? null);
+const scannedFingerprint = computed(() => (scannedText.value ? approveParam(scannedText.value) : null));
+const scannedMachine = computed(() => store.machines.find((m) => m.fingerprint === scannedFingerprint.value) ?? null);
 const canApproveTarget = computed(() => !!approveTarget.value && approveTarget.value.status !== 'approved');
 
 const errorMessage = (error: any, fallback: string) => error.response?.data?.message || error.message || fallback;
@@ -201,6 +263,43 @@ async function handleApprove() {
     toast.error(errorMessage(error, 'Failed to approve machine'));
   } finally {
     approving.value = false;
+  }
+}
+
+function approveParam(text: string) {
+  try {
+    return new URL(text).searchParams.get('approve');
+  } catch {
+    return null;
+  }
+}
+
+function openScanner() {
+  scannedText.value = null;
+  scannerOpen.value = true;
+}
+
+function onDetect(text: string) {
+  scannedText.value = text;
+  if (scannedFingerprint.value && !scannedMachine.value) refresh();
+}
+
+async function actOnScanned(approve: boolean) {
+  const machine = scannedMachine.value;
+  if (!machine) return;
+  scanBusy.value = true;
+  try {
+    if (approve) {
+      const approved = await store.approveFingerprint(machine.fingerprint);
+      toast.success(`Approved ${approved.code}${approved.name ? ` as ${approved.name}` : ''}`);
+    } else {
+      await store.revoke(machine.fingerprint);
+      toast.success(`Rejected ${machine.code}`);
+    }
+  } catch (error: any) {
+    toast.error(errorMessage(error, approve ? 'Failed to approve machine' : 'Failed to reject machine'));
+  } finally {
+    scanBusy.value = false;
   }
 }
 

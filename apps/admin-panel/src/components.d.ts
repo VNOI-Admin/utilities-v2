@@ -12,6 +12,7 @@ declare module 'vue' {
     AnnouncementTicker: typeof import('./components/overlay/AnnouncementTicker.vue')['default']
     BackButton: typeof import('./components/BackButton.vue')['default']
     BatchUserModal: typeof import('./components/batch-user/BatchUserModal.vue')['default']
+    Camera: typeof import('lucide-vue-next')['Camera']
     CanvasSizeControl: typeof import('./components/floor-plan/toolbar/CanvasSizeControl.vue')['default']
     CanvasTooltip: typeof import('./components/floor-plan/CanvasTooltip.vue')['default']
     ColumnMappingStep: typeof import('./components/batch-user/ColumnMappingStep.vue')['default']
@@ -42,6 +43,7 @@ declare module 'vue' {
     PageHeader: typeof import('./components/PageHeader.vue')['default']
     PathLayer: typeof import('./components/floor-plan/layers/PathLayer.vue')['default']
     PropertiesPanel: typeof import('./components/floor-plan/panels/PropertiesPanel.vue')['default']
+    QrScanner: typeof import('./components/QrScanner.vue')['default']
     RankingConfigPanel: typeof import('./components/overlay-controller/RankingConfigPanel.vue')['default']
     RankingDisplay: typeof import('./components/overlay/RankingDisplay.vue')['default']
     RankingView: typeof import('./components/overlay/RankingView.vue')['default']
@@ -63,5 +65,6 @@ declare module 'vue' {
     ToggleButton: typeof import('./components/ToggleButton.vue')['default']
     VideoPlayer: typeof import('./components/VideoPlayer.vue')['default']
     WallObject: typeof import('./components/floor-plan/objects/WallObject.vue')['default']
+    X: typeof import('lucide-vue-next')['X']
   }
 }
