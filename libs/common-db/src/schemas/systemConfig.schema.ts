@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { type Document, SchemaTypes } from 'mongoose';
 
 export const CONTESTANT_LOGIN_LOCKED_UNTIL_CONFIG_KEY = 'contestantLoginLockedUntil';
+export const COACH_ACCESS_REOPENED_AT_CONFIG_KEY = 'coachAccessReopenedAt';
 
 /**
  * Reaction timing knobs, stored as a single object so the settings page saves

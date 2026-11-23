@@ -10,6 +10,7 @@ import { Model } from 'mongoose';
 import { ExtractJwt } from 'passport-jwt';
 
 import { Role } from '../decorators/role.decorator';
+import { getCoachAccessStatus } from './coachAccess';
 
 @Injectable()
 export class AccessTokenGuard implements CanActivate {
@@ -64,6 +65,10 @@ export class AccessTokenGuard implements CanActivate {
 
       if (!isAdmin && !isPublic && !isMatchedRole) {
         throw new UnauthorizedException('User not authorized to access this resource');
+      }
+
+      if (user.role === Role.COACH && (await getCoachAccessStatus(this.userModel.db)).locked) {
+        throw new UnauthorizedException('Coach access is closed while the scoreboard is frozen');
       }
 
       // Set only after the role check: with AccessTokenOptional, later guards trust request.user.

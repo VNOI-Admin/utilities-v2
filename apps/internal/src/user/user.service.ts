@@ -223,7 +223,9 @@ export class UserService implements OnModuleInit {
       user.keyPair = keyPair;
     }
 
-    if (updateUserDto.group) {
+    if (updateUserDto.group === null || updateUserDto.group === '') {
+      user.group = undefined as unknown as string;
+    } else if (updateUserDto.group) {
       const group = await this.groupModel.findOne({
         code: updateUserDto.group,
       });
@@ -241,6 +243,9 @@ export class UserService implements OnModuleInit {
   }
 
   async deleteUser(username: string) {
+    if (username === 'admin') {
+      throw new BadRequestException('The admin account cannot be deleted');
+    }
     try {
       const user = await this.userModel.findOne({ username });
       if (!user) {

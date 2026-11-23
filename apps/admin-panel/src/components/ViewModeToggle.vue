@@ -1,20 +1,20 @@
 <template>
-  <div class="flex items-center border border-white/20 divide-x divide-white/20 shrink-0">
+  <div class="flex items-center gap-1 p-1 rounded-full border border-white/10 bg-mission-dark shrink-0">
     <button
       v-for="option in options"
       :key="option.value"
       type="button"
       :title="option.title"
-      class="flex items-center gap-2 px-3 py-2 font-mono text-[10px] md:text-xs uppercase tracking-wider transition-all duration-300"
+      class="flex items-center gap-1.5 px-3 py-1 rounded-full text-sm transition-colors"
       :class="
         modelValue === option.value
-          ? 'text-mission-accent bg-mission-accent/10 shadow-[inset_0_0_10px_rgba(0,255,157,0.15)]'
-          : 'text-gray-400 hover:text-white hover:bg-white/5'
+          ? 'bg-gray-100 text-mission-ink'
+          : 'text-mission-muted hover:text-gray-100'
       "
       @click="$emit('update:modelValue', option.value)"
     >
-      <component :is="option.icon" :size="16" :stroke-width="2" />
-      <span class="hidden sm:inline">{{ option.value }}</span>
+      <component :is="option.icon" :size="14" :stroke-width="2" />
+      <span class="hidden sm:inline">{{ option.label }}</span>
     </button>
   </div>
 </template>
@@ -31,7 +31,7 @@ defineEmits<{
 }>();
 
 const options = [
-  { value: 'GRID' as const, icon: LayoutGrid, title: 'Thumbnail grid' },
-  { value: 'FEED' as const, icon: Rows3, title: 'Full-screen scrolling feed' },
+  { value: 'GRID' as const, label: 'Grid', icon: LayoutGrid, title: 'Thumbnail grid' },
+  { value: 'FEED' as const, label: 'Feed', icon: Rows3, title: 'Full-screen scrolling feed' },
 ];
 </script>

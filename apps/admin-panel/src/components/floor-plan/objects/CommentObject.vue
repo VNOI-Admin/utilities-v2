@@ -42,12 +42,12 @@ const pixelSize = computed(() => ({
 }));
 
 // Colors
-const fillColor = computed(() => 'rgba(255, 184, 48, 0.1)');
+const fillColor = computed(() => 'rgba(212, 194, 255, 0.08)');
 const strokeColor = computed(() => {
-  if (isSelected.value) return '#00d4ff';
-  return '#ffb830';
+  if (isSelected.value) return '#a8b8ff';
+  return '#d4c2ff';
 });
-const textColor = computed(() => '#ffb830');
+const textColor = computed(() => '#d4c2ff');
 
 function handleDragStart() {
   if (props.readonly) return;
@@ -173,9 +173,6 @@ watch(
         strokeWidth: isSelected ? 3 : 2,
         cornerRadius: 4,
         dash: [8, 4],
-        shadowColor: isSelected ? '#00d4ff' : 'transparent',
-        shadowBlur: isSelected ? 15 : 0,
-        shadowOpacity: 0.5,
       }"
     />
 
@@ -205,9 +202,9 @@ watch(
     :config="{
       enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
       rotateEnabled: false,
-      borderStroke: '#00d4ff',
-      anchorFill: '#00d4ff',
-      anchorStroke: '#00d4ff',
+      borderStroke: '#a8b8ff',
+      anchorFill: '#a8b8ff',
+      anchorStroke: '#a8b8ff',
       anchorSize: 8,
       keepRatio: false,
       centeredScaling: false,

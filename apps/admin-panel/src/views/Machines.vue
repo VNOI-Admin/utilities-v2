@@ -1,66 +1,78 @@
 <template>
-  <div class="min-h-screen bg-mission-black p-6">
-    <PageHeader title="MACHINES" subtitle="CONTEST MACHINE REGISTRATION" />
+  <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
+    <div class="flex flex-wrap items-end gap-3">
+      <PageHeader class="flex-1 min-w-0" title="Machines" :subtitle="subtitle" />
+      <div class="flex items-center gap-1.5 text-xs text-mission-muted">
+        <span class="w-1.5 h-1.5 rounded-full" :class="loaded ? 'bg-mission-ok' : 'bg-mission-muted'"></span>
+        <span>{{ loaded ? 'Live' : 'Connecting' }}</span>
+      </div>
+    </div>
 
-    <div class="mission-card p-6 mb-6 flex flex-col md:flex-row md:items-end gap-4">
+    <div class="mission-card p-4 md:p-5 flex flex-col md:flex-row md:items-end gap-4">
       <div>
-        <label class="tech-label block mb-2">QR ON THE MACHINE'S SCREEN</label>
-        <button
-          type="button"
-          class="btn-primary w-full md:w-auto px-4 py-3 md:py-2 flex items-center justify-center gap-2"
-          @click="openScanner"
-        >
-          <Camera :size="16" />
+        <label class="tech-label block mb-1.5">QR on the machine's screen</label>
+        <button type="button" class="btn-primary w-full md:w-auto py-3 md:py-2" @click="openScanner">
+          <Camera :size="16" :stroke-width="2" />
           Scan QR
         </button>
       </div>
-      <span class="tech-label text-center md:pb-2">OR</span>
+      <span class="text-sm text-mission-muted text-center md:pb-2">or</span>
       <form class="flex-1 flex flex-col md:flex-row md:items-end gap-3" @submit.prevent="handleApprove">
         <div class="flex-1 max-w-md">
-          <label class="tech-label block mb-2">CODE SHOWN ON THE MACHINE</label>
+          <label class="tech-label block mb-1.5">Code shown on the machine</label>
           <input
             v-model="code"
-            class="input-mission w-full font-mono uppercase"
+            class="input-mission font-mono uppercase"
             placeholder="XXXXX-XXXXX"
             autocomplete="off"
             required
           />
         </div>
-        <button type="submit" class="btn-primary px-4 py-2" :disabled="approving || !code.trim()">
-          {{ approving ? 'Approving...' : 'Approve' }}
+        <button type="submit" class="btn-primary" :disabled="approving || !code.trim()">
+          <RotateCw v-if="approving" :size="16" :stroke-width="2" class="animate-spin" />
+          {{ approving ? 'Approving…' : 'Approve' }}
         </button>
       </form>
     </div>
 
-    <EmptyState v-if="store.machines.length === 0" title="No machines enrolled" />
+    <EmptyState
+      v-if="store.machines.length === 0"
+      title="No machines enrolled"
+      subtitle="Machines show up here when they reach the greeter."
+      container-class="mission-card"
+    >
+      <template #icon>
+        <Monitor :size="48" :stroke-width="2" class="mx-auto mb-4 text-mission-line" />
+      </template>
+    </EmptyState>
 
     <MissionTable
       v-else
       :items="store.machines"
       :clickable="false"
       item-key="fingerprint"
-      grid-template-columns="9rem 11rem minmax(0, 1fr) 7rem 10rem 8rem 11rem 11rem"
+      grid-template-columns="9rem 11rem minmax(0, 1fr) 7rem 10rem 8rem 11rem 9.5rem"
       min-width="1200px"
     >
       <template #header>
-        <div class="tech-label">CODE</div>
-        <div class="tech-label">NAME</div>
-        <div class="tech-label">HOSTNAME</div>
-        <div class="tech-label">STATUS</div>
-        <div class="tech-label">GUEST ACCOUNT</div>
-        <div class="tech-label">ENROLLED FROM</div>
-        <div class="tech-label">ENROLLED AT</div>
-        <div class="tech-label text-center">ACTIONS</div>
+        <div>Code</div>
+        <div>Name</div>
+        <div>Hostname</div>
+        <div>Status</div>
+        <div>Guest account</div>
+        <div>Enrolled from</div>
+        <div>Enrolled at</div>
+        <div class="text-right">Actions</div>
       </template>
 
       <template #row="{ item: machine }">
-        <div class="font-mono text-sm text-mission-cyan">{{ machine.code }}</div>
+        <div class="font-mono text-sm">{{ machine.code }}</div>
         <div class="min-w-0">
           <input
             v-if="editingName === machine.fingerprint"
             v-model="nameDraft"
             v-focus
-            class="input-mission w-full py-1 text-sm"
+            class="input-mission py-1"
             maxlength="32"
             @keydown.enter.prevent="saveName(machine)"
             @keydown.esc="editingName = null"
@@ -68,28 +80,29 @@
           />
           <button
             v-else
-            class="w-full text-left text-sm truncate hover:text-mission-cyan"
-            :class="machine.name ? 'text-gray-200' : 'text-gray-600'"
+            class="group/name w-full flex items-center gap-1.5 text-left text-sm min-w-0 hover:text-mission-accent transition-colors"
+            :class="machine.name ? 'text-gray-100' : 'text-mission-muted'"
             title="Rename"
             @click="startRename(machine)"
           >
-            {{ machine.name || '—' }}
+            <span class="truncate">{{ machine.name || '—' }}</span>
+            <Pencil :size="12" :stroke-width="2" class="flex-shrink-0 opacity-0 group-hover/name:opacity-100 transition-opacity" />
           </button>
         </div>
-        <div class="text-sm text-gray-300 truncate">{{ machine.hostname }}</div>
+        <div class="text-sm text-mission-muted truncate">{{ machine.hostname || '—' }}</div>
         <div>
-          <StatusBadge :variant="statusVariant[machine.status]" :show-dot="true">{{ machine.status }}</StatusBadge>
+          <StatusBadge :variant="statusVariant[machine.status]" :text="machine.status" show-dot />
         </div>
         <div v-if="machine.guest" class="min-w-0 flex flex-col items-start gap-1">
-          <StatusBadge :variant="machine.guest.isOnline ? 'accent' : 'gray'" :show-dot="true">
+          <StatusBadge :variant="machine.guest.isOnline ? 'ok' : 'gray'" show-dot>
             {{ machine.guest.username }}
           </StatusBadge>
-          <span class="font-mono text-xs text-gray-400">{{ machine.guest.vpnIpAddress }}</span>
+          <span class="font-mono text-xs text-mission-muted">{{ machine.guest.vpnIpAddress }}</span>
         </div>
-        <div v-else class="text-xs text-gray-600">—</div>
-        <div class="font-mono text-xs text-gray-400">{{ machine.enrollIp }}</div>
-        <div class="font-mono text-xs text-gray-400">{{ new Date(machine.createdAt).toLocaleString() }}</div>
-        <div class="flex items-center justify-center gap-2">
+        <div v-else class="text-sm text-mission-muted">—</div>
+        <div class="font-mono text-xs text-mission-muted">{{ machine.enrollIp }}</div>
+        <div class="text-xs text-mission-muted tabular-nums">{{ new Date(machine.createdAt).toLocaleString() }}</div>
+        <div class="flex items-center justify-end gap-2">
           <button
             v-if="machine.status !== 'revoked'"
             class="btn-secondary px-3 py-1 text-xs"
@@ -97,37 +110,35 @@
           >
             Revoke
           </button>
-          <button class="btn-secondary px-3 py-1 text-xs" @click="handleRemove(machine)">Delete</button>
+          <button class="btn-danger px-3 py-1 text-xs" @click="handleRemove(machine)">Delete</button>
         </div>
       </template>
     </MissionTable>
 
     <QrScanner v-if="scannerOpen" @detect="onDetect" @close="scannerOpen = false">
-      <p v-if="!scannedText" class="py-4 text-center text-sm font-mono text-gray-400">
+      <p v-if="!scannedText" class="py-4 text-center text-sm text-mission-muted">
         Point the camera at the QR on the machine's screen.
       </p>
-      <p v-else-if="!scannedFingerprint" class="py-4 text-center text-sm font-mono text-mission-red">
+      <p v-else-if="!scannedFingerprint" class="py-4 text-center text-sm text-mission-red">
         That QR isn't a machine registration code.
       </p>
-      <p v-else-if="!scannedMachine" class="py-4 text-center text-sm font-mono text-mission-red">
+      <p v-else-if="!scannedMachine" class="py-4 text-center text-sm text-mission-red">
         No enrolled machine has this fingerprint. It may have been deleted and needs to re-enroll.
       </p>
       <div v-else class="space-y-3">
         <div class="flex items-center justify-between gap-3">
-          <span class="font-mono text-2xl text-mission-cyan">{{ scannedMachine.code }}</span>
-          <StatusBadge :variant="statusVariant[scannedMachine.status]" :show-dot="true">
-            {{ scannedMachine.status }}
-          </StatusBadge>
+          <span class="font-mono text-2xl font-semibold">{{ scannedMachine.code }}</span>
+          <StatusBadge :variant="statusVariant[scannedMachine.status]" :text="scannedMachine.status" show-dot />
         </div>
         <dl class="grid grid-cols-[8rem_minmax(0,1fr)] gap-y-1 text-sm">
-          <dt class="tech-label">HOSTNAME</dt>
-          <dd class="text-gray-300 break-all">{{ scannedMachine.hostname || '—' }}</dd>
-          <dt class="tech-label">ENROLLED FROM</dt>
-          <dd class="font-mono text-gray-300">{{ scannedMachine.enrollIp || '—' }}</dd>
-          <dt class="tech-label">ENROLLED AT</dt>
-          <dd class="font-mono text-gray-300">{{ new Date(scannedMachine.createdAt).toLocaleString() }}</dd>
+          <dt class="tech-label">Hostname</dt>
+          <dd class="text-gray-100 break-all">{{ scannedMachine.hostname || '—' }}</dd>
+          <dt class="tech-label">Enrolled from</dt>
+          <dd class="font-mono text-gray-100">{{ scannedMachine.enrollIp || '—' }}</dd>
+          <dt class="tech-label">Enrolled at</dt>
+          <dd class="text-gray-100">{{ new Date(scannedMachine.createdAt).toLocaleString() }}</dd>
         </dl>
-        <p v-if="scannedMachine.status === 'approved'" class="py-2 text-sm text-mission-accent">
+        <p v-if="scannedMachine.status === 'approved'" class="py-2 text-sm text-mission-ok">
           Approved{{ scannedMachine.name ? ` as ${scannedMachine.name}` : '' }}. Point the camera at the next machine.
         </p>
         <div v-else class="flex gap-3">
@@ -140,7 +151,7 @@
             Reject
           </button>
           <button class="btn-primary flex-1 py-3" :disabled="scanBusy" @click="actOnScanned(true)">
-            {{ scanBusy ? 'Saving...' : 'Approve' }}
+            {{ scanBusy ? 'Saving…' : 'Approve' }}
           </button>
         </div>
       </div>
@@ -148,49 +159,47 @@
 
     <MissionModal
       :show="approveQuery !== null"
-      title="APPROVE MACHINE"
+      title="Approve machine"
       :loading="approvingFromLink"
       @close="closeApproveDialog"
     >
-      <p v-if="!loaded" class="text-sm font-mono text-gray-400">Loading machines...</p>
-      <p v-else-if="!approveTarget" class="text-sm font-mono text-mission-red">
+      <p v-if="!loaded" class="text-sm text-mission-muted">Loading machines…</p>
+      <p v-else-if="!approveTarget" class="text-sm text-mission-red">
         No enrolled machine has this fingerprint. Scan the code on the machine's screen again; if it still fails, the
         machine may have been deleted and needs to re-enroll.
       </p>
       <div v-else class="space-y-3">
         <dl class="grid grid-cols-[8rem_minmax(0,1fr)] gap-y-2 text-sm">
-          <dt class="tech-label">CODE</dt>
-          <dd class="font-mono text-mission-cyan">{{ approveTarget.code }}</dd>
-          <dt class="tech-label">HOSTNAME</dt>
-          <dd class="text-gray-300 break-all">{{ approveTarget.hostname || '—' }}</dd>
-          <dt class="tech-label">ENROLLED FROM</dt>
-          <dd class="font-mono text-gray-300">{{ approveTarget.enrollIp || '—' }}</dd>
-          <dt class="tech-label">ENROLLED AT</dt>
-          <dd class="font-mono text-gray-300">{{ new Date(approveTarget.createdAt).toLocaleString() }}</dd>
-          <dt class="tech-label">STATUS</dt>
+          <dt class="tech-label">Code</dt>
+          <dd class="font-mono text-gray-100">{{ approveTarget.code }}</dd>
+          <dt class="tech-label">Hostname</dt>
+          <dd class="text-gray-100 break-all">{{ approveTarget.hostname || '—' }}</dd>
+          <dt class="tech-label">Enrolled from</dt>
+          <dd class="font-mono text-gray-100">{{ approveTarget.enrollIp || '—' }}</dd>
+          <dt class="tech-label">Enrolled at</dt>
+          <dd class="text-gray-100">{{ new Date(approveTarget.createdAt).toLocaleString() }}</dd>
+          <dt class="tech-label">Status</dt>
           <dd>
-            <StatusBadge :variant="statusVariant[approveTarget.status]" :show-dot="true">
-              {{ approveTarget.status }}
-            </StatusBadge>
+            <StatusBadge :variant="statusVariant[approveTarget.status]" :text="approveTarget.status" show-dot />
           </dd>
         </dl>
-        <p v-if="approveTarget.status === 'approved'" class="text-sm text-gray-400">
+        <p v-if="approveTarget.status === 'approved'" class="text-sm text-mission-muted">
           Already approved{{ approveTarget.name ? ` as ${approveTarget.name}` : '' }}.
         </p>
-        <p v-else class="text-sm text-gray-400">Check that the code matches the one on the machine's screen.</p>
+        <p v-else class="text-sm text-mission-muted">Check that the code matches the one on the machine's screen.</p>
       </div>
 
       <template #actions>
-        <button class="btn-secondary px-4 py-2" :disabled="approvingFromLink" @click="closeApproveDialog">
+        <button class="btn-secondary" :disabled="approvingFromLink" @click="closeApproveDialog">
           {{ canApproveTarget ? 'Cancel' : 'Close' }}
         </button>
         <button
           v-if="canApproveTarget"
-          class="btn-primary px-4 py-2"
+          class="btn-primary"
           :disabled="approvingFromLink"
           @click="confirmApproveFromLink"
         >
-          {{ approvingFromLink ? 'Approving...' : 'Approve' }}
+          {{ approvingFromLink ? 'Approving…' : 'Approve' }}
         </button>
       </template>
     </MissionModal>
@@ -200,6 +209,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { Camera, Monitor, Pencil, RotateCw } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import { useMachinesStore } from '~/stores/machines';
 import type { Machine, MachineStatus } from '~/types/machines';
@@ -224,8 +234,8 @@ const scannedText = ref<string | null>(null);
 const scanBusy = ref(false);
 const editingName = ref<string | null>(null);
 const nameDraft = ref('');
-const statusVariant: Record<MachineStatus, 'accent' | 'amber' | 'red'> = {
-  approved: 'accent',
+const statusVariant: Record<MachineStatus, 'ok' | 'amber' | 'red'> = {
+  approved: 'ok',
   pending: 'amber',
   revoked: 'red',
 };
@@ -240,6 +250,13 @@ const approveQuery = computed(() => {
 const approveTarget = computed(() => store.machines.find((m) => m.fingerprint === approveQuery.value) ?? null);
 const scannedFingerprint = computed(() => (scannedText.value ? approveParam(scannedText.value) : null));
 const scannedMachine = computed(() => store.machines.find((m) => m.fingerprint === scannedFingerprint.value) ?? null);
+const pendingCount = computed(() => store.machines.filter((m) => m.status === 'pending').length);
+const subtitle = computed(() => {
+  const total = store.machines.length;
+  if (!total) return '';
+  const base = `${total} ${total === 1 ? 'machine' : 'machines'}`;
+  return pendingCount.value ? `${base} · ${pendingCount.value} pending` : base;
+});
 const canApproveTarget = computed(() => !!approveTarget.value && approveTarget.value.status !== 'approved');
 
 const errorMessage = (error: any, fallback: string) => error.response?.data?.message || error.message || fallback;

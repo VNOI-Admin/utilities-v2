@@ -41,7 +41,7 @@
           :key="language"
           :value="language"
         >
-          {{ language.toUpperCase() }}
+          {{ language }}
         </option>
       </select>
     </div>
@@ -189,14 +189,15 @@ function isSupportedLanguage(value?: string): value is SupportedLanguage {
 .editor-shell {
   display: flex;
   min-height: 0;
-  border: 1px solid rgb(255 255 255 / 0.1);
-  background: rgb(0 0 0 / 0.35);
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 12px;
+  background: #0f0f13;
   overflow: hidden;
 }
 
 .line-gutter {
-  border-right: 1px solid rgb(255 255 255 / 0.1);
-  background: rgb(255 255 255 / 0.03);
+  border-right: 1px solid rgb(255 255 255 / 0.06);
+  background: transparent;
   overflow: hidden;
   padding: 12px 8px 12px 10px;
 }
@@ -207,7 +208,7 @@ function isSupportedLanguage(value?: string): value is SupportedLanguage {
   text-align: right;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
-  color: rgb(107 114 128);
+  color: rgb(139 139 154 / 0.6);
   user-select: none;
 }
 
@@ -225,7 +226,7 @@ function isSupportedLanguage(value?: string): value is SupportedLanguage {
   margin: 0;
   padding: 12px 16px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 24px;
   white-space: pre;
   overflow: auto;
@@ -253,11 +254,11 @@ function isSupportedLanguage(value?: string): value is SupportedLanguage {
 }
 
 .input-layer::placeholder {
-  color: rgb(107 114 128);
+  color: rgb(139 139 154);
 }
 
 .input-layer::selection {
-  background: rgb(34 211 238 / 0.3);
+  background: rgb(168 184 255 / 0.3);
 }
 
 .input-layer:disabled {
@@ -267,19 +268,16 @@ function isSupportedLanguage(value?: string): value is SupportedLanguage {
 .lang-select {
   height: 30px;
   min-width: 110px;
-  border: 1px solid rgb(255 255 255 / 0.15);
-  background: rgb(17 24 39 / 0.8);
-  color: rgb(209 213 219);
+  border: 1px solid rgb(255 255 255 / 0.1);
+  background: #1f1f27;
+  color: rgb(139 139 154);
   padding: 0 10px;
-  border-radius: 6px;
-  font-family: 'JetBrains Mono', monospace;
+  border-radius: 8px;
   font-size: 12px;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
   outline: none;
 }
 
 .lang-select:focus {
-  border-color: rgb(34 211 238 / 0.6);
+  border-color: #a8b8ff;
 }
 </style>

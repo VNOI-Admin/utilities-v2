@@ -138,7 +138,7 @@ export const usePrintingStore = defineStore('printing', () => {
 
   // Polling
   function startPolling(intervalMs: number = 5000, filters?: { status?: 'queued' | 'done' }) {
-    if (isPolling.value) return;
+    stopPolling();
 
     isPolling.value = true;
 

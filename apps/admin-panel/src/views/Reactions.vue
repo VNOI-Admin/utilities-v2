@@ -2,45 +2,43 @@
   <div
     :class="
       isFeed
-        ? 'h-[calc(100vh-3.5rem)] flex flex-col bg-mission-black overflow-hidden'
-        : 'min-h-screen bg-mission-black grid-background'
+        ? 'h-[calc(100vh-3.5rem)] lg:h-screen flex flex-col bg-mission-black overflow-hidden'
+        : 'p-4 md:p-8 max-w-[1440px] mx-auto space-y-5'
     "
   >
     <!-- Grid header: full mission-control chrome. -->
-    <div
-      v-if="!isFeed"
-      class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4"
-    >
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <PageHeader title="REACTION_VIDEOS" subtitle="RENDERED TEAM REACTIONS / S3" />
-        <div class="flex items-center gap-4">
-          <StatCounter label="CLIPS:" :value="filteredItems.length" />
-          <ViewModeToggle v-model="viewMode" />
-          <RefreshButton :loading="loading" @click="loadList" />
-        </div>
+    <template v-if="!isFeed">
+      <div class="flex flex-wrap items-end gap-3">
+        <PageHeader class="flex-1 min-w-0" title="Reaction videos" />
+        <ViewModeToggle v-model="viewMode" />
+        <RefreshButton :loading="loading" @click="loadList" />
       </div>
 
-      <div class="flex flex-col md:flex-row gap-3 mt-4">
-        <SearchInput v-model="query" placeholder="SEARCH TEAM / PROBLEM / CONTEST..." />
+      <div class="flex flex-wrap items-center gap-2">
+        <SearchInput
+          v-model="query"
+          placeholder="Search team, problem or contest"
+          container-class="w-full md:w-96"
+        />
         <FilterButtonGroup v-if="verdicts.length > 2" v-model="verdictFilter" :options="verdicts" />
+        <span class="ml-auto text-sm text-mission-muted tabular-nums">
+          {{ filteredItems.length === items.length ? items.length : `${filteredItems.length} of ${items.length}` }} clips
+        </span>
       </div>
-    </div>
+    </template>
 
     <!-- Feed header: single compact row so the clip keeps the vertical space. -->
     <div
       v-else
-      class="shrink-0 border-b border-white/10 bg-mission-dark/80 backdrop-blur px-4 md:px-6 py-2.5 flex items-center gap-3 flex-wrap"
+      class="shrink-0 border-b border-white/[0.06] px-4 md:px-6 py-2.5 flex items-center gap-3 flex-wrap"
     >
-      <h1 class="text-lg font-display font-bold text-glow flex items-center gap-2 shrink-0">
-        <span class="text-mission-accent">█</span>
-        REACTION_FEED
-      </h1>
-      <StatCounter label="CLIPS:" :value="filteredItems.length" value-class="text-sm" />
+      <h1 class="text-lg font-semibold tracking-tight shrink-0">Reaction feed</h1>
+      <span class="text-sm text-mission-muted tabular-nums shrink-0">{{ filteredItems.length }} clips</span>
       <SearchInput
         v-model="query"
-        placeholder="SEARCH..."
+        placeholder="Search"
         container-class="flex-1 min-w-[160px] max-w-xs"
-        input-class="py-2 text-sm"
+        input-class="!py-1.5 text-sm"
       />
       <FilterButtonGroup
         v-if="verdicts.length > 2"
@@ -48,16 +46,16 @@
         :options="verdicts"
         class="hidden lg:flex"
       />
-      <ToggleButton v-model="autoAdvance" label="AUTO-NEXT" :show-indicator="true" />
+      <ToggleButton v-model="autoAdvance" label="Auto-next" :show-indicator="true" />
       <ViewModeToggle v-model="viewMode" />
-      <RefreshButton :loading="loading" button-class="!px-4 !py-2 text-xs" @click="loadList" />
+      <RefreshButton :loading="loading" button-class="!px-3 !py-1.5 text-xs" @click="loadList" />
     </div>
 
     <!-- Feed body. -->
     <template v-if="isFeed">
       <div
         v-if="errorMessage"
-        class="m-4 mission-card p-6 border border-mission-amber/40 bg-mission-amber/5 text-mission-amber font-mono text-sm"
+        class="m-4 rounded-xl bg-mission-amber/10 text-mission-amber text-sm px-4 py-3"
       >
         {{ errorMessage }}
       </div>
@@ -75,32 +73,29 @@
     </template>
 
     <!-- Grid body. -->
-    <div v-else class="p-4 md:p-8">
+    <template v-else>
       <!-- Loading skeleton mirrors the grid so the layout does not jump. -->
       <div v-if="loading && items.length === 0" :class="gridClass">
         <div v-for="i in 10" :key="i" class="animate-pulse">
-          <div class="aspect-[9/16] bg-white/5 rounded-lg border border-white/10"></div>
-          <div class="h-3 bg-white/5 rounded mt-3 w-3/4"></div>
-          <div class="h-3 bg-white/5 rounded mt-2 w-1/2"></div>
+          <div class="aspect-[9/16] rounded-2xl bg-mission-gray"></div>
+          <div class="h-3 rounded bg-mission-gray mt-3 w-3/4"></div>
+          <div class="h-3 rounded bg-mission-gray mt-2 w-1/2"></div>
         </div>
       </div>
 
       <div
         v-else-if="errorMessage"
-        class="mission-card p-6 border border-mission-amber/40 bg-mission-amber/5 text-mission-amber font-mono text-sm"
+        class="rounded-xl bg-mission-amber/10 text-mission-amber text-sm px-4 py-3"
       >
         {{ errorMessage }}
       </div>
 
       <EmptyState
         v-else-if="filteredItems.length === 0"
-        :title="items.length === 0 ? 'NO REACTION VIDEOS' : 'NO MATCHES'"
-        :subtitle="
-          items.length === 0
-            ? 'Nothing rendered under the reaction S3 prefix yet'
-            : 'No clip matches the current search or filter'
-        "
+        :title="items.length === 0 ? 'No reaction videos yet' : 'No clips match your search'"
+        :subtitle="items.length === 0 ? 'Rendered reactions show up here once they are uploaded.' : ''"
         icon="generic"
+        container-class="py-16"
       />
 
       <div v-else :class="gridClass">
@@ -112,7 +107,7 @@
         >
           <!-- Thumbnail: first frame via #t, hover previews muted inline. -->
           <div
-            class="relative aspect-[9/16] rounded-lg overflow-hidden bg-black border border-white/10 transition-all duration-300 group-hover:border-mission-accent/60 group-hover:shadow-[0_0_24px_rgba(0,255,157,0.15)]"
+            class="relative aspect-[9/16] rounded-2xl overflow-hidden bg-black border border-white/[0.06] transition-colors group-hover:border-white/20"
             @mouseenter="preview($event, true)"
             @mouseleave="preview($event, false)"
           >
@@ -127,12 +122,12 @@
             />
 
             <div
-              class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none"
+              class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"
             ></div>
 
             <span
               v-if="item.status"
-              class="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider border backdrop-blur-sm"
+              class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold backdrop-blur-sm"
               :class="verdictClass(item.status)"
             >
               {{ item.status }}
@@ -140,16 +135,16 @@
 
             <span
               v-if="durations[item.key]"
-              class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-[11px] font-mono"
+              class="absolute bottom-2 right-2 px-1.5 py-0.5 rounded-md bg-black/70 text-gray-100 text-[11px] tabular-nums"
             >
               {{ durations[item.key] }}
             </span>
 
             <div
-              class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
             >
-              <div class="p-3 rounded-full bg-black/60 backdrop-blur-sm border border-white/20">
-                <Play :size="22" :stroke-width="2" class="text-white" />
+              <div class="p-3 rounded-full bg-black/60 backdrop-blur-sm">
+                <Play :size="22" :stroke-width="2" class="text-gray-100" />
               </div>
             </div>
           </div>
@@ -157,30 +152,30 @@
           <!-- Metadata row, YouTube style: avatar + title + secondary lines. -->
           <div class="flex gap-3 mt-3">
             <div
-              class="shrink-0 w-9 h-9 rounded-full grid place-items-center text-[11px] font-bold font-mono border border-white/10 bg-mission-gray text-mission-cyan"
+              class="shrink-0 w-9 h-9 rounded-full grid place-items-center text-[11px] font-semibold bg-mission-gray text-mission-accent"
               :title="item.group || 'No group'"
             >
               {{ reactionMonogram(item) }}
             </div>
             <div class="min-w-0">
               <h3
-                class="text-sm font-medium text-white leading-snug line-clamp-2 group-hover:text-mission-accent transition-colors"
+                class="text-sm font-medium text-gray-100 leading-snug line-clamp-2 group-hover:text-mission-accent transition-colors"
               >
                 {{ reactionTitle(item) }}
               </h3>
-              <p class="text-xs text-gray-500 font-mono mt-1 truncate">
+              <p class="text-xs text-mission-muted mt-1 truncate">
                 {{ item.group || item.author || '—' }}
               </p>
-              <p class="text-xs text-gray-600 font-mono mt-0.5 truncate">
-                <span v-if="rankDelta(item)" :class="rankClass(item)">{{ rankDelta(item) }}</span>
+              <p class="text-xs text-mission-muted mt-0.5 truncate">
+                <span v-if="rankDelta(item)" class="tabular-nums" :class="rankClass(item)">{{ rankDelta(item) }}</span>
                 <span v-if="rankDelta(item)"> · </span>
-                <span>{{ relativeTime(item.lastModified) }}</span>
+                <span :title="item.lastModified ? formatDateTime(item.lastModified) : ''">{{ timeAgo(item.lastModified) }}</span>
               </p>
             </div>
           </div>
         </article>
       </div>
-    </div>
+    </template>
 
     <MissionModal
       :show="selected !== null"
@@ -192,31 +187,31 @@
       <div v-if="selected">
         <video
           :src="selected.url"
-          class="w-full rounded-lg bg-black border border-white/10"
+          class="w-full rounded-xl bg-black"
           controls
           autoplay
           playsinline
         />
-        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs font-mono">
+        <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 mt-4 text-sm">
           <div v-for="row in details(selected)" :key="row.label" class="contents">
-            <dt class="tech-label">{{ row.label }}</dt>
-            <dd class="text-gray-300 truncate" :title="row.value">{{ row.value }}</dd>
+            <dt class="text-mission-muted">{{ row.label }}</dt>
+            <dd class="text-gray-100 truncate" :title="row.value">{{ row.value }}</dd>
           </div>
         </dl>
-        <div class="flex gap-3 pt-4">
-          <button type="button" class="btn-secondary flex-1 text-sm" @click="playInFeed(selected)">
-            IN FEED
+        <div class="flex gap-2 pt-5">
+          <button type="button" class="btn-secondary flex-1" @click="playInFeed(selected)">
+            In feed
           </button>
-          <button type="button" class="btn-secondary flex-1 text-sm" @click="copyUrl(selected.url)">
-            COPY URL
+          <button type="button" class="btn-secondary flex-1" @click="copyUrl(selected.url)">
+            Copy URL
           </button>
           <a
             :href="selected.url"
             target="_blank"
             rel="noopener noreferrer"
-            class="btn-primary flex-1 text-sm text-center"
+            class="btn-primary flex-1"
           >
-            OPEN
+            Open
           </a>
         </div>
       </div>
@@ -225,6 +220,7 @@
 </template>
 
 <script setup lang="ts">
+import { timeAgo } from '~/common/timeAgo';
 import { computed, onMounted, ref, watch } from 'vue';
 import { Play } from 'lucide-vue-next';
 import { useRoute, useRouter } from 'vue-router';
@@ -242,7 +238,6 @@ import {
   rankDelta,
   reactionMonogram,
   reactionTitle,
-  relativeTime,
   verdictClass,
 } from '~/utils/reaction';
 
@@ -259,7 +254,7 @@ const loading = ref(false);
 const items = ref<ReactionVideoItem[]>([]);
 const errorMessage = ref('');
 const query = ref('');
-const verdictFilter = ref('ALL');
+const verdictFilter = ref('all');
 const durations = ref<Record<string, string>>({});
 const selected = ref<ReactionVideoItem | null>(null);
 const viewMode = ref<ViewMode>(route.query.view === 'feed' ? 'FEED' : 'GRID');
@@ -287,14 +282,14 @@ const sortedItems = computed((): ReactionVideoItem[] =>
 );
 
 const verdicts = computed((): string[] => [
-  'ALL',
+  'all',
   ...new Set(items.value.map((item) => item.status).filter((s): s is string => Boolean(s))),
 ]);
 
 const filteredItems = computed((): ReactionVideoItem[] => {
   const needle = query.value.trim().toLowerCase();
   return sortedItems.value.filter((item) => {
-    if (verdictFilter.value !== 'ALL' && item.status !== verdictFilter.value) {
+    if (verdictFilter.value !== 'all' && item.status !== verdictFilter.value) {
       return false;
     }
     if (!needle) {
@@ -316,14 +311,14 @@ const filteredItems = computed((): ReactionVideoItem[] => {
 
 function details(item: ReactionVideoItem): { label: string; value: string }[] {
   return [
-    { label: 'TEAM', value: item.teamName ?? '—' },
-    { label: 'GROUP', value: item.group ?? '—' },
-    { label: 'PROBLEM', value: item.problemDisplayName || item.problemCode || '—' },
-    { label: 'CONTEST', value: item.contestCode ?? '—' },
-    { label: 'VERDICT', value: item.status ?? '—' },
-    { label: 'RANK', value: rankDelta(item) || '—' },
-    { label: 'SIZE', value: formatBytes(item.size) },
-    { label: 'RENDERED', value: item.lastModified ? formatDateTime(item.lastModified) : '—' },
+    { label: 'Team', value: item.teamName ?? '—' },
+    { label: 'Group', value: item.group ?? '—' },
+    { label: 'Problem', value: item.problemDisplayName || item.problemCode || '—' },
+    { label: 'Contest', value: item.contestCode ?? '—' },
+    { label: 'Verdict', value: item.status ?? '—' },
+    { label: 'Rank', value: rankDelta(item) || '—' },
+    { label: 'Size', value: formatBytes(item.size) },
+    { label: 'Rendered', value: item.lastModified ? formatDateTime(item.lastModified) : '—' },
   ];
 }
 

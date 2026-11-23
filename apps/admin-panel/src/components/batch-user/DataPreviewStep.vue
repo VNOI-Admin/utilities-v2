@@ -1,88 +1,42 @@
 <template>
-  <div class="space-y-6">
-    <div class="text-center">
-      <h3 class="text-lg font-display font-semibold mb-2">Preview Data</h3>
-      <p class="text-gray-400 text-sm">
-        Review the mapped data before creating users. Invalid rows will be skipped.
+  <div class="space-y-5">
+    <div>
+      <h3 class="font-semibold">Preview</h3>
+      <p class="text-mission-muted text-sm mt-1">
+        Check the rows before creating users. Rows with errors are skipped.
       </p>
     </div>
 
     <!-- Summary -->
-    <div class="flex items-center justify-center gap-6">
-      <div class="flex items-center gap-2">
-        <CheckCircle :size="20" class="text-mission-accent" />
-        <span class="text-mission-accent font-mono">{{ validCount }} valid</span>
-      </div>
-      <div v-if="invalidCount > 0" class="flex items-center gap-2">
-        <XCircle :size="20" class="text-mission-red" />
-        <span class="text-mission-red font-mono">{{ invalidCount }} invalid</span>
-      </div>
-      <div class="text-gray-400 font-mono">
-        {{ rows.length }} total rows
-      </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <StatusBadge status="completed">{{ validCount }} valid</StatusBadge>
+      <StatusBadge v-if="invalidCount > 0" status="failed">{{ invalidCount }} with errors</StatusBadge>
+      <span class="text-sm text-mission-muted">{{ rows.length }} rows in total</span>
     </div>
 
     <!-- Data Table -->
-    <div class="border border-white/10 overflow-hidden">
-      <div class="max-h-[300px] overflow-y-auto custom-scrollbar">
+    <div class="rounded-xl border border-white/[0.06] overflow-hidden">
+      <div class="max-h-[300px] overflow-auto">
         <table class="w-full text-sm">
           <thead class="sticky top-0 bg-mission-gray">
-            <tr class="border-b border-white/10">
-              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider w-10">
-                #
-              </th>
-              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider w-10">
-                STATUS
-              </th>
-              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider">
-                USERNAME
-              </th>
-              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider">
-                FULL NAME
-              </th>
-              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider">
-                PASSWORD
-              </th>
-              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider">
-                VNOJ API KEY
-              </th>
-              <th class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider">
-                GROUP
-              </th>
+            <tr class="border-b border-white/[0.06] text-left text-xs font-medium text-mission-muted">
+              <th class="px-3 py-2 font-medium w-10">#</th>
+              <th class="px-3 py-2 font-medium">Username</th>
+              <th class="px-3 py-2 font-medium">Full name</th>
+              <th class="px-3 py-2 font-medium">Password</th>
+              <th class="px-3 py-2 font-medium">VNOJ API key</th>
+              <th class="px-3 py-2 font-medium">Group</th>
+              <th class="px-3 py-2 font-medium">Issues</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody class="divide-y divide-white/[0.06]">
             <tr
               v-for="user in previewData"
               :key="user.rowIndex"
-              class="border-b border-white/5"
               :class="{ 'bg-mission-red/5': !user.isValid }"
             >
-              <td class="px-3 py-2 font-mono text-xs text-gray-500">
+              <td class="px-3 py-2 text-xs text-mission-muted tabular-nums">
                 {{ user.rowIndex + 1 }}
-              </td>
-              <td class="px-3 py-2">
-                <div class="relative group">
-                  <CheckCircle
-                    v-if="user.isValid"
-                    :size="18"
-                    class="text-mission-accent"
-                  />
-                  <XCircle
-                    v-else
-                    :size="18"
-                    class="text-mission-red"
-                  />
-                  <!-- Error Tooltip -->
-                  <div
-                    v-if="!user.isValid && user.errors.length > 0"
-                    class="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-10 hidden group-hover:block"
-                  >
-                    <div class="bg-mission-dark border border-mission-red p-2 text-xs text-mission-red whitespace-nowrap">
-                      <div v-for="error in user.errors" :key="error">{{ error }}</div>
-                    </div>
-                  </div>
-                </div>
               </td>
               <td class="px-3 py-2 font-mono text-gray-300">
                 {{ user.username || '—' }}
@@ -90,24 +44,29 @@
               <td class="px-3 py-2 text-gray-300 truncate max-w-[150px]">
                 {{ user.fullName || '—' }}
               </td>
-              <td class="px-3 py-2 font-mono text-gray-500">
+              <td class="px-3 py-2 text-mission-muted">
                 {{ user.password ? '••••••••' : '—' }}
               </td>
-              <td class="px-3 py-2 font-mono text-gray-500 truncate max-w-[120px]" :title="user.apiKey">
+              <td class="px-3 py-2 font-mono text-mission-muted truncate max-w-[120px]" :title="user.apiKey">
                 {{ user.apiKey ? user.apiKey.slice(0, 6) + '…' : '—' }}
               </td>
-              <td class="px-3 py-2 text-gray-400 truncate max-w-[150px]">
-                <span v-if="user.group" class="flex items-center gap-1">
+              <td class="px-3 py-2 text-mission-muted truncate max-w-[150px]">
+                <span v-if="user.group" class="flex items-center gap-1.5">
                   {{ user.group }}
-                  <span
+                  <StatusBadge
                     v-if="!isExistingGroup(user.group)"
-                    class="text-xs text-mission-amber"
-                    title="Group will be auto-created"
-                  >
-                    (new)
-                  </span>
+                    variant="amber"
+                    title="This group will be created"
+                  >new</StatusBadge>
                 </span>
                 <span v-else>—</span>
+              </td>
+              <td class="px-3 py-2">
+                <div v-if="!user.isValid" class="flex flex-wrap gap-1">
+                  <StatusBadge v-for="error in user.errors" :key="error" status="failed">
+                    <span class="normal-case">{{ error }}</span>
+                  </StatusBadge>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -115,27 +74,15 @@
       </div>
     </div>
 
-    <!-- Legend -->
-    <div class="flex items-center justify-center gap-6 text-xs text-gray-500">
-      <div class="flex items-center gap-1">
-        <CheckCircle :size="14" class="text-mission-accent" />
-        <span>Valid row</span>
-      </div>
-      <div class="flex items-center gap-1">
-        <XCircle :size="14" class="text-mission-red" />
-        <span>Invalid row (hover for details)</span>
-      </div>
-      <div class="flex items-center gap-1">
-        <span class="text-mission-amber">(new)</span>
-        <span>Group will be auto-created</span>
-      </div>
-    </div>
+    <p v-if="hasNewGroups" class="text-xs text-mission-muted">
+      Groups marked new don't exist yet and will be created.
+    </p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, watch } from 'vue';
-import { CheckCircle, XCircle } from 'lucide-vue-next';
+import StatusBadge from '~/components/StatusBadge.vue';
 import type { ColumnMapping, PreviewUser } from './BatchUserModal.vue';
 import type { GroupEntity } from '@libs/api/internal';
 
@@ -151,6 +98,7 @@ const previewData = defineModel<PreviewUser[]>('previewData', { required: true }
 
 const validCount = computed(() => previewData.value.filter((p) => p.isValid).length);
 const invalidCount = computed(() => previewData.value.filter((p) => !p.isValid).length);
+const hasNewGroups = computed(() => previewData.value.some((p) => p.group && !isExistingGroup(p.group)));
 
 function isExistingGroup(groupName: string): boolean {
   return props.groups.some(
@@ -234,21 +182,3 @@ watch(
 );
 </script>
 
-<style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 157, 0.3);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 157, 0.5);
-}
-</style>

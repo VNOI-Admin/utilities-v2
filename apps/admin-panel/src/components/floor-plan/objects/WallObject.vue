@@ -38,7 +38,7 @@ const linePoints = computed(() => {
   }
 });
 
-const strokeColor = computed(() => (isSelected.value ? '#00d4ff' : '#ffb830'));
+const strokeColor = computed(() => (isSelected.value ? '#a8b8ff' : '#8b8b9a'));
 
 function handleClick(e: any) {
   if (props.readonly) return;
@@ -56,8 +56,6 @@ function handleClick(e: any) {
       strokeWidth: isSelected ? 6 : 4,
       lineCap: 'round',
       lineJoin: 'round',
-      shadowColor: isSelected ? '#00d4ff' : 'transparent',
-      shadowBlur: isSelected ? 10 : 0,
       hitStrokeWidth: 20,
     }"
     @click="handleClick"

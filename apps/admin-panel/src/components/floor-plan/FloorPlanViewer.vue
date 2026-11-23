@@ -55,44 +55,42 @@ function nextFloor() {
 <template>
   <div class="floor-plan-viewer flex flex-col h-full">
     <!-- Header with floor navigation -->
-    <div class="flex items-center justify-between px-4 py-3 bg-mission-dark border-b border-white/10">
-      <h2 class="text-lg font-medium text-white">
-        {{ store.currentFloorPlan?.name }}
-      </h2>
-
-      <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5 bg-mission-dark border-b border-white/[0.06]">
+      <div class="flex items-center gap-1">
         <button
-          class="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30"
+          class="p-1.5 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/[0.06] disabled:opacity-30 transition-colors"
+          title="Previous floor"
           :disabled="!store.currentFloorPlan?.floors.length || store.currentFloorPlan.floors.findIndex(f => f.id === store.activeFloorId) === 0"
           @click="previousFloor"
         >
-          <ChevronLeft :size="20" />
+          <ChevronLeft :size="18" />
         </button>
 
-        <span class="text-white/60 text-sm min-w-[100px] text-center">
+        <span class="text-sm min-w-[100px] text-center">
           {{ store.activeFloor?.name }}
-          <span class="text-white/40">
-            ({{ (store.currentFloorPlan?.floors.findIndex(f => f.id === store.activeFloorId) || 0) + 1 }}/{{ store.currentFloorPlan?.floors.length || 0 }})
+          <span class="text-mission-muted tabular-nums">
+            {{ (store.currentFloorPlan?.floors.findIndex(f => f.id === store.activeFloorId) || 0) + 1 }}/{{ store.currentFloorPlan?.floors.length || 0 }}
           </span>
         </span>
 
         <button
-          class="p-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30"
+          class="p-1.5 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/[0.06] disabled:opacity-30 transition-colors"
+          title="Next floor"
           :disabled="!store.currentFloorPlan?.floors.length || store.currentFloorPlan.floors.findIndex(f => f.id === store.activeFloorId) === store.currentFloorPlan.floors.length - 1"
           @click="nextFloor"
         >
-          <ChevronRight :size="20" />
+          <ChevronRight :size="18" />
         </button>
       </div>
 
       <!-- Pathfinding Tool -->
-      <div class="flex items-center gap-2 border-l border-white/10 pl-4">
-        <Navigation :size="18" class="text-mission-cyan" />
-        <div class="min-w-[200px]">
+      <div class="flex items-center gap-2">
+        <Navigation :size="16" class="text-mission-muted" />
+        <div class="w-56">
           <MissionSelect
             :model-value="store.selectedUserForPath"
             :options="(boundUserOptions as any)"
-            placeholder="Select user to navigate"
+            placeholder="Find a user's seat"
             option-label="label"
             option-value="value"
             :searchable="true"
@@ -102,22 +100,22 @@ function nextFloor() {
       </div>
 
       <!-- Legend -->
-      <div class="flex items-center gap-4 text-sm">
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded bg-mission-accent/30 border border-mission-accent" />
-          <span class="text-white/60">Bound</span>
+      <div class="flex items-center gap-4 text-xs text-mission-muted ml-auto">
+        <div class="flex items-center gap-1.5">
+          <div class="w-3.5 h-3.5 rounded bg-mission-ok/15 border border-mission-ok" />
+          <span>Bound</span>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="w-4 h-4 rounded bg-mission-gray border border-white/30" />
-          <span class="text-white/60">Unbound</span>
+        <div class="flex items-center gap-1.5">
+          <div class="w-3.5 h-3.5 rounded bg-mission-gray border border-white/20" />
+          <span>Unbound</span>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-1 rounded bg-mission-amber" />
-          <span class="text-white/60">Wall</span>
+        <div class="flex items-center gap-1.5">
+          <div class="w-6 h-1 rounded bg-mission-muted" />
+          <span>Wall</span>
         </div>
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded-full bg-mission-cyan" />
-          <span class="text-white/60">Start</span>
+        <div class="flex items-center gap-1.5">
+          <div class="w-3 h-3 rounded bg-mission-cyan/20 border border-mission-cyan" />
+          <span>Start</span>
         </div>
       </div>
     </div>

@@ -1,265 +1,232 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
-      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div class="flex items-start gap-3">
-          <BackButton to="/remote-control/jobs" label="BACK" />
-          <PageHeader
-            :title="`JOB_${shortJobId}`"
-            subtitle="PER-TARGET RUN STATUS / LOGS"
-          />
+  <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
+    <BackButton to="/remote-control/jobs" label="Remote jobs" button-class="!px-3 !py-1.5 text-xs" />
+
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex-1 min-w-0">
+        <button
+          v-if="job"
+          type="button"
+          class="font-mono text-2xl font-semibold tracking-tight text-left break-all hover:text-mission-accent transition-colors"
+          title="Open in scripts"
+          @click="openScriptManager(job.scriptName)"
+        >
+          {{ job.scriptName }}
+        </button>
+        <h1 v-else class="text-2xl font-semibold tracking-tight">Job</h1>
+        <p class="text-sm text-mission-muted mt-1 break-all">
+          <span class="font-mono">{{ jobId }}</span>
+          <template v-if="job"> · {{ job.createdBy }} · <span :title="formatDateTime(job.createdAt)">{{ timeAgo(job.createdAt) }}</span></template>
+        </p>
+      </div>
+
+      <button
+        class="btn-secondary"
+        :disabled="refreshing || !job"
+        @click="handleRefresh"
+      >
+        <RotateCw
+          :size="16"
+          :stroke-width="2"
+          :class="{ 'animate-spin': refreshing }"
+        />
+        <span>{{ refreshing ? 'Refreshing…' : 'Refresh' }}</span>
+      </button>
+
+      <button
+        class="btn-primary"
+        :disabled="!job"
+        @click="showCreateJobModal = true"
+      >
+        <Play :size="16" :stroke-width="2" />
+        <span>Run again</span>
+      </button>
+    </div>
+
+    <div class="mission-card p-5 space-y-3">
+      <div class="flex flex-wrap items-center gap-3">
+        <span class="flex-1 text-sm tabular-nums">
+          <span class="font-semibold">{{ statusCounts.success + statusCounts.failed }}/{{ runs.length }}</span>
+          <span class="text-mission-muted"> done</span>
+          <span v-if="statusCounts.failed" class="text-mission-red"> · {{ statusCounts.failed }} failed</span>
+          <span v-if="statusCounts.running" class="text-mission-cyan"> · {{ statusCounts.running }} running</span>
+          <span v-if="statusCounts.pending" class="text-mission-muted"> · {{ statusCounts.pending }} pending</span>
+        </span>
+        <StatusBadge
+          v-if="job && runs.length"
+          :variant="JOB_STATUS_VARIANTS[job.status]"
+          :show-dot="true"
+          :pulse="job.status === 'running'"
+        >
+          {{ JOB_STATUS_LABELS[job.status] }}
+        </StatusBadge>
+      </div>
+      <JobProgressBar :counts="statusCounts" />
+    </div>
+
+    <div
+      v-if="job && (jobArgs.length > 0 || jobEnvEntries.length > 0 || jobInputFiles.length > 0)"
+      class="mission-card p-5 grid grid-cols-1 lg:grid-cols-3 gap-5"
+    >
+      <div v-if="jobArgs.length > 0">
+        <p class="tech-label mb-2">Args</p>
+        <div class="flex flex-wrap gap-1.5">
+          <span
+            v-for="arg in jobArgs"
+            :key="arg"
+            class="px-2 py-0.5 rounded-md bg-mission-gray font-mono text-xs"
+          >
+            {{ arg }}
+          </span>
         </div>
+      </div>
 
-        <div class="flex items-center gap-2">
-          <button
-            class="btn-secondary flex items-center gap-2"
-            :disabled="refreshing || !job"
-            @click="handleRefresh"
+      <div v-if="jobEnvEntries.length > 0">
+        <p class="tech-label mb-2">Environment</p>
+        <div class="space-y-1">
+          <div
+            v-for="[key, value] in jobEnvEntries"
+            :key="key"
+            class="font-mono text-xs break-all"
           >
-            <RotateCw
-              :size="16"
-              :stroke-width="2"
-              :class="{ 'animate-spin': refreshing }"
-            />
-            <span>{{ refreshing ? 'REFRESHING...' : 'REFRESH' }}</span>
-          </button>
+            <span class="text-mission-muted">{{ key }}=</span>{{ value }}
+          </div>
+        </div>
+      </div>
 
-          <button
-            class="btn-primary flex items-center gap-2"
-            :disabled="!job"
-            @click="showCreateJobModal = true"
+      <div v-if="jobInputFiles.length > 0">
+        <p class="tech-label mb-2">Input files</p>
+        <div class="space-y-1">
+          <div
+            v-for="file in jobInputFiles"
+            :key="file.key"
+            class="flex items-center justify-between gap-2 text-xs"
+            :title="file.hash"
           >
-            <RotateCw :size="16" :stroke-width="2" />
-            <span>RUN AGAIN</span>
-          </button>
+            <span class="font-mono truncate">{{ file.filename }}</span>
+            <span class="text-mission-muted shrink-0">{{ formatFileSize(file.size) }}</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="p-4 md:p-8 space-y-4">
-      <div v-if="job" class="mission-card p-4 md:p-6 space-y-4">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div>
-            <p class="tech-label mb-1">SCRIPT</p>
-            <button
-              type="button"
-              class="font-mono text-mission-accent break-all hover:text-white hover:underline transition-colors text-left"
-              @click="openScriptManager(job.scriptName)"
-            >
-              {{ job.scriptName }}
-            </button>
+    <div class="mission-card overflow-hidden">
+      <div class="overflow-x-auto">
+        <div class="min-w-[640px]">
+          <div class="grid grid-cols-[minmax(0,2fr)_110px_90px_minmax(0,1fr)_24px] gap-4 px-4 md:px-6 py-3 text-xs font-medium text-mission-muted border-b border-white/[0.06]">
+            <div>Target</div>
+            <div>Status</div>
+            <div>Exit code</div>
+            <div>Updated</div>
+            <div></div>
           </div>
-          <div>
-            <p class="tech-label mb-1">CREATED BY</p>
-            <p class="font-mono text-white">{{ job.createdBy }}</p>
+
+          <div v-if="runs.length === 0" class="px-6 py-10 text-center text-sm text-mission-muted">
+            No runs found for this job.
           </div>
-          <div>
-            <p class="tech-label mb-1">JOB ID</p>
-            <p class="font-mono text-xs text-gray-300 break-all">{{ job.jobId }}</p>
-          </div>
-          <div>
-            <p class="tech-label mb-1">CREATED AT</p>
-            <p class="font-mono text-gray-300">{{ formatDateTime(job.createdAt) }}</p>
-          </div>
-        </div>
 
-        <div v-if="jobArgs.length > 0">
-          <p class="tech-label mb-2">ARGS</p>
-          <div class="flex flex-wrap gap-2">
-            <span
-              v-for="arg in jobArgs"
-              :key="arg"
-              class="px-2 py-1 text-xs font-mono border border-white/20 bg-black/20 text-white rounded"
-            >
-              {{ arg }}
-            </span>
-          </div>
-        </div>
-
-        <div v-if="jobEnvEntries.length > 0">
-          <p class="tech-label mb-2">ENV</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div
-              v-for="[key, value] in jobEnvEntries"
-              :key="key"
-              class="px-3 py-2 border border-white/10 bg-black/20 font-mono text-xs"
-            >
-              <span class="text-mission-cyan">{{ key }}</span>
-              <span class="text-gray-500">=</span>
-              <span class="text-white break-all">{{ value }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="jobInputFiles.length > 0">
-          <p class="tech-label mb-2">INPUT FILES</p>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div
-              v-for="file in jobInputFiles"
-              :key="file.key"
-              class="px-3 py-2 border border-white/10 bg-black/20 font-mono text-xs"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-white truncate">{{ file.filename }}</span>
-                <span class="text-gray-500 shrink-0">{{ formatFileSize(file.size) }}</span>
-              </div>
-              <p class="text-gray-600 truncate mt-1">{{ file.hash }}</p>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <p class="tech-label mb-2">TARGETS ({{ jobTargets.length }})</p>
-          <div class="flex flex-wrap gap-2">
-            <span
-              v-for="target in jobTargets"
-              :key="target"
-              class="px-2 py-1 text-xs font-mono border border-mission-accent/30 bg-mission-accent/10 text-mission-accent rounded"
-            >
-              {{ target }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div class="mission-card px-4 py-3">
-          <p class="tech-label">TOTAL</p>
-          <p class="text-xl font-mono text-white">{{ runs.length }}</p>
-        </div>
-        <div class="mission-card px-4 py-3">
-          <p class="tech-label">RUNNING</p>
-          <p class="text-xl font-mono text-mission-cyan">{{ statusCounts.running }}</p>
-        </div>
-        <div class="mission-card px-4 py-3">
-          <p class="tech-label">SUCCESS</p>
-          <p class="text-xl font-mono text-mission-accent">{{ statusCounts.success }}</p>
-        </div>
-        <div class="mission-card px-4 py-3">
-          <p class="tech-label">FAILED</p>
-          <p class="text-xl font-mono text-mission-red">{{ statusCounts.failed }}</p>
-        </div>
-      </div>
-
-      <div class="mission-card overflow-hidden">
-        <div class="overflow-x-auto">
-          <div class="min-w-[900px]">
-            <div class="grid grid-cols-12 gap-4 px-4 md:px-6 py-4 bg-mission-gray border-b border-white/10">
-              <div class="col-span-3 tech-label">TARGET</div>
-              <div class="col-span-2 tech-label">STATUS</div>
-              <div class="col-span-2 tech-label">EXIT CODE</div>
-              <div class="col-span-4 tech-label">UPDATED</div>
-              <div class="col-span-1 tech-label text-right">LOG</div>
-            </div>
-
-            <div v-if="runs.length === 0" class="px-6 py-10 text-center text-gray-500 font-mono text-sm">
-              No runs found for this job.
-            </div>
-
-            <div v-for="run in runs" :key="run.target" class="border-b border-white/5 last:border-b-0">
+          <div class="divide-y divide-white/[0.06]">
+            <div v-for="run in sortedRuns" :key="run.target">
               <button
                 type="button"
-                class="w-full grid grid-cols-12 gap-4 px-4 md:px-6 py-4 text-left hover:bg-mission-accent/5 transition-all duration-200"
-                @click="toggleRunLog(run.target)"
+                class="w-full grid grid-cols-[minmax(0,2fr)_110px_90px_minmax(0,1fr)_24px] items-center gap-4 px-4 md:px-6 py-3 text-left hover:bg-white/[0.03] transition-colors"
+                @click="toggleRunLog(run)"
               >
-                <div class="col-span-3 font-mono text-sm text-white">{{ run.target }}</div>
-                <div class="col-span-2">
-                  <StatusBadge :variant="statusVariant(run.status)" :show-dot="true" :pulse="run.status === 'running'">
-                    {{ run.status.toUpperCase() }}
+                <div class="font-mono text-sm truncate">{{ run.target }}</div>
+                <div>
+                  <StatusBadge
+                    :status="run.status === 'success' ? 'completed' : run.status"
+                    :show-dot="true"
+                    :pulse="run.status === 'running'"
+                  >
+                    {{ STATUS_LABELS[run.status] }}
                   </StatusBadge>
                 </div>
-                <div class="col-span-2 font-mono text-sm text-gray-300">
+                <div class="font-mono text-sm" :class="run.exitCode ? 'text-mission-red' : 'text-mission-muted'">
                   {{ run.exitCode === null ? '—' : run.exitCode }}
                 </div>
-                <div class="col-span-4 font-mono text-xs text-gray-400">
-                  {{ formatDateTime(run.updatedAt) }}
+                <div class="text-sm text-mission-muted" :title="formatDateTime(run.updatedAt)">
+                  {{ run.updatedAt ? timeAgo(run.updatedAt) : '—' }}
                 </div>
-                <div class="col-span-1 flex justify-end">
-                  <ChevronDown
-                    :size="16"
-                    :stroke-width="2"
-                    class="transition-transform text-gray-400"
-                    :class="isRunExpanded(run.target) ? 'rotate-180 text-mission-accent' : ''"
-                  />
-                </div>
+                <ChevronDown
+                  :size="16"
+                  :stroke-width="2"
+                  class="justify-self-end text-mission-muted transition-transform"
+                  :class="{ 'rotate-180': isRunExpanded(run) }"
+                />
               </button>
 
               <div
-                v-if="isRunExpanded(run.target)"
-                class="px-4 md:px-6 pb-4"
+                v-if="isRunExpanded(run)"
+                class="px-4 md:px-6 pb-4 space-y-3"
               >
                 <div
                   v-if="run.outputFiles.length > 0"
-                  class="mb-3 border border-white/10 bg-black/30"
+                  class="rounded-xl bg-mission-black/60 border border-white/[0.06]"
                 >
-                  <div class="px-3 py-2 border-b border-white/10 bg-mission-gray/60">
-                    <p class="tech-label">RETURNED FILES</p>
-                  </div>
-                  <div class="divide-y divide-white/5">
+                  <p class="tech-label px-3 pt-2.5 pb-1">Returned files</p>
+                  <div class="divide-y divide-white/[0.06]">
                     <div
                       v-for="file in run.outputFiles"
                       :key="file.key"
-                      class="px-3 py-2 font-mono text-xs"
+                      class="px-3 py-2 flex items-center justify-between gap-2 text-xs"
+                      :title="file.hash"
                     >
-                      <div class="flex items-center justify-between gap-2">
-                        <span class="text-white truncate">{{ file.filename }}</span>
-                        <div class="flex items-center gap-2 shrink-0">
-                          <span class="text-gray-500">{{ formatFileSize(file.size) }}</span>
-                          <button
-                            v-if="file.path"
-                            type="button"
-                            class="px-2 py-1 border border-white/20 text-gray-300 hover:text-mission-accent hover:border-mission-accent transition-all"
-                            @click.stop="downloadOutputFile(run, file)"
-                          >
-                            <Download :size="14" :stroke-width="2" />
-                          </button>
-                        </div>
+                      <span class="font-mono truncate">{{ file.filename }}</span>
+                      <div class="flex items-center gap-2 shrink-0">
+                        <span class="text-mission-muted">{{ formatFileSize(file.size) }}</span>
+                        <button
+                          v-if="file.path"
+                          type="button"
+                          class="p-1 rounded-lg text-mission-muted hover:text-gray-100 hover:bg-white/5 transition-colors"
+                          title="Download"
+                          @click.stop="downloadOutputFile(run, file)"
+                        >
+                          <Download :size="14" :stroke-width="2" />
+                        </button>
                       </div>
-                      <p class="text-gray-600 truncate mt-1">{{ file.hash }}</p>
                     </div>
                   </div>
                 </div>
 
-                  <div class="border border-white/10 bg-black/30">
-                  <div class="px-3 py-2 border-b border-white/10 bg-mission-gray/60 flex items-center justify-between gap-2">
-                    <p class="tech-label">LOG OUTPUT</p>
+                <div class="rounded-xl bg-mission-black/60 border border-white/[0.06]">
+                  <div class="px-3 pt-2.5 pb-1 flex items-center justify-between gap-2">
+                    <p class="tech-label">Log</p>
                     <button
                       type="button"
-                      class="px-2 py-1 text-[10px] font-mono border border-white/20 text-gray-300 hover:text-mission-accent hover:border-mission-accent transition-colors disabled:text-gray-600 disabled:border-white/10 disabled:hover:text-gray-600 disabled:hover:border-white/10 disabled:cursor-not-allowed"
+                      class="inline-flex items-center gap-1 text-xs text-mission-muted hover:text-gray-100 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       :disabled="!run.log"
                       @click="copyRunLog(run)"
                     >
-                      <span class="inline-flex items-center gap-1">
-                        <Check v-if="isLogCopied(run.target)" :size="12" :stroke-width="2" />
-                        <Copy v-else :size="12" :stroke-width="2" />
-                        <span>{{ isLogCopied(run.target) ? 'COPIED' : 'COPY' }}</span>
-                      </span>
+                      <Check v-if="isLogCopied(run.target)" :size="12" :stroke-width="2" />
+                      <Copy v-else :size="12" :stroke-width="2" />
+                      <span>{{ isLogCopied(run.target) ? 'Copied' : 'Copy' }}</span>
                     </button>
                   </div>
-                  <pre class="p-3 font-mono text-xs text-gray-200 whitespace-pre-wrap break-words max-h-96 overflow-auto">{{ run.log || 'No logs available yet.' }}</pre>
+                  <pre class="px-3 pb-3 pt-1 font-mono text-xs text-gray-200 whitespace-pre-wrap break-words max-h-96 overflow-auto">{{ run.log || 'No logs available yet.' }}</pre>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
+    <div
+      v-if="remoteControlStore.jobsError || remoteControlStore.runsError"
+      class="space-y-2"
+    >
       <div
-        v-if="remoteControlStore.jobsError || remoteControlStore.runsError"
-        class="space-y-2"
+        v-if="remoteControlStore.jobsError"
+        class="rounded-xl bg-mission-red/10 text-mission-red text-sm px-4 py-3"
       >
-        <div
-          v-if="remoteControlStore.jobsError"
-          class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono"
-        >
-          {{ remoteControlStore.jobsError }}
-        </div>
-        <div
-          v-if="remoteControlStore.runsError"
-          class="p-3 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono"
-        >
-          {{ remoteControlStore.runsError }}
-        </div>
+        {{ remoteControlStore.jobsError }}
+      </div>
+      <div
+        v-if="remoteControlStore.runsError"
+        class="rounded-xl bg-mission-red/10 text-mission-red text-sm px-4 py-3"
+      >
+        {{ remoteControlStore.runsError }}
       </div>
     </div>
 
@@ -273,17 +240,45 @@
 </template>
 
 <script setup lang="ts">
-import { Check, ChevronDown, Copy, Download, RotateCw } from 'lucide-vue-next';
+import { timeAgo } from '~/common/timeAgo';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { Check, ChevronDown, Copy, Download, Play, RotateCw } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import BackButton from '~/components/BackButton.vue';
-import PageHeader from '~/components/PageHeader.vue';
 import StatusBadge from '~/components/StatusBadge.vue';
 import CreateJobModal from '~/components/remote-control/CreateJobModal.vue';
+import JobProgressBar from '~/components/remote-control/JobProgressBar.vue';
 import { useRemoteControlStore } from '~/stores/remoteControl';
 import type { CreateRemoteJobPayload, RemoteControlFileMetadata } from '~/types/remote-control';
-import type { RemoteJobRun, RemoteJobRunStatus } from '~/types/remote-control';
+import type { RemoteJobRun, RemoteJobRunStatus, RemoteJobStatus } from '~/types/remote-control';
+
+const STATUS_LABELS: Record<RemoteJobRunStatus, string> = {
+  pending: 'Pending',
+  running: 'Running',
+  success: 'Done',
+  failed: 'Failed',
+};
+
+const JOB_STATUS_LABELS: Record<RemoteJobStatus, string> = {
+  ...STATUS_LABELS,
+  partial: 'Partly failed',
+};
+
+const JOB_STATUS_VARIANTS: Record<RemoteJobStatus, 'amber' | 'cyan' | 'ok' | 'red' | 'purple'> = {
+  pending: 'amber',
+  running: 'cyan',
+  success: 'ok',
+  failed: 'red',
+  partial: 'purple',
+};
+
+const STATUS_ORDER: Record<RemoteJobRunStatus, number> = {
+  failed: 0,
+  running: 1,
+  pending: 2,
+  success: 3,
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -314,11 +309,6 @@ const rerunPrefill = computed<Partial<CreateRemoteJobPayload> | null>(() => {
   };
 });
 
-const shortJobId = computed(() => {
-  if (!jobId.value) return 'DETAIL';
-  return jobId.value.length > 18 ? `${jobId.value.slice(0, 18)}...` : jobId.value;
-});
-
 const statusCounts = computed(() => {
   return runs.value.reduce(
     (acc, run) => {
@@ -334,12 +324,9 @@ const statusCounts = computed(() => {
   );
 });
 
-function statusVariant(status: RemoteJobRunStatus) {
-  if (status === 'running') return 'cyan';
-  if (status === 'success') return 'accent';
-  if (status === 'failed') return 'red';
-  return 'amber';
-}
+const sortedRuns = computed(() => {
+  return [...runs.value].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || a.target.localeCompare(b.target));
+});
 
 function formatDateTime(value?: string) {
   if (!value) return '—';
@@ -359,15 +346,15 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function toggleRunLog(target: string) {
+function toggleRunLog(run: RemoteJobRun) {
   expandedLogs.value = {
     ...expandedLogs.value,
-    [target]: !expandedLogs.value[target],
+    [run.target]: !isRunExpanded(run),
   };
 }
 
-function isRunExpanded(target: string) {
-  return Boolean(expandedLogs.value[target]);
+function isRunExpanded(run: RemoteJobRun) {
+  return expandedLogs.value[run.target] ?? run.status === 'failed';
 }
 
 async function copyRunLog(run: RemoteJobRun) {
@@ -445,6 +432,7 @@ async function handleRefresh() {
       includeLog: true,
       mode: 'sync',
     });
+    await remoteControlStore.fetchJob(job.value.jobId);
     toast.success('Runs refreshed');
   } catch (error: any) {
     toast.error(error.response?.data?.message || error.message || 'Failed to refresh runs');

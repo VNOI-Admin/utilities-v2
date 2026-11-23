@@ -34,14 +34,14 @@ function decreaseHeight() {
 </script>
 
 <template>
-  <div class="default-table-size-control flex items-center gap-2 border-r border-white/10 pr-4">
-    <span class="text-white/40 text-xs font-mono">Table Size:</span>
+  <div class="default-table-size-control flex items-center gap-2 border-r border-white/[0.06] pr-3">
+    <span class="text-mission-muted text-xs whitespace-nowrap">Table size</span>
 
     <!-- Width Controls -->
     <div class="flex items-center gap-1">
       <button
         class="size-btn"
-        title="Decrease Default Width"
+        title="Decrease default width"
         @click="decreaseWidth"
       >
         <Minimize2 :size="14" />
@@ -49,7 +49,7 @@ function decreaseHeight() {
       <span class="size-display">W: {{ store.defaultTableSize.width }}</span>
       <button
         class="size-btn"
-        title="Increase Default Width"
+        title="Increase default width"
         @click="increaseWidth"
       >
         <Maximize2 :size="14" />
@@ -60,7 +60,7 @@ function decreaseHeight() {
     <div class="flex items-center gap-1">
       <button
         class="size-btn"
-        title="Decrease Default Height"
+        title="Decrease default height"
         @click="decreaseHeight"
       >
         <Minimize2 :size="14" class="rotate-90" />
@@ -68,7 +68,7 @@ function decreaseHeight() {
       <span class="size-display">H: {{ store.defaultTableSize.height }}</span>
       <button
         class="size-btn"
-        title="Increase Default Height"
+        title="Increase default height"
         @click="increaseHeight"
       >
         <Maximize2 :size="14" class="rotate-90" />
@@ -79,10 +79,10 @@ function decreaseHeight() {
 
 <style scoped>
 .size-btn {
-  @apply p-1 rounded text-white/60 hover:text-white hover:bg-white/10 transition-colors;
+  @apply p-1 rounded-md text-mission-muted hover:text-gray-100 hover:bg-white/[0.06] transition-colors;
 }
 
 .size-display {
-  @apply text-white/60 text-xs font-mono min-w-[3rem] text-center;
+  @apply text-gray-300 text-xs tabular-nums whitespace-nowrap min-w-[3rem] text-center;
 }
 </style>

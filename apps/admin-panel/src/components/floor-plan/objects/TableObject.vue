@@ -43,12 +43,12 @@ const pixelSize = computed(() => ({
 }));
 
 // Colors based on bound state
-const fillColor = computed(() => (isBound.value ? 'rgba(0, 255, 157, 0.2)' : 'rgba(26, 26, 26, 0.8)'));
+const fillColor = computed(() => (isBound.value ? 'rgba(126, 226, 184, 0.12)' : '#1f1f27'));
 const strokeColor = computed(() => {
-  if (isSelected.value) return '#00d4ff';
-  return isBound.value ? '#00ff9d' : 'rgba(255, 255, 255, 0.3)';
+  if (isSelected.value) return '#a8b8ff';
+  return isBound.value ? '#7ee2b8' : 'rgba(255, 255, 255, 0.2)';
 });
-const textColor = computed(() => (isBound.value ? '#00ff9d' : '#ffffff'));
+const textColor = computed(() => (isBound.value ? '#7ee2b8' : '#e5e7eb'));
 
 function handleDragStart() {
   if (props.readonly) return;
@@ -172,10 +172,7 @@ watch(
         fill: fillColor,
         stroke: strokeColor,
         strokeWidth: isSelected ? 3 : 2,
-        cornerRadius: 4,
-        shadowColor: isSelected ? '#00d4ff' : 'transparent',
-        shadowBlur: isSelected ? 15 : 0,
-        shadowOpacity: 0.5,
+        cornerRadius: 6,
       }"
     />
 
@@ -218,9 +215,9 @@ watch(
     :config="{
       enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
       rotateEnabled: false,
-      borderStroke: '#00d4ff',
-      anchorFill: '#00d4ff',
-      anchorStroke: '#00d4ff',
+      borderStroke: '#a8b8ff',
+      anchorFill: '#a8b8ff',
+      anchorStroke: '#a8b8ff',
       anchorSize: 8,
       keepRatio: false,
       centeredScaling: false,

@@ -1,35 +1,35 @@
 <template>
-  <div class="space-y-6">
-    <div class="text-center">
-      <h3 class="text-lg font-display font-semibold mb-2">Import CSV Data</h3>
-      <p class="text-gray-400 text-sm">
-        Upload a CSV file or paste CSV data. The data should have headers in the first row.
+  <div class="space-y-5">
+    <div>
+      <h3 class="font-semibold">Add a CSV</h3>
+      <p class="text-mission-muted text-sm mt-1">
+        Upload a file or paste the data. The first row must be the column headers.
       </p>
     </div>
 
     <!-- Input Mode Toggle -->
-    <div class="flex justify-center gap-2">
+    <div class="flex gap-2">
       <button
         type="button"
         @click="inputMode = 'file'"
-        class="px-4 py-2 font-mono text-xs uppercase tracking-wider transition-all border"
+        class="px-3 py-1.5 border rounded-full text-sm inline-flex items-center gap-2 transition-colors"
         :class="inputMode === 'file'
-          ? 'border-mission-accent text-mission-accent bg-mission-accent/10'
-          : 'border-white/20 text-gray-400 hover:border-white/40'"
+          ? 'border-gray-100 bg-gray-100 text-mission-ink'
+          : 'border-white/10 bg-mission-dark text-mission-muted hover:text-gray-100'"
       >
-        <Upload :size="16" class="inline mr-2" />
-        Upload File
+        <Upload :size="16" />
+        Upload file
       </button>
       <button
         type="button"
         @click="inputMode = 'paste'"
-        class="px-4 py-2 font-mono text-xs uppercase tracking-wider transition-all border"
+        class="px-3 py-1.5 border rounded-full text-sm inline-flex items-center gap-2 transition-colors"
         :class="inputMode === 'paste'
-          ? 'border-mission-accent text-mission-accent bg-mission-accent/10'
-          : 'border-white/20 text-gray-400 hover:border-white/40'"
+          ? 'border-gray-100 bg-gray-100 text-mission-ink'
+          : 'border-white/10 bg-mission-dark text-mission-muted hover:text-gray-100'"
       >
-        <ClipboardPaste :size="16" class="inline mr-2" />
-        Paste Text
+        <ClipboardPaste :size="16" />
+        Paste text
       </button>
     </div>
 
@@ -40,13 +40,13 @@
       @dragleave.prevent="isDragging = false"
       @drop.prevent="handleDrop"
       @click="triggerFileInput"
-      class="border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-300"
+      class="border-2 border-dashed rounded-card p-10 text-center cursor-pointer transition-colors"
       :class="[
         isDragging
           ? 'border-mission-accent bg-mission-accent/10'
           : file
-            ? 'border-mission-accent/50 bg-mission-accent/5'
-            : 'border-white/20 hover:border-white/40 hover:bg-white/5',
+            ? 'border-mission-ok/40 bg-mission-ok/5'
+            : 'border-white/15 hover:border-white/30 hover:bg-white/[0.03]',
       ]"
     >
       <input
@@ -58,10 +58,10 @@
       />
 
       <template v-if="file">
-        <FileSpreadsheet :size="48" class="mx-auto mb-4 text-mission-accent" />
-        <p class="font-mono text-mission-accent">{{ file.name }}</p>
-        <p class="text-sm text-gray-400 mt-1">
-          {{ formatFileSize(file.size) }} | {{ rows.length }} rows detected
+        <FileSpreadsheet :size="40" class="mx-auto mb-3 text-mission-ok" />
+        <p class="font-mono text-sm">{{ file.name }}</p>
+        <p class="text-sm text-mission-muted mt-1">
+          {{ formatFileSize(file.size) }} · {{ rows.length }} rows
         </p>
         <button
           type="button"
@@ -73,11 +73,11 @@
       </template>
 
       <template v-else>
-        <Upload :size="48" class="mx-auto mb-4 text-gray-500" />
-        <p class="font-mono text-gray-300">
-          {{ isDragging ? 'DROP FILE HERE' : 'DRAG & DROP OR CLICK TO SELECT' }}
+        <Upload :size="40" class="mx-auto mb-3 text-mission-muted" />
+        <p class="text-sm text-gray-300">
+          {{ isDragging ? 'Drop the file here' : 'Drag a file here or click to choose one' }}
         </p>
-        <p class="text-sm text-gray-500 mt-2">Supports .csv files</p>
+        <p class="text-sm text-mission-muted mt-1">.csv files only</p>
       </template>
     </div>
 
@@ -87,11 +87,11 @@
         v-model="pastedText"
         @input="handleTextInput"
         class="input-mission w-full h-48 font-mono text-sm resize-none"
-        placeholder="Paste CSV data here...&#10;&#10;Example:&#10;username,fullName,password,group&#10;john_doe,John Doe,password123,Team A&#10;jane_doe,Jane Doe,password456,Team B"
+        placeholder="Paste CSV data here&#10;&#10;Example:&#10;username,fullName,password,group&#10;john_doe,John Doe,password123,Team A&#10;jane_doe,Jane Doe,password456,Team B"
       ></textarea>
       <div class="flex items-center justify-between">
-        <p class="text-xs text-gray-500">
-          Paste data with headers in the first row. Columns separated by commas.
+        <p class="text-xs text-mission-muted">
+          Headers in the first row, columns separated by commas.
         </p>
         <button
           v-if="pastedText"
@@ -105,36 +105,36 @@
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center gap-2 text-gray-400">
-      <RotateCw :size="20" class="animate-spin" />
-      <span>Parsing file...</span>
+    <div v-if="isLoading" class="flex items-center justify-center gap-2 text-sm text-mission-muted">
+      <RotateCw :size="16" class="animate-spin" />
+      <span>Reading file…</span>
     </div>
 
     <!-- Error Message -->
     <div
       v-if="error"
-      class="p-4 border border-mission-red bg-mission-red/10 text-mission-red text-sm font-mono"
+      class="rounded-xl px-4 py-3 bg-mission-red/10 text-mission-red text-sm"
     >
       {{ error }}
     </div>
 
     <!-- File Preview -->
-    <div v-if="file && headers.length > 0" class="space-y-4">
+    <div v-if="headers.length > 0" class="space-y-3">
       <div class="flex items-center gap-2">
-        <CheckCircle :size="20" class="text-mission-accent" />
+        <CheckCircle :size="16" class="text-mission-ok" />
         <span class="text-sm text-gray-300">
-          Detected {{ headers.length }} columns and {{ rows.length }} data rows
+          Found {{ headers.length }} columns and {{ rows.length }} rows
         </span>
       </div>
 
-      <div class="overflow-x-auto">
+      <div class="overflow-x-auto rounded-xl border border-white/[0.06]">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-white/10">
+            <tr class="border-b border-white/[0.06]">
               <th
                 v-for="header in headers"
                 :key="header"
-                class="px-3 py-2 text-left font-mono text-xs text-gray-400 uppercase tracking-wider"
+                class="px-3 py-2 text-left text-xs font-medium text-mission-muted"
               >
                 {{ header }}
               </th>
@@ -144,12 +144,12 @@
             <tr
               v-for="(row, index) in previewRows"
               :key="index"
-              class="border-b border-white/5"
+              class="border-b border-white/[0.06] last:border-b-0"
             >
               <td
                 v-for="(cell, cellIndex) in row"
                 :key="cellIndex"
-                class="px-3 py-2 font-mono text-gray-300 truncate max-w-[150px]"
+                class="px-3 py-2 text-gray-300 truncate max-w-[150px]"
               >
                 {{ cell || '—' }}
               </td>
@@ -158,7 +158,7 @@
         </table>
       </div>
 
-      <p v-if="rows.length > 5" class="text-xs text-gray-500 text-center">
+      <p v-if="rows.length > 5" class="text-xs text-mission-muted">
         Showing first 5 of {{ rows.length }} rows
       </p>
     </div>

@@ -1,5 +1,5 @@
 <template>
-  <div class="relative bg-black overflow-hidden">
+  <div class="relative bg-mission-black overflow-hidden">
     <!-- Snap scroller: one clip per viewport, exactly like a TikTok feed. -->
     <div
       ref="scroller"
@@ -16,12 +16,12 @@
         <div
           class="absolute inset-0 pointer-events-none"
           :style="{
-            background: `radial-gradient(120% 80% at 50% 50%, ${verdictColor(item.status)}1f 0%, transparent 70%)`,
+            background: `radial-gradient(120% 80% at 50% 50%, ${verdictColor(item.status)}14 0%, transparent 70%)`,
           }"
         ></div>
 
         <div
-          class="relative h-full aspect-[9/16] max-w-full overflow-hidden md:rounded-xl md:border md:border-white/10 bg-black"
+          class="relative h-full aspect-[9/16] max-w-full overflow-hidden md:rounded-2xl md:border md:border-white/[0.06] bg-black"
         >
           <video
             v-if="isNear(index)"
@@ -52,15 +52,15 @@
             v-if="buffering && index === activeIndex"
             class="absolute inset-0 grid place-items-center pointer-events-none"
           >
-            <Loader2 :size="34" :stroke-width="2" class="text-white/70 animate-spin" />
+            <Loader2 :size="32" :stroke-width="2" class="text-gray-100/70 animate-spin" />
           </div>
 
           <div
             v-else-if="paused && index === activeIndex"
             class="absolute inset-0 grid place-items-center pointer-events-none"
           >
-            <div class="p-5 rounded-full bg-black/50 backdrop-blur-sm border border-white/20">
-              <Play :size="30" :stroke-width="2" class="text-white" />
+            <div class="p-5 rounded-full bg-black/50 backdrop-blur-sm">
+              <Play :size="28" :stroke-width="2" class="text-gray-100" />
             </div>
           </div>
 
@@ -69,41 +69,41 @@
             <div class="flex items-center gap-2 flex-wrap">
               <span
                 v-if="item.status"
-                class="px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider border backdrop-blur-sm"
+                class="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold backdrop-blur-sm"
                 :class="verdictClass(item.status)"
               >
                 {{ item.status }}
               </span>
               <span
                 v-if="rankDelta(item)"
-                class="text-xs font-mono font-bold"
+                class="text-xs font-semibold tabular-nums"
                 :class="rankClass(item)"
               >
                 {{ rankDelta(item) }}
               </span>
-              <span v-if="item.contestCode" class="text-xs font-mono text-gray-400">
+              <span v-if="item.contestCode" class="text-xs font-mono text-gray-300">
                 {{ item.contestCode }}
               </span>
             </div>
 
-            <h3 class="text-lg font-display font-bold text-white leading-snug line-clamp-2">
+            <h3 class="text-lg font-semibold text-gray-100 leading-snug line-clamp-2">
               {{ reactionTitle(item) }}
             </h3>
 
-            <p class="text-sm font-mono text-gray-300 truncate">
+            <p class="text-sm text-gray-300 truncate">
               {{ item.group || item.author || '—' }}
             </p>
 
-            <p class="text-[11px] font-mono text-gray-500 truncate">
-              {{ relativeTime(item.lastModified) }}
-              <span v-if="item.submissionId"> · #{{ item.submissionId }}</span>
+            <p class="text-xs text-gray-400 truncate">
+              <span :title="item.lastModified ? formatDateTime(item.lastModified) : ''">{{ timeAgo(item.lastModified) }}</span>
+              <span v-if="item.submissionId"> · <span class="font-mono">#{{ item.submissionId }}</span></span>
             </p>
           </div>
 
           <!-- Action rail, bottom-right. -->
           <div class="absolute right-3 bottom-6 flex flex-col items-center gap-6">
             <div
-              class="w-11 h-11 rounded-full grid place-items-center text-xs font-bold font-mono border border-white/30 bg-black/50 backdrop-blur-sm text-mission-cyan"
+              class="w-11 h-11 rounded-full grid place-items-center text-xs font-semibold bg-mission-gray/90 backdrop-blur-sm text-mission-accent"
               :title="item.group || 'No group'"
             >
               {{ reactionMonogram(item) }}
@@ -111,12 +111,12 @@
 
             <button type="button" class="rail-button" :title="muted ? 'Unmute (M)' : 'Mute (M)'" @click="toggleMute">
               <component :is="muted ? VolumeX : Volume2" :size="20" :stroke-width="2" />
-              <span class="rail-label">{{ muted ? 'MUTED' : 'SOUND' }}</span>
+              <span class="rail-label">{{ muted ? 'Muted' : 'Sound' }}</span>
             </button>
 
             <button type="button" class="rail-button" title="Copy URL" @click="copyUrl(item.url)">
               <Link2 :size="20" :stroke-width="2" />
-              <span class="rail-label">COPY</span>
+              <span class="rail-label">Copy</span>
             </button>
 
             <a
@@ -127,7 +127,7 @@
               title="Open original"
             >
               <ExternalLink :size="20" :stroke-width="2" />
-              <span class="rail-label">OPEN</span>
+              <span class="rail-label">Open</span>
             </a>
 
             <button
@@ -138,7 +138,7 @@
               @click="showDetails = !showDetails"
             >
               <Info :size="20" :stroke-width="2" />
-              <span class="rail-label">INFO</span>
+              <span class="rail-label">Info</span>
             </button>
           </div>
 
@@ -146,12 +146,12 @@
           <Transition name="sheet">
             <div
               v-if="showDetails && index === activeIndex"
-              class="absolute inset-x-0 bottom-0 p-4 pb-8 bg-black/85 backdrop-blur-md border-t border-white/10"
+              class="absolute inset-x-0 bottom-0 p-4 pb-8 bg-mission-dark/95 backdrop-blur-md border-t border-white/[0.06]"
             >
-              <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs font-mono">
+              <dl class="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
                 <div v-for="row in details(item)" :key="row.label" class="contents">
-                  <dt class="tech-label">{{ row.label }}</dt>
-                  <dd class="text-gray-300 truncate" :title="row.value">{{ row.value }}</dd>
+                  <dt class="text-mission-muted">{{ row.label }}</dt>
+                  <dd class="text-gray-100 truncate" :title="row.value">{{ row.value }}</dd>
                 </div>
               </dl>
             </div>
@@ -166,7 +166,7 @@
             @pointerup="endScrub"
             @pointercancel="endScrub"
           >
-            <div class="w-full h-[3px] bg-white/20 transition-all group-hover/bar:h-[6px]">
+            <div class="w-full h-[3px] bg-white/15 transition-all group-hover/bar:h-[6px]">
               <div
                 class="h-full bg-mission-accent transition-[width] duration-100 ease-linear"
                 :style="{ width: `${progress * 100}%` }"
@@ -180,11 +180,11 @@
     <!-- Floating chrome. The wrapper ignores pointer events; children opt back in. -->
     <div class="absolute inset-0 z-20 pointer-events-none">
       <div
-        class="absolute top-3 left-4 px-2 py-1 rounded bg-black/60 backdrop-blur-sm border border-white/10 font-mono text-[11px] text-gray-300"
+        class="absolute top-3 left-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-sm text-xs tabular-nums text-gray-300"
       >
-        <span class="text-mission-accent font-bold">{{ items.length ? activeIndex + 1 : 0 }}</span>
-        <span class="text-gray-600"> / {{ items.length }}</span>
-        <span v-if="durationLabel" class="text-gray-500"> · {{ durationLabel }}</span>
+        <span class="text-gray-100 font-semibold">{{ items.length ? activeIndex + 1 : 0 }}</span>
+        <span class="text-mission-muted"> / {{ items.length }}</span>
+        <span v-if="durationLabel" class="text-mission-muted"> · {{ durationLabel }}</span>
       </div>
 
       <div class="absolute top-1/2 right-4 -translate-y-1/2 hidden md:flex flex-col gap-3">
@@ -211,9 +211,9 @@
       <Transition name="hint">
         <div
           v-if="showHint && items.length > 0"
-          class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded bg-black/60 backdrop-blur-sm border border-white/10 font-mono text-[10px] uppercase tracking-wider text-gray-400 whitespace-nowrap"
+          class="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-sm text-xs text-gray-300 whitespace-nowrap"
         >
-          J / K SCROLL · SPACE PAUSE · M SOUND · I INFO
+          J / K to scroll · Space to pause · M for sound · I for info
         </div>
       </Transition>
     </div>
@@ -221,8 +221,8 @@
     <EmptyState
       v-if="items.length === 0"
       container-class="absolute inset-0 grid place-items-center"
-      title="NO CLIPS IN FEED"
-      subtitle="No clip matches the current search or filter"
+      title="No clips to show"
+      subtitle="No clip matches the current search or filter."
       icon="generic"
     />
   </div>
@@ -242,6 +242,7 @@ import {
   VolumeX,
 } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
+import { timeAgo } from '~/common/timeAgo';
 import type { ReactionVideoItem } from '~/types/reaction';
 import {
   formatBytes,
@@ -251,7 +252,6 @@ import {
   rankDelta,
   reactionMonogram,
   reactionTitle,
-  relativeTime,
   verdictClass,
   verdictColor,
 } from '~/utils/reaction';
@@ -316,14 +316,14 @@ function activeVideo(): HTMLVideoElement | null {
 
 function details(item: ReactionVideoItem): { label: string; value: string }[] {
   return [
-    { label: 'TEAM', value: item.teamName ?? '—' },
-    { label: 'GROUP', value: item.group ?? '—' },
-    { label: 'PROBLEM', value: item.problemDisplayName || item.problemCode || '—' },
-    { label: 'CONTEST', value: item.contestCode ?? '—' },
-    { label: 'VERDICT', value: item.status ?? '—' },
-    { label: 'RANK', value: rankDelta(item) || '—' },
-    { label: 'SIZE', value: formatBytes(item.size) },
-    { label: 'RENDERED', value: item.lastModified ? formatDateTime(item.lastModified) : '—' },
+    { label: 'Team', value: item.teamName ?? '—' },
+    { label: 'Group', value: item.group ?? '—' },
+    { label: 'Problem', value: item.problemDisplayName || item.problemCode || '—' },
+    { label: 'Contest', value: item.contestCode ?? '—' },
+    { label: 'Verdict', value: item.status ?? '—' },
+    { label: 'Rank', value: rankDelta(item) || '—' },
+    { label: 'Size', value: formatBytes(item.size) },
+    { label: 'Rendered', value: item.lastModified ? formatDateTime(item.lastModified) : '—' },
   ];
 }
 
@@ -576,19 +576,19 @@ onBeforeUnmount(() => {
 
 .rail-button {
   @apply relative w-11 h-11 rounded-full grid place-items-center bg-black/50 backdrop-blur-sm
-         border border-white/15 text-white transition-all duration-200
-         hover:border-mission-accent/60 hover:text-mission-accent;
+         text-gray-100 transition-colors duration-200
+         hover:bg-black/70 hover:text-mission-accent;
 }
 
 /* Label rides just under the circle, TikTok-style, without growing the hit area. */
 .rail-label {
-  @apply absolute -bottom-4 text-[8px] font-mono tracking-widest text-gray-400;
+  @apply absolute -bottom-4 text-[10px] text-gray-300;
 }
 
 .nav-button {
-  @apply w-10 h-10 rounded-full grid place-items-center bg-black/50 backdrop-blur-sm
-         border border-white/15 text-white transition-all duration-200
-         hover:border-mission-accent/60 hover:text-mission-accent
+  @apply w-10 h-10 rounded-full grid place-items-center bg-mission-dark/80 backdrop-blur-sm
+         border border-white/10 text-gray-100 transition-colors duration-200
+         hover:border-white/25 hover:text-mission-accent
          disabled:opacity-25 disabled:pointer-events-none;
 }
 

@@ -78,8 +78,8 @@ async function deleteSelected() {
 </script>
 
 <template>
-  <div class="properties-panel w-96 bg-mission-dark border-l border-white/10 p-4 overflow-y-auto">
-    <h3 class="text-sm font-medium text-white/40 uppercase mb-4">Properties</h3>
+  <div class="properties-panel w-80 xl:w-96 bg-mission-dark border-l border-white/[0.06] p-4 overflow-y-auto">
+    <h3 class="text-sm font-semibold mb-4">Properties</h3>
 
     <template v-if="selectedObject">
       <!-- Table Properties -->
@@ -87,7 +87,7 @@ async function deleteSelected() {
         <div class="space-y-4">
           <!-- Label -->
           <div>
-            <label class="tech-label">Label</label>
+            <label class="tech-label block mb-1.5">Label</label>
             <input
               v-model="editLabel"
               type="text"
@@ -99,12 +99,12 @@ async function deleteSelected() {
 
           <!-- Position (read-only) -->
           <div>
-            <label class="tech-label">Position</label>
+            <label class="tech-label block mb-1.5">Position</label>
             <div class="grid grid-cols-2 gap-2">
-              <div class="text-white/60 text-sm">
+              <div class="text-gray-300 text-sm tabular-nums">
                 X: {{ selectedTable.position.x }}
               </div>
-              <div class="text-white/60 text-sm">
+              <div class="text-gray-300 text-sm tabular-nums">
                 Y: {{ selectedTable.position.y }}
               </div>
             </div>
@@ -112,7 +112,7 @@ async function deleteSelected() {
 
           <!-- Size -->
           <div>
-            <label class="tech-label">Size (cells)</label>
+            <label class="tech-label block mb-1.5">Size (cells)</label>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <input
@@ -139,11 +139,11 @@ async function deleteSelected() {
 
           <!-- User Binding -->
           <div>
-            <label class="tech-label">Bound User</label>
+            <label class="tech-label block mb-1.5">Bound user</label>
             <div v-if="selectedTable.boundUsername" class="flex items-center gap-2 mb-2">
-              <span class="text-mission-accent text-sm">{{ selectedTable.boundUsername }}</span>
+              <span class="px-2.5 py-0.5 rounded-full bg-mission-ok/15 text-mission-ok text-sm font-mono">{{ selectedTable.boundUsername }}</span>
               <button
-                class="p-1 text-white/40 hover:text-mission-red"
+                class="p-1.5 rounded-lg text-mission-muted hover:text-mission-red hover:bg-white/[0.06] transition-colors"
                 title="Unbind user"
                 @click="unbindFromUser"
               >
@@ -157,11 +157,11 @@ async function deleteSelected() {
                   :options="(userOptions as any)"
                   option-label="label"
                   option-value="value"
-                  placeholder="Select user..."
+                  placeholder="Select user"
                 />
               </div>
               <button
-                class="p-2 text-white/40 hover:text-mission-accent disabled:opacity-30 flex-shrink-0"
+                class="p-2 rounded-lg text-mission-muted hover:text-mission-accent hover:bg-white/[0.06] disabled:opacity-30 flex-shrink-0 transition-colors"
                 :disabled="!selectedUser"
                 title="Bind user"
                 @click="bindToUser"
@@ -177,30 +177,30 @@ async function deleteSelected() {
       <template v-else-if="selectedWall">
         <div class="space-y-4">
           <div>
-            <label class="tech-label">Type</label>
-            <div class="text-white capitalize">
-              {{ selectedWall.orientation }} Wall
+            <label class="tech-label block mb-1.5">Type</label>
+            <div class="text-sm text-gray-100 first-letter:uppercase">
+              {{ selectedWall.orientation }} wall
             </div>
           </div>
 
           <div>
-            <label class="tech-label">Start Position</label>
+            <label class="tech-label block mb-1.5">Start position</label>
             <div class="grid grid-cols-2 gap-2">
-              <div class="text-white/60 text-sm">X: {{ selectedWall.start.x }}</div>
-              <div class="text-white/60 text-sm">Y: {{ selectedWall.start.y }}</div>
+              <div class="text-gray-300 text-sm tabular-nums">X: {{ selectedWall.start.x }}</div>
+              <div class="text-gray-300 text-sm tabular-nums">Y: {{ selectedWall.start.y }}</div>
             </div>
           </div>
 
           <div>
-            <label class="tech-label">Length</label>
-            <div class="text-white">{{ selectedWall.length }} cells</div>
+            <label class="tech-label block mb-1.5">Length</label>
+            <div class="text-sm text-gray-100 tabular-nums">{{ selectedWall.length }} cells</div>
           </div>
         </div>
       </template>
 
       <!-- Delete Button -->
       <button
-        class="w-full mt-6 py-2 px-4 rounded-lg bg-mission-red/20 text-mission-red hover:bg-mission-red/30 flex items-center justify-center gap-2 transition-colors"
+        class="btn-danger w-full mt-6"
         @click="deleteSelected"
       >
         <Trash2 :size="16" />
@@ -210,7 +210,7 @@ async function deleteSelected() {
 
     <!-- No Selection -->
     <template v-else>
-      <div class="text-white/40 text-sm">
+      <div class="text-mission-muted text-sm">
         {{ store.selectedObjectIds.length > 1 ? `${store.selectedObjectIds.length} objects selected` : 'No object selected' }}
       </div>
     </template>

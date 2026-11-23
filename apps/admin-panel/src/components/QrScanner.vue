@@ -5,25 +5,25 @@
         <video ref="video" class="absolute inset-0 w-full h-full object-cover" autoplay muted playsinline />
         <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div
-            class="w-64 h-64 max-w-[70vw] max-h-[70vw] border-2 border-mission-accent/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"
+            class="w-64 h-64 max-w-[70vw] max-h-[70vw] rounded-3xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]"
           />
         </div>
         <p
           v-if="error"
-          class="absolute inset-x-4 top-1/2 -translate-y-1/2 p-4 bg-mission-dark border border-mission-red text-mission-red text-sm font-mono"
+          class="absolute inset-x-4 top-1/2 -translate-y-1/2 p-4 rounded-card bg-mission-dark border border-mission-red/40 text-mission-red text-sm"
         >
           {{ error }}
         </p>
         <button
           type="button"
-          class="absolute top-4 right-4 p-2 bg-black/60 text-white hover:text-mission-red"
+          class="absolute top-4 right-4 p-2 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
           aria-label="Close scanner"
           @click="emit('close')"
         >
-          <X :size="28" />
+          <X :size="24" :stroke-width="2" />
         </button>
       </div>
-      <div class="bg-mission-dark border-t border-white/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div class="bg-mission-dark border-t border-white/[0.06] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <slot />
       </div>
     </div>

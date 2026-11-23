@@ -27,7 +27,7 @@
         <div
           v-if="isOpen"
           ref="dropdownRef"
-          class="fixed z-[9999] mission-card border border-white/20 overflow-hidden shadow-2xl"
+          class="fixed z-[9999] mission-card border-white/10 overflow-hidden shadow-2xl"
           :style="dropdownStyle"
         >
         <!-- Search Input -->
@@ -60,10 +60,10 @@
             class="w-full px-4 py-2.5 text-left text-sm transition-all duration-200 border-l-2 border-transparent truncate"
             :class="[
               isOptionSelected(option)
-                ? 'bg-mission-accent/10 border-mission-accent text-mission-accent font-semibold'
+                ? 'bg-white/5 border-mission-accent text-gray-100 font-medium'
                 : isOptionDisabled(option)
                   ? 'text-gray-600 cursor-not-allowed opacity-50'
-                  : 'text-gray-300 hover:bg-mission-accent/5 hover:border-mission-accent/50 hover:text-white',
+                  : 'text-gray-300 hover:bg-white/5 hover:text-white',
             ]"
           >
             <slot name="option" :option="option" :index="index" :selected="isOptionSelected(option)">
@@ -74,10 +74,10 @@
           <!-- Empty State -->
           <div
             v-if="filteredOptions.length === 0"
-            class="px-4 py-8 text-center text-gray-500 text-sm font-mono"
+            class="px-4 py-6 text-center text-mission-muted text-sm"
           >
-            <Archive :size="48" :stroke-width="2" class="mx-auto mb-2 text-gray-600" />
-            NO OPTIONS FOUND
+            <Archive :size="32" :stroke-width="2" class="mx-auto mb-2 text-mission-line" />
+            No options found
           </div>
         </div>
         </div>
@@ -250,11 +250,11 @@ onBeforeUnmount(() => {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 157, 0.3);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 157, 0.5);
+  background: rgba(255, 255, 255, 0.2);
 }
 </style>

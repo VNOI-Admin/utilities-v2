@@ -1,337 +1,211 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
-    <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <PageHeader
-          title="PRINTING_SYSTEM"
-          subtitle="PRINT JOB MANAGEMENT / CLIENT CONTROL INTERFACE"
-        />
-        <button
-          v-if="activeTab === 'clients'"
-          @click="showCreateClientModal = true"
-          class="btn-primary flex items-center gap-2"
-        >
-          <Plus :size="20" :stroke-width="2" />
-          <span class="hidden md:inline">CREATE CLIENT</span>
-        </button>
+  <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
+    <div class="flex flex-wrap items-end gap-3">
+      <PageHeader class="flex-1 min-w-0" title="Printing" />
+      <div class="flex items-center gap-1.5 text-xs text-mission-muted">
+        <span
+          class="w-1.5 h-1.5 rounded-full"
+          :class="printingStore.isPolling ? 'bg-mission-ok' : 'bg-mission-muted'"
+        ></span>
+        <span>{{ printingStore.isPolling ? 'Live' : 'Paused' }}</span>
       </div>
-
-      <!-- Tab Switcher & Filter Bar -->
-      <div class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center">
-        <!-- Tab Switcher -->
-        <div class="flex items-center gap-2 w-full md:w-auto">
-          <span class="tech-label">VIEW:</span>
-          <div class="flex flex-1 md:flex-none border border-white/20 rounded overflow-hidden">
-            <button
-              @click="activeTab = 'jobs'"
-              class="flex-1 md:flex-none px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all duration-300"
-              :class="activeTab === 'jobs'
-                ? 'bg-mission-accent text-black font-semibold'
-                : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'"
-            >
-              PRINT JOBS
-            </button>
-            <button
-              @click="activeTab = 'clients'"
-              class="flex-1 md:flex-none px-4 py-2 text-xs font-mono uppercase tracking-wider transition-all duration-300"
-              :class="activeTab === 'clients'
-                ? 'bg-mission-accent text-black font-semibold'
-                : 'bg-transparent text-gray-400 hover:text-white hover:bg-white/5'"
-            >
-              CLIENTS
-            </button>
-          </div>
-        </div>
-
-        <!-- Status Filter (only for jobs tab) -->
-        <FilterButtonGroup
-          v-if="activeTab === 'jobs'"
-          v-model="selectedStatus"
-          :options="['all', 'queued', 'done']"
-          label="STATUS:"
-        />
-
-        <!-- Stats -->
-        <div class="flex items-center gap-4 w-full md:w-auto md:ml-auto">
-          <StatCounter
-            v-if="activeTab === 'jobs'"
-            label="JOBS:"
-            :value="filteredJobs.length"
-          />
-          <StatCounter
-            v-else
-            label="CLIENTS:"
-            :value="printingStore.printClients.length"
-          />
-          <div class="flex items-center gap-2 text-xs font-mono text-gray-500">
-            <div
-              class="w-2 h-2 rounded-full"
-              :class="printingStore.isPolling ? 'bg-mission-accent animate-pulse' : 'bg-gray-600'"
-            ></div>
-            <span>{{ printingStore.isPolling ? 'LIVE' : 'OFFLINE' }}</span>
-          </div>
-        </div>
-      </div>
+      <button class="btn-secondary" @click="showCreateClientModal = true">
+        <Plus :size="16" :stroke-width="2" />
+        <span>Add printer</span>
+      </button>
     </div>
 
-    <!-- Main Content -->
-    <div class="p-4 md:p-8">
-      <!-- Jobs Tab -->
-      <div v-if="activeTab === 'jobs'">
-        <!-- Loading State -->
-        <div v-if="printingStore.loadingJobs && printJobs.length === 0" class="mission-card overflow-hidden">
-          <div class="animate-pulse">
-            <div class="h-12 bg-white/5 border-b border-white/10"></div>
-            <div v-for="i in 8" :key="i" class="h-16 bg-white/5 border-b border-white/5"></div>
-          </div>
-        </div>
+    <section class="space-y-3">
+      <h2 class="text-xs font-medium uppercase tracking-wider text-mission-muted">Printers</h2>
 
-        <!-- Empty State -->
-        <EmptyState
-          v-else-if="filteredJobs.length === 0"
-          title="NO PRINT JOBS FOUND"
-          :subtitle="selectedStatus === 'all' ? 'No print jobs in the system' : `No ${selectedStatus} jobs`"
-          icon="printer"
-        />
-
-        <!-- Jobs Table -->
-        <MissionTable
-          v-else
-          :items="filteredJobs"
-          :clickable="false"
-          item-key="jobId"
-        >
-          <template #header>
-            <div class="col-span-3 tech-label">FILENAME</div>
-            <div class="col-span-2 tech-label">USERNAME</div>
-            <div class="col-span-2 tech-label">CLIENT ID</div>
-            <div class="col-span-2 tech-label">STATUS</div>
-            <div class="col-span-2 tech-label">REQUESTED AT</div>
-            <div class="col-span-1 tech-label text-center">ACTIONS</div>
-          </template>
-
-          <template #row="{ item: job }">
-            <!-- Filename -->
-            <div class="col-span-3 font-mono text-sm truncate">
-              {{ job.filename }}
-            </div>
-
-            <!-- Username -->
-            <div class="col-span-2 text-sm text-gray-300">
-              {{ job.username }}
-            </div>
-
-            <!-- Client ID -->
-            <div class="col-span-2 font-mono text-xs text-mission-cyan">
-              {{ job.clientId }}
-            </div>
-
-            <!-- Status -->
-            <div class="col-span-2">
-              <StatusBadge
-                :variant="job.status === 'done' ? 'accent' : 'amber'"
-                :show-dot="true"
-              >
-                {{ typeof job.status === 'string' ? job.status.toUpperCase() : 'QUEUED' }}
-              </StatusBadge>
-            </div>
-
-            <!-- Requested At -->
-            <div class="col-span-2 font-mono text-xs text-gray-400">
-              {{ formatDateTime(job.requestedAt) }}
-            </div>
-
-            <!-- Actions -->
-            <div class="col-span-1 flex items-center justify-center gap-2">
-              <button
-                v-if="job.status === 'done'"
-                @click="handleRetrigger(job.jobId)"
-                class="px-3 py-1 text-xs font-mono uppercase border border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-black transition-all duration-300 rounded-sm"
-                title="Retrigger job"
-              >
-                <RotateCw :size="14" :stroke-width="2" />
-              </button>
-              <span v-else class="text-gray-600 text-xs">—</span>
-            </div>
-          </template>
-        </MissionTable>
+      <div
+        v-if="printingStore.loadingClients && printClients.length === 0"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3"
+      >
+        <div v-for="i in 4" :key="i" class="mission-card h-28 animate-pulse"></div>
       </div>
 
-      <!-- Clients Tab -->
-      <div v-else-if="activeTab === 'clients'">
-        <!-- Loading State -->
-        <div v-if="printingStore.loadingClients && printClients.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div v-for="i in 6" :key="i" class="mission-card h-48 animate-pulse">
-            <div class="h-full bg-white/5"></div>
+      <div v-else-if="printClients.length === 0" class="mission-card px-5 py-8 text-center text-sm text-mission-muted">
+        No printers yet. Add one to start printing.
+      </div>
+
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div
+          v-for="client in printClients"
+          :key="client.clientId"
+          class="mission-card p-4 flex flex-col gap-3"
+          :class="{
+            '!border-mission-red/40': client.isActive && !client.isOnline,
+            'opacity-60': !client.isActive,
+          }"
+        >
+          <div class="flex items-start gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="font-mono text-sm font-semibold truncate" :title="client.clientId">{{ client.clientId }}</div>
+              <div class="text-xs text-mission-muted mt-0.5" :title="formatDateTime(client.lastReportedAt)">
+                Seen {{ timeAgo(client.lastReportedAt) }}
+              </div>
+            </div>
+            <StatusBadge v-if="!client.isActive" variant="gray">Inactive</StatusBadge>
+            <StatusBadge v-else-if="client.isOnline" status="completed" :show-dot="true">Online</StatusBadge>
+            <StatusBadge v-else variant="red" :show-dot="true">Offline</StatusBadge>
           </div>
-        </div>
 
-        <!-- Empty State -->
-        <EmptyState
-          v-else-if="printClients.length === 0"
-          title="NO PRINT CLIENTS"
-          subtitle="Create a client to start printing"
-          icon="printer"
-        />
+          <div class="flex items-center gap-2 text-sm">
+            <span class="flex-1 tabular-nums" :class="queuedByClient[client.clientId] ? 'text-gray-100' : 'text-mission-muted'">
+              {{ queuedByClient[client.clientId] || 0 }} queued
+            </span>
+            <button
+              type="button"
+              class="text-xs text-mission-muted hover:text-gray-100 transition-colors"
+              @click="toggleAuthKey(client.clientId)"
+            >
+              {{ visibleAuthKeys.has(client.clientId) ? 'Hide key' : 'Auth key' }}
+            </button>
+            <button
+              v-if="client.isActive"
+              type="button"
+              class="p-1 rounded-lg text-mission-muted hover:text-mission-red hover:bg-mission-red/10 transition-colors"
+              title="Deactivate printer"
+              @click="handleDeactivateClient(client.clientId)"
+            >
+              <Power :size="14" :stroke-width="2" />
+            </button>
+          </div>
 
-        <!-- Clients Grid -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
-            v-for="(client, index) in printClients"
-            :key="client.clientId"
-            class="mission-card p-6 hover:border-mission-accent/50 transition-all duration-300"
-            :style="{ animationDelay: `${index * 50}ms` }"
-            style="animation: slideInRow 0.4s ease-out backwards"
+            v-if="visibleAuthKeys.has(client.clientId)"
+            class="px-3 py-2 rounded-lg bg-mission-gray font-mono text-xs text-gray-300 break-all"
           >
-            <!-- Client ID -->
-            <div class="flex items-start justify-between mb-4">
-              <div>
-                <div class="tech-label mb-1">CLIENT ID</div>
-                <div class="font-mono text-lg font-semibold text-mission-accent">
-                  {{ client.clientId }}
-                </div>
-              </div>
-              <button
-                @click="handleDeactivateClient(client.clientId)"
-                class="p-2 text-mission-red hover:bg-mission-red/10 border border-mission-red/50 hover:border-mission-red rounded transition-all duration-300"
-                title="Deactivate client"
-              >
-                <X :size="16" :stroke-width="2" />
-              </button>
-            </div>
-
-            <!-- Status -->
-            <div class="space-y-3 mb-4">
-              <!-- Online Status -->
-              <div class="flex items-center justify-between">
-                <span class="tech-label">STATUS</span>
-                <div class="flex items-center gap-2">
-                  <span
-                    class="inline-block w-2 h-2 rounded-full"
-                    :class="client.isOnline ? 'bg-mission-accent animate-pulse' : 'bg-gray-600'"
-                  ></span>
-                  <span
-                    class="text-xs font-mono uppercase"
-                    :class="client.isOnline ? 'text-mission-accent' : 'text-gray-500'"
-                  >
-                    {{ client.isOnline ? 'ONLINE' : 'OFFLINE' }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Active Status -->
-              <div class="flex items-center justify-between">
-                <span class="tech-label">ACTIVE</span>
-                <span
-                  class="text-xs font-mono uppercase"
-                  :class="client.isActive ? 'text-mission-cyan' : 'text-gray-500'"
-                >
-                  {{ client.isActive ? 'YES' : 'NO' }}
-                </span>
-              </div>
-
-              <!-- Last Reported -->
-              <div class="flex items-center justify-between">
-                <span class="tech-label">LAST SEEN</span>
-                <span class="text-xs font-mono text-gray-400">
-                  {{ formatDateTime(client.lastReportedAt) }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Auth Key (Hidden by default) -->
-            <div class="pt-4 border-t border-white/10">
-              <button
-                @click="toggleAuthKey(client.clientId)"
-                class="w-full text-xs font-mono text-gray-500 hover:text-mission-cyan transition-colors flex items-center justify-between"
-              >
-                <span>AUTH KEY</span>
-                <ChevronDown
-                  :size="14"
-                  :stroke-width="2"
-                  class="transition-transform duration-300"
-                  :class="{ 'rotate-180': visibleAuthKeys.has(client.clientId) }"
-                />
-              </button>
-              <div
-                v-if="visibleAuthKeys.has(client.clientId)"
-                class="mt-2 p-3 bg-black/30 rounded border border-white/10 font-mono text-xs text-gray-400 break-all"
-              >
-                {{ client.authKey }}
-              </div>
-            </div>
+            {{ client.authKey }}
           </div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <section class="space-y-3">
+      <FilterButtonGroup v-model="selectedStatus" :options="STATUSES" :formatter="tabLabel" />
+
+      <div v-if="printingStore.loadingJobs && printJobs.length === 0" class="mission-card p-2 space-y-2">
+        <div v-for="i in 6" :key="i" class="h-12 rounded-xl bg-mission-gray animate-pulse"></div>
+      </div>
+
+      <EmptyState
+        v-else-if="filteredJobs.length === 0"
+        :title="selectedStatus === 'queued' ? 'Nothing is waiting to print' : 'No print jobs'"
+        :subtitle="selectedStatus === 'done' ? 'Printed jobs will show up here.' : ''"
+        icon="printer"
+        container-class="py-16"
+      />
+
+      <MissionTable
+        v-else
+        :items="filteredJobs"
+        item-key="jobId"
+        grid-template-columns="minmax(0,2.2fr) minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) 96px 120px"
+        min-width="820px"
+        row-class="hover:bg-white/[0.03]"
+      >
+        <template #header>
+          <div>File</div>
+          <div>Team</div>
+          <div>Printer</div>
+          <div>Requested</div>
+          <div>Status</div>
+          <div class="text-right">Actions</div>
+        </template>
+
+        <template #row="{ item: job }">
+          <div class="font-mono text-sm truncate" :title="job.filename">{{ job.filename }}</div>
+          <div class="text-sm truncate">{{ job.username }}</div>
+          <div class="font-mono text-xs text-mission-muted truncate">{{ job.clientId }}</div>
+          <div
+            class="text-sm"
+            :class="isStuck(job) ? 'text-mission-amber font-semibold' : 'text-mission-muted'"
+            :title="formatDateTime(job.requestedAt)"
+          >
+            {{ timeAgo(job.requestedAt) }}
+          </div>
+          <div>
+            <StatusBadge v-if="job.status === 'done'" status="completed">Printed</StatusBadge>
+            <StatusBadge v-else status="pending">Waiting</StatusBadge>
+          </div>
+          <div class="flex justify-end">
+            <button
+              v-if="job.status === 'done'"
+              type="button"
+              class="btn-secondary !px-3 !py-1.5 text-xs"
+              title="Send this job to the printer again"
+              @click="handleRetrigger(job.jobId)"
+            >
+              <RotateCw :size="12" :stroke-width="2" />
+              <span>Print again</span>
+            </button>
+          </div>
+        </template>
+      </MissionTable>
+    </section>
 
     <!-- Create Client Modal -->
     <MissionModal
       :show="showCreateClientModal"
-      title="CREATE PRINT CLIENT"
+      title="Add printer"
       :error="createError"
       :loading="creating"
       :show-actions="false"
       @close="closeCreateClientModal"
     >
       <form @submit.prevent="handleCreateClient" class="space-y-4">
-        <!-- Client ID -->
         <div>
-          <label class="tech-label block mb-2">CLIENT ID *</label>
+          <label class="tech-label block mb-2">Client ID</label>
           <input
             v-model="newClient.clientId"
             type="text"
             required
-            class="input-mission"
-            placeholder="Enter client ID (e.g., printer-lab-01)..."
+            class="input-mission font-mono"
+            placeholder="printer-lab-01"
           />
         </div>
 
-        <!-- Auth Key (Optional) -->
         <div>
-          <label class="tech-label block mb-2">AUTH KEY (OPTIONAL)</label>
+          <label class="tech-label block mb-2">Auth key (optional)</label>
           <input
             v-model="newClient.authKey"
             type="text"
-            class="input-mission"
-            placeholder="Auto-generated if not provided..."
+            class="input-mission font-mono"
+            placeholder="Generated if left empty"
           />
-          <p class="text-xs text-gray-500 mt-1 font-mono">Leave empty for auto-generation</p>
         </div>
 
-        <!-- Is Active -->
-        <div class="flex items-center gap-3">
+        <label class="flex items-center gap-3 text-sm cursor-pointer">
           <input
             v-model="newClient.isActive"
             type="checkbox"
-            id="isActive"
             class="w-4 h-4 accent-mission-accent"
           />
-          <label for="isActive" class="tech-label cursor-pointer">ACTIVE (CAN ACCEPT JOBS)</label>
-        </div>
+          <span>Active (can accept jobs)</span>
+        </label>
 
-        <!-- Actions -->
-        <div class="flex items-center gap-3 pt-4">
+        <div class="flex items-center gap-3 pt-2">
           <button
             type="submit"
             :disabled="creating"
-            class="btn-primary flex-1 flex items-center justify-center gap-2"
+            class="btn-primary flex-1"
           >
             <RotateCw
               v-if="creating"
-              :size="20"
+              :size="16"
               :stroke-width="2"
               class="animate-spin"
             />
-            <span>{{ creating ? 'CREATING...' : 'CREATE CLIENT' }}</span>
+            <span>{{ creating ? 'Creating…' : 'Create printer' }}</span>
           </button>
           <button
             type="button"
             @click="closeCreateClientModal"
             class="btn-secondary px-8"
           >
-            CANCEL
+            Cancel
           </button>
         </div>
       </form>
@@ -340,18 +214,23 @@
 </template>
 
 <script setup lang="ts">
+import { timeAgo } from '~/common/timeAgo';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { Plus, RotateCw, X, ChevronDown } from 'lucide-vue-next';
+import { Plus, Power, RotateCw } from 'lucide-vue-next';
 import { usePrintingStore } from '~/stores/printing';
 import { useToast } from 'vue-toastification';
-import type { CreatePrintClientDto } from '@libs/api/printing';
+import type { CreatePrintClientDto, PrintJobEntity } from '@libs/api/printing';
+
+type StatusTab = 'queued' | 'done' | 'all';
+const STATUSES: StatusTab[] = ['queued', 'done', 'all'];
+const TAB_LABELS: Record<StatusTab, string> = { queued: 'Waiting', done: 'Printed', all: 'All' };
+const STUCK_MS = 5 * 60 * 1000;
 
 const printingStore = usePrintingStore();
 const toast = useToast();
 
 // State
-const activeTab = ref<'jobs' | 'clients'>('jobs');
-const selectedStatus = ref<'all' | 'queued' | 'done'>('all');
+const selectedStatus = ref<StatusTab>('queued');
 const visibleAuthKeys = ref(new Set<string>());
 
 // Create client modal state
@@ -368,6 +247,20 @@ const newClient = ref<CreatePrintClientDto>({
 const printJobs = computed(() => printingStore.printJobs);
 const printClients = computed(() => printingStore.printClients);
 
+const statusCounts = computed(() => ({
+  queued: printJobs.value.filter((job) => job.status === 'queued').length,
+  done: printJobs.value.filter((job) => job.status === 'done').length,
+  all: printJobs.value.length,
+}));
+
+const queuedByClient = computed(() => {
+  const counts: Record<string, number> = {};
+  for (const job of printJobs.value) {
+    if (job.status === 'queued') counts[job.clientId] = (counts[job.clientId] || 0) + 1;
+  }
+  return counts;
+});
+
 const filteredJobs = computed(() => {
   if (selectedStatus.value === 'all') {
     return printJobs.value;
@@ -376,6 +269,15 @@ const filteredJobs = computed(() => {
 });
 
 // Methods
+function tabLabel(tab: StatusTab) {
+  return `${TAB_LABELS[tab]} · ${statusCounts.value[tab]}`;
+}
+
+function isStuck(job: PrintJobEntity) {
+  return job.status === 'queued' && Date.now() - new Date(job.requestedAt).getTime() > STUCK_MS;
+}
+
+
 function formatDateTime(date: string | Date): string {
   const d = new Date(date);
   const year = d.getFullYear();
@@ -454,9 +356,7 @@ async function handleCreateClient() {
 
 // Lifecycle
 onMounted(() => {
-  // Start polling with current filter
-  const filters = selectedStatus.value === 'all' ? undefined : { status: selectedStatus.value };
-  printingStore.startPolling(5000, filters);
+  printingStore.startPolling(5000);
 });
 
 onUnmounted(() => {
@@ -464,16 +364,3 @@ onUnmounted(() => {
   printingStore.stopPolling();
 });
 </script>
-
-<style scoped>
-@keyframes slideInRow {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-</style>

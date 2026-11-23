@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useFloorPlanStore } from '~/stores/floorplan';
 import { Plus, X, Edit2 } from 'lucide-vue-next';
+import MissionModal from '~/components/MissionModal.vue';
 
 defineProps<{
   readonly?: boolean;
@@ -46,8 +47,8 @@ async function handleDeleteFloor(floorId: string) {
 </script>
 
 <template>
-  <div class="floor-tabs flex items-center gap-2 px-4 py-2 bg-mission-dark border-t border-white/10 overflow-x-auto">
-    <span class="text-white/40 text-sm mr-2">Floors:</span>
+  <div class="floor-tabs flex items-center gap-2 px-4 py-2 bg-mission-dark border-t border-white/[0.06] overflow-x-auto">
+    <span class="text-mission-muted text-xs mr-1">Floors</span>
 
     <!-- Floor Tabs -->
     <template v-for="floor in store.currentFloorPlan?.floors" :key="floor.id">
@@ -58,24 +59,24 @@ async function handleDeleteFloor(floorId: string) {
         <input
           v-model="editingName"
           type="text"
-          class="input-mission px-2 py-1 text-sm w-32"
+          class="input-mission !px-2 !py-1 text-sm w-32"
           @keyup.enter="saveEdit"
           @keyup.escape="cancelEdit"
         />
-        <button class="text-mission-accent hover:text-white" @click="saveEdit">
+        <button class="px-2 py-1 rounded-lg text-sm text-mission-accent hover:bg-white/[0.06]" @click="saveEdit">
           Save
         </button>
-        <button class="text-white/40 hover:text-white" @click="cancelEdit">
+        <button class="px-2 py-1 rounded-lg text-sm text-mission-muted hover:text-gray-100 hover:bg-white/[0.06]" @click="cancelEdit">
           Cancel
         </button>
       </div>
 
       <button
         v-else
-        class="floor-tab flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors"
+        class="floor-tab flex items-center gap-2 px-3 py-1.5 rounded-full text-sm whitespace-nowrap border transition-colors"
         :class="{
-          'bg-mission-accent/20 text-mission-accent': store.activeFloorId === floor.id,
-          'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white': store.activeFloorId !== floor.id,
+          'border-gray-100 bg-gray-100 text-mission-ink': store.activeFloorId === floor.id,
+          'border-white/10 bg-mission-dark text-mission-muted hover:text-gray-100': store.activeFloorId !== floor.id,
         }"
         @click="store.setActiveFloor(floor.id)"
       >
@@ -90,7 +91,7 @@ async function handleDeleteFloor(floorId: string) {
           <X
             v-if="(store.currentFloorPlan?.floors.length || 0) > 1"
             :size="14"
-            class="opacity-50 hover:opacity-100 cursor-pointer text-mission-red"
+            class="opacity-50 hover:opacity-100 cursor-pointer"
             @click.stop="handleDeleteFloor(floor.id)"
           />
         </template>
@@ -100,35 +101,32 @@ async function handleDeleteFloor(floorId: string) {
     <!-- Add Floor Button -->
     <button
       v-if="!readonly"
-      class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm bg-white/5 text-white/40 hover:bg-white/10 hover:text-white transition-colors"
+      class="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm whitespace-nowrap border border-dashed border-white/15 text-mission-muted hover:text-gray-100 hover:border-white/30 transition-colors"
       @click="showAddModal = true"
     >
-      <Plus :size="16" />
-      <span>Add</span>
+      <Plus :size="14" />
+      <span>Add floor</span>
     </button>
 
     <!-- Add Floor Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showAddModal"
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-        @click.self="showAddModal = false"
-      >
-        <div class="bg-mission-dark rounded-xl p-6 w-96 border border-white/10">
-          <h3 class="text-lg font-medium text-white mb-4">Add New Floor</h3>
-          <input
-            v-model="newFloorName"
-            type="text"
-            placeholder="Floor name"
-            class="input-mission w-full mb-4"
-            @keyup.enter="handleAddFloor"
-          />
-          <div class="flex justify-end gap-2">
-            <button class="btn-secondary" @click="showAddModal = false">Cancel</button>
-            <button class="btn-primary" @click="handleAddFloor">Add Floor</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <MissionModal
+      :show="showAddModal"
+      title="Add floor"
+      max-width="sm"
+      @close="showAddModal = false"
+    >
+      <input
+        v-model="newFloorName"
+        type="text"
+        placeholder="Floor name"
+        class="input-mission"
+        @keyup.enter="handleAddFloor"
+      />
+
+      <template #actions>
+        <button class="btn-secondary" @click="showAddModal = false">Cancel</button>
+        <button class="btn-primary" @click="handleAddFloor">Add floor</button>
+      </template>
+    </MissionModal>
   </div>
 </template>

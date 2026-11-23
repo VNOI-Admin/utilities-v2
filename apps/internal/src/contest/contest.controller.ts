@@ -77,7 +77,7 @@ export class ContestController {
   }
 
   @Get(':code/participants')
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(Role.ADMIN, Role.COACH)
   @ApiOperation({ summary: 'Get participants for contest' })
   @ApiOkResponse({
     description: 'Return list of participants with group information',
@@ -88,7 +88,7 @@ export class ContestController {
   }
 
   @Get(':code/problems')
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(Role.ADMIN, Role.COACH)
   @ApiOperation({ summary: 'Get problems for contest' })
   async getProblems(@Param('code') code: string) {
     return this.contestService.getProblems(code);

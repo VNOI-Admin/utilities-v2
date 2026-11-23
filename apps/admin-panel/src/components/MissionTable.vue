@@ -6,21 +6,21 @@
       <div :style="{ minWidth: minWidth }">
         <!-- Table Header -->
         <div
-          class="grid gap-4 px-4 md:px-6 py-4 bg-mission-gray border-b border-white/10"
+          class="grid gap-4 px-4 md:px-6 py-3 text-xs font-medium text-mission-muted border-b border-white/[0.06]"
           :style="{ gridTemplateColumns: gridTemplateColumns }"
         >
           <slot name="header" />
         </div>
 
         <!-- Table Rows -->
-        <div class="divide-y divide-white/5">
+        <div class="divide-y divide-white/[0.06]">
           <div
             v-for="(item, index) in items"
             :key="getItemKey(item, index)"
             @click="handleRowClick(item, index)"
-            class="grid gap-4 px-4 md:px-6 py-4 transition-all duration-300 group relative overflow-hidden"
+            class="grid gap-4 px-4 md:px-6 py-3 items-center transition-colors group relative"
             :class="[
-              clickable ? 'cursor-pointer hover:bg-mission-accent/5 hover:border-l-4 hover:border-mission-accent' : '',
+              clickable ? 'cursor-pointer hover:bg-white/[0.03]' : '',
               rowClass
             ]"
             :style="[
@@ -29,10 +29,6 @@
             ]"
           >
             <!-- Scan line effect on hover -->
-            <div
-              v-if="clickable"
-              class="absolute inset-0 border-l-4 border-transparent group-hover:border-mission-accent transition-all duration-300"
-            ></div>
 
             <!-- Row Content -->
             <slot name="row" :item="item" :index="index" />
@@ -42,7 +38,7 @@
               v-if="clickable && showHoverArrow"
               class="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-300 group-hover:translate-x-0 translate-x-2"
             >
-              <ChevronRight :size="20" :stroke-width="2" class="text-mission-accent" />
+              <ChevronRight :size="16" :stroke-width="2" class="text-mission-muted" />
             </div>
 
             <!-- Bottom glow line -->
@@ -76,9 +72,9 @@ const props = withDefaults(defineProps<Props>(), {
   minWidth: '700px',
   clickable: false,
   rowClass: '',
-  animateRows: true,
+  animateRows: false,
   showHoverArrow: true,
-  showGlowLine: true,
+  showGlowLine: false,
 });
 
 const emit = defineEmits<{

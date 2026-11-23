@@ -21,21 +21,21 @@ function goToEdit() {
 </script>
 
 <template>
-  <div class="floor-plan-viewer-view flex flex-col h-screen">
+  <div class="floor-plan-viewer-view flex flex-col h-[calc(100vh-3.5rem)] lg:h-screen">
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-3 bg-mission-dark border-b border-white/10">
-      <div class="flex items-center gap-4">
+    <div class="flex items-center justify-between gap-3 px-4 py-3 bg-mission-black border-b border-white/[0.06]">
+      <div class="flex items-center gap-3 min-w-0">
         <BackButton @click="goBack" />
-        <div>
-          <h1 class="text-lg font-medium text-white">
-            {{ store.currentFloorPlan?.name || 'Loading...' }}
+        <div class="min-w-0">
+          <h1 class="text-base font-semibold truncate">
+            {{ store.currentFloorPlan?.name || 'Loading…' }}
           </h1>
-          <p class="text-sm text-white/40 font-mono">{{ code }}</p>
+          <p class="text-xs text-mission-muted font-mono">{{ code }}</p>
         </div>
       </div>
 
       <button class="btn-primary flex items-center gap-2" @click="goToEdit">
-        <Edit :size="18" />
+        <Edit :size="16" />
         <span>Edit</span>
       </button>
     </div>

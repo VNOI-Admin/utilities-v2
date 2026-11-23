@@ -1,9 +1,9 @@
 <template>
-  <div class="space-y-6">
-    <div class="text-center">
-      <h3 class="text-lg font-display font-semibold mb-2">Map CSV Columns</h3>
-      <p class="text-gray-400 text-sm">
-        Select which CSV column corresponds to each user field. Required fields are marked with *.
+  <div class="space-y-5">
+    <div>
+      <h3 class="font-semibold">Map columns</h3>
+      <p class="text-mission-muted text-sm mt-1">
+        Pick the CSV column for each field. Username, full name and password are required.
       </p>
     </div>
 
@@ -11,19 +11,19 @@
     <div class="space-y-4">
       <!-- Username -->
       <div class="flex items-center gap-4">
-        <div class="w-40 flex items-center gap-2">
-          <span class="tech-label">USERNAME *</span>
+        <div class="w-32 sm:w-44 flex-shrink-0 flex items-center gap-2">
+          <span class="text-sm">Username</span>
           <CheckCircle
             v-if="mapping.username"
             :size="16"
-            class="text-mission-accent"
+            class="text-mission-ok"
           />
         </div>
         <div class="flex-1">
           <MissionSelect
             v-model="mapping.username"
             :options="(headerOptions as any)"
-            placeholder="Select column..."
+            placeholder="Select a column"
             :searchable="true"
           />
         </div>
@@ -31,19 +31,19 @@
 
       <!-- Full Name -->
       <div class="flex items-center gap-4">
-        <div class="w-40 flex items-center gap-2">
-          <span class="tech-label">FULL NAME *</span>
+        <div class="w-32 sm:w-44 flex-shrink-0 flex items-center gap-2">
+          <span class="text-sm">Full name</span>
           <CheckCircle
             v-if="mapping.fullName"
             :size="16"
-            class="text-mission-accent"
+            class="text-mission-ok"
           />
         </div>
         <div class="flex-1">
           <MissionSelect
             v-model="mapping.fullName"
             :options="(headerOptions as any)"
-            placeholder="Select column..."
+            placeholder="Select a column"
             :searchable="true"
           />
         </div>
@@ -51,19 +51,19 @@
 
       <!-- Password -->
       <div class="flex items-center gap-4">
-        <div class="w-40 flex items-center gap-2">
-          <span class="tech-label">PASSWORD *</span>
+        <div class="w-32 sm:w-44 flex-shrink-0 flex items-center gap-2">
+          <span class="text-sm">Password</span>
           <CheckCircle
             v-if="mapping.password"
             :size="16"
-            class="text-mission-accent"
+            class="text-mission-ok"
           />
         </div>
         <div class="flex-1">
           <MissionSelect
             v-model="mapping.password"
             :options="(headerOptions as any)"
-            placeholder="Select column..."
+            placeholder="Select a column"
             :searchable="true"
           />
         </div>
@@ -71,19 +71,19 @@
 
       <!-- API Key (Optional) -->
       <div class="flex items-center gap-4">
-        <div class="w-40 flex items-center gap-2">
-          <span class="tech-label text-gray-400">VNOJ API KEY</span>
+        <div class="w-32 sm:w-44 flex-shrink-0 flex items-center gap-2">
+          <span class="text-sm text-mission-muted">VNOJ API key</span>
           <CheckCircle
             v-if="mapping.apiKey"
             :size="16"
-            class="text-gray-400"
+            class="text-mission-ok"
           />
         </div>
         <div class="flex-1">
           <MissionSelect
             v-model="mapping.apiKey"
             :options="(optionalHeaderOptions as any)"
-            placeholder="Select column (optional)..."
+            placeholder="Optional"
             :searchable="true"
           />
         </div>
@@ -91,19 +91,19 @@
 
       <!-- Group (Optional) -->
       <div class="flex items-center gap-4">
-        <div class="w-40 flex items-center gap-2">
-          <span class="tech-label text-gray-400">GROUP (BY NAME)</span>
+        <div class="w-32 sm:w-44 flex-shrink-0 flex items-center gap-2">
+          <span class="text-sm text-mission-muted">Group name</span>
           <CheckCircle
             v-if="mapping.group"
             :size="16"
-            class="text-gray-400"
+            class="text-mission-ok"
           />
         </div>
         <div class="flex-1">
           <MissionSelect
             v-model="mapping.group"
             :options="(optionalHeaderOptions as any)"
-            placeholder="Select column (optional)..."
+            placeholder="Optional"
             :searchable="true"
           />
         </div>
@@ -113,65 +113,11 @@
     <!-- Auto-mapping Info -->
     <div
       v-if="autoMappedCount > 0"
-      class="p-4 border border-mission-accent/30 bg-mission-accent/5 text-sm"
+      class="rounded-xl px-4 py-3 bg-mission-accent/10 text-sm"
     >
       <div class="flex items-center gap-2 text-mission-accent">
-        <Sparkles :size="18" />
-        <span>Auto-mapped {{ autoMappedCount }} column(s) based on header names</span>
-      </div>
-    </div>
-
-    <!-- Validation Summary -->
-    <div class="p-4 border border-white/10 bg-mission-gray">
-      <div class="flex items-center gap-2 mb-2">
-        <span class="tech-label">MAPPING STATUS</span>
-      </div>
-      <div class="grid grid-cols-2 gap-2 text-sm">
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2 h-2 rounded-full"
-            :class="mapping.username ? 'bg-mission-accent' : 'bg-mission-red'"
-          ></span>
-          <span :class="mapping.username ? 'text-gray-300' : 'text-mission-red'">
-            Username: {{ mapping.username || 'Not mapped' }}
-          </span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2 h-2 rounded-full"
-            :class="mapping.fullName ? 'bg-mission-accent' : 'bg-mission-red'"
-          ></span>
-          <span :class="mapping.fullName ? 'text-gray-300' : 'text-mission-red'">
-            Full Name: {{ mapping.fullName || 'Not mapped' }}
-          </span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2 h-2 rounded-full"
-            :class="mapping.password ? 'bg-mission-accent' : 'bg-mission-red'"
-          ></span>
-          <span :class="mapping.password ? 'text-gray-300' : 'text-mission-red'">
-            Password: {{ mapping.password || 'Not mapped' }}
-          </span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2 h-2 rounded-full"
-            :class="mapping.apiKey ? 'bg-gray-400' : 'bg-gray-600'"
-          ></span>
-          <span class="text-gray-400">
-            VNOJ API key: {{ mapping.apiKey || 'Not mapped (optional)' }}
-          </span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="w-2 h-2 rounded-full"
-            :class="mapping.group ? 'bg-gray-400' : 'bg-gray-600'"
-          ></span>
-          <span class="text-gray-400">
-            Group: {{ mapping.group || 'Not mapped (optional)' }}
-          </span>
-        </div>
+        <Sparkles :size="16" />
+        <span>{{ autoMappedCount }} of 5 fields mapped</span>
       </div>
     </div>
   </div>

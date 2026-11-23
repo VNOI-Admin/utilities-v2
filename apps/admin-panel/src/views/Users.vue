@@ -1,212 +1,244 @@
 <template>
-  <div class="min-h-screen bg-mission-black grid-background">
+  <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
     <!-- Header -->
-    <div class="border-b border-white/10 bg-mission-dark/80 backdrop-blur sticky top-0 z-40 px-4 md:px-8 py-4 md:py-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <PageHeader
-          title="USER_REGISTRY"
-          subtitle="SYSTEM USERS / ACCESS CONTROL INTERFACE"
-        />
-        <div class="flex items-center gap-2">
-          <button
-            @click="syncVpn"
-            :disabled="syncingVpn"
-            class="btn-secondary flex items-center gap-2"
-          >
-            <RotateCw :size="20" :stroke-width="2" :class="{ 'animate-spin': syncingVpn }" />
-            <span class="hidden md:inline">{{ syncingVpn ? 'SYNCING VPN...' : 'SYNC VPN' }}</span>
-          </button>
-          <button
-            @click="showBatchModal = true"
-            class="btn-secondary flex items-center gap-2"
-          >
-            <Upload :size="20" :stroke-width="2" />
-            <span class="hidden md:inline">BATCH IMPORT</span>
-          </button>
-          <button
-            @click="showCreateModal = true"
-            class="btn-primary flex items-center gap-2"
-          >
-            <Plus :size="20" :stroke-width="2" />
-            <span class="hidden md:inline">CREATE USER</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Filter Bar -->
-      <div class="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-center">
-        <!-- Search -->
-        <SearchInput
-          v-model="searchQuery"
-          placeholder="SEARCH USERNAME OR NAME..."
-        />
-
-        <!-- Filters row -->
-        <div class="flex flex-wrap items-center gap-2 md:gap-4">
-          <!-- Role Filter -->
-          <FilterButtonGroup
-            v-model="selectedRole"
-            :options="['all', 'admin', 'coach', 'contestant', 'guest']"
-            label="ROLE:"
-          />
-
-          <!-- Status Filters -->
-          <div class="flex items-center gap-2">
-            <span class="tech-label">STATUS:</span>
-            <ToggleButton
-              v-model="onlineOnly"
-              label="ONLINE"
-              :show-indicator="true"
-            />
-            <ToggleButton
-              v-model="activeOnly"
-              label="ACTIVE"
-            />
-          </div>
-        </div>
-
-        <!-- Group Filter -->
-        <div class="flex items-center gap-2 w-full md:w-auto">
-          <span class="tech-label">GROUP:</span>
-          <MissionSelect
-            v-model="selectedGroup"
-            :options="(groupFilterOptions as any)"
-            :searchable="true"
-            placeholder="All Groups"
-            container-class="flex-1 md:w-64"
-          />
-        </div>
-
-        <!-- Stats & Actions -->
-        <div class="flex items-center gap-4 w-full md:w-auto md:ml-auto">
-          <StatCounter
-            label="TOTAL:"
-            :value="filteredUsers.length"
-          />
-          <button
-            v-if="canBulkDelete"
-            @click="showDeleteConfirm = true"
-            class="btn-danger flex items-center gap-2 text-xs"
-            title="Delete all users matching the current search filter"
-          >
-            <Trash2 :size="16" :stroke-width="2" />
-            <span class="hidden md:inline">DELETE MATCHING</span>
-          </button>
-          <RefreshButton
-            :loading="loading"
-            @click="refreshUsers"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="p-4 md:p-8">
-      <!-- Loading State -->
-      <div v-if="loading && users.length === 0" class="mission-card overflow-hidden">
-        <div class="animate-pulse">
-          <div class="h-12 bg-white/5 border-b border-white/10"></div>
-          <div v-for="i in 10" :key="i" class="h-16 bg-white/5 border-b border-white/5"></div>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <EmptyState
-        v-else-if="filteredUsers.length === 0"
-        title="NO USERS FOUND"
-        subtitle="Try adjusting your filters"
-        icon="users"
+    <div class="flex flex-wrap items-end gap-3">
+      <PageHeader
+        class="flex-1 min-w-0"
+        title="Users"
+        :subtitle="users.length ? `${plural(baseUsers.length, 'user')} · ${onlineCount} online` : ''"
       />
-
-      <!-- Users Table -->
-      <MissionTable
-        v-else
-        :items="filteredUsers"
-        :clickable="true"
-        item-key="username"
-        @row-click="(user) => navigateToUser(user.username)"
-      >
-        <template #header>
-          <div class="col-span-2 tech-label">USERNAME</div>
-          <div class="col-span-3 tech-label">FULL NAME</div>
-          <div class="col-span-1 tech-label">ROLE</div>
-          <div class="col-span-2 tech-label">GROUP</div>
-          <div class="col-span-2 tech-label">VPN ADDRESS</div>
-          <div class="col-span-1 tech-label">STATUS</div>
-          <div class="col-span-1 tech-label text-center">METRICS</div>
-        </template>
-
-        <template #row="{ item: user }">
-          <!-- Username -->
-          <div class="col-span-2 font-mono text-sm font-semibold group-hover:text-mission-accent transition-colors">
-            {{ user.username }}
-          </div>
-
-          <!-- Full Name -->
-          <div class="col-span-3 text-sm truncate">
-            {{ user.fullName }}
-          </div>
-
-          <!-- Role -->
-          <div class="col-span-1">
-            <StatusBadge :role="user.role as any">
-              {{ user.role }}
-            </StatusBadge>
-          </div>
-
-          <!-- Group -->
-          <div class="col-span-2 font-mono text-sm text-gray-400">
-            {{ user.group || '—' }}
-          </div>
-
-          <!-- VPN IP -->
-          <div class="col-span-2 font-mono text-xs text-mission-cyan">
-            {{ user.vpnIpAddress || '—' }}
-          </div>
-
-          <!-- Status -->
-          <div class="col-span-1">
-            <div class="flex items-center gap-2">
-              <span
-                class="inline-block w-2 h-2 rounded-full"
-                :class="user.machineUsage?.isOnline ? 'bg-mission-accent animate-pulse' : 'bg-gray-600'"
-              ></span>
-              <span
-                class="text-xs font-mono uppercase"
-                :class="user.machineUsage?.isOnline ? 'text-mission-accent' : 'text-gray-500'"
-              >
-                {{ user.machineUsage?.isOnline ? 'LIVE' : 'OFF' }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Activity Metrics -->
-          <div class="col-span-1 flex items-center justify-center gap-1">
-            <div
-              v-if="user.machineUsage?.isOnline"
-              class="flex items-center gap-1"
-            >
-              <!-- CPU indicator -->
-              <div
-                class="w-1 h-3 bg-gradient-to-t from-mission-accent to-transparent rounded-sm"
-                :style="{ opacity: (user.machineUsage.cpu || 0) / 100 }"
-              ></div>
-              <!-- Memory indicator -->
-              <div
-                class="w-1 h-3 bg-gradient-to-t from-mission-cyan to-transparent rounded-sm"
-                :style="{ opacity: (user.machineUsage.memory || 0) / 100 }"
-              ></div>
-              <!-- Disk indicator -->
-              <div
-                class="w-1 h-3 bg-gradient-to-t from-mission-amber to-transparent rounded-sm"
-                :style="{ opacity: (user.machineUsage.disk || 0) / 100 }"
-              ></div>
-            </div>
-            <span v-else class="text-gray-600 text-xs">—</span>
-          </div>
-        </template>
-      </MissionTable>
+      <div class="flex items-center gap-2">
+        <RefreshButton :loading="loading" @click="refreshUsers" />
+        <button @click="syncVpn" :disabled="syncingVpn" class="btn-secondary">
+          <RotateCw :size="16" :stroke-width="2" :class="{ 'animate-spin': syncingVpn }" />
+          <span class="hidden md:inline">{{ syncingVpn ? 'Syncing VPN…' : 'Sync VPN' }}</span>
+        </button>
+        <button @click="showBatchModal = true" class="btn-secondary">
+          <Upload :size="16" :stroke-width="2" />
+          <span class="hidden md:inline">Import CSV</span>
+        </button>
+        <button @click="showCreateModal = true" class="btn-primary">
+          <Plus :size="16" :stroke-width="2" />
+          <span class="hidden md:inline">Create user</span>
+        </button>
+      </div>
     </div>
+
+    <!-- Filter Bar -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Search -->
+      <SearchInput
+        v-model="searchQuery"
+        placeholder="Search username or name"
+        container-class="w-full md:w-72"
+      />
+      <!-- Group Filter -->
+      <MissionSelect
+        v-model="selectedGroup"
+        :options="(groupFilterOptions as any)"
+        :searchable="true"
+        placeholder="All groups"
+        class="w-full md:w-64"
+      />
+      <ToggleButton v-model="showDisabled" label="Show disabled" />
+      <div class="ml-auto flex rounded-xl border border-white/10 overflow-hidden">
+        <button
+          type="button"
+          class="p-2 transition-colors"
+          :class="viewMode === 'table' ? 'bg-gray-100 text-mission-ink' : 'text-mission-muted hover:text-gray-100'"
+          title="Table view"
+          @click="viewMode = 'table'"
+        >
+          <List :size="16" :stroke-width="2" />
+        </button>
+        <button
+          type="button"
+          class="p-2 transition-colors"
+          :class="viewMode === 'cards' ? 'bg-gray-100 text-mission-ink' : 'text-mission-muted hover:text-gray-100'"
+          title="Card view"
+          @click="viewMode = 'cards'"
+        >
+          <LayoutGrid :size="16" :stroke-width="2" />
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <!-- Role Filter -->
+      <FilterButtonGroup v-model="selectedRole" :options="roleOptions">
+        <template #option="{ option }"><span class="normal-case">{{ roleLabel(option) }}</span></template>
+      </FilterButtonGroup>
+      <span class="hidden md:block h-5 w-px bg-white/10"></span>
+      <!-- Status Filters -->
+      <FilterButtonGroup v-model="selectedStatus" :options="STATUSES">
+        <template #option="{ option }"><span class="normal-case">{{ statusLabel(option) }}</span></template>
+      </FilterButtonGroup>
+    </div>
+
+    <div
+      v-if="selectedUsernames.size"
+      class="mission-card flex flex-wrap items-center gap-2 px-4 py-3"
+    >
+      <span class="text-sm font-medium mr-2">{{ selectedUsernames.size }} selected</span>
+      <button type="button" class="btn-secondary !py-1.5" @click="openBulk('move')">
+        <FolderInput :size="16" :stroke-width="2" />
+        Move to group
+      </button>
+      <button v-if="selectedActive.length" type="button" class="btn-secondary !py-1.5" @click="openBulk('disable')">
+        <UserX :size="16" :stroke-width="2" />
+        Disable
+      </button>
+      <button v-if="selectedInactive.length" type="button" class="btn-secondary !py-1.5" @click="openBulk('enable')">
+        <UserCheck :size="16" :stroke-width="2" />
+        Enable
+      </button>
+      <button type="button" class="btn-danger !py-1.5" @click="openBulk('delete')">
+        <Trash2 :size="16" :stroke-width="2" />
+        Delete
+      </button>
+      <button type="button" class="ml-auto text-sm text-mission-muted hover:text-gray-100" @click="clearSelection">
+        Clear selection
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading && users.length === 0" class="mission-card p-4 space-y-3">
+      <div v-for="i in 8" :key="i" class="h-10 rounded-xl bg-mission-gray animate-pulse"></div>
+    </div>
+
+    <!-- Empty State -->
+    <EmptyState
+      v-else-if="filteredUsers.length === 0"
+      title="No users match"
+      subtitle="Try another filter or search."
+      icon="users"
+    />
+
+    <!-- Users Table -->
+    <MissionTable
+      v-else-if="viewMode === 'table'"
+      :items="filteredUsers"
+      :clickable="true"
+      :show-hover-arrow="false"
+      item-key="username"
+      grid-template-columns="1.25rem minmax(0,2.4fr) minmax(0,1fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,1.1fr) minmax(0,1fr)"
+      min-width="900px"
+      @row-click="(user) => openUser(user.username)"
+    >
+      <template #header>
+        <input
+          type="checkbox"
+          class="checkbox"
+          :checked="allVisibleSelected"
+          :indeterminate="someVisibleSelected && !allVisibleSelected"
+          title="Select all visible"
+          @change="toggleAllVisible"
+        />
+        <div>User</div>
+        <div>Role</div>
+        <div>Group</div>
+        <div>Status</div>
+        <div>VPN IP</div>
+        <div>Issue</div>
+      </template>
+
+      <template #row="{ item: user }">
+        <input
+          type="checkbox"
+          class="checkbox"
+          :checked="selectedUsernames.has(user.username)"
+          @click.stop
+          @change="toggleSelected(user.username)"
+        />
+
+        <!-- Username -->
+        <div class="flex items-center gap-3 min-w-0">
+          <span
+            class="grid place-items-center w-8 h-8 rounded-full text-xs font-semibold text-mission-ink flex-shrink-0"
+            :class="[avatarClass(user.username), { 'opacity-50': !user.isActive }]"
+          >{{ initials(user.fullName || user.username) }}</span>
+          <div class="min-w-0">
+            <div class="font-mono text-sm truncate" :class="{ 'text-mission-muted': !user.isActive }">{{ user.username }}</div>
+            <div class="text-xs text-mission-muted truncate">
+              {{ user.fullName }}<template v-if="!user.isActive"> · disabled</template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role -->
+        <div>
+          <StatusBadge v-if="isRole(user.role)" :role="user.role">{{ user.role }}</StatusBadge>
+          <span v-else class="text-sm text-mission-muted">{{ user.role }}</span>
+        </div>
+
+        <!-- Group -->
+        <div class="text-sm text-mission-muted truncate">{{ user.group || '—' }}</div>
+
+        <!-- Status -->
+        <div>
+          <template v-if="user.vpnIpAddress">
+            <StatusBadge v-if="user.machineUsage?.isOnline" status="completed" show-dot>Online</StatusBadge>
+            <StatusBadge v-else variant="gray" show-dot>Offline</StatusBadge>
+          </template>
+          <span v-else class="text-sm text-mission-muted">—</span>
+        </div>
+
+        <!-- VPN IP -->
+        <div class="font-mono text-xs text-mission-muted truncate">{{ user.vpnIpAddress || '—' }}</div>
+
+        <div>
+          <StatusBadge v-if="machineIssue(user)" variant="amber"><span class="normal-case">{{ machineIssue(user) }}</span></StatusBadge>
+        </div>
+      </template>
+    </MissionTable>
+
+    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+      <div
+        v-for="user in filteredUsers"
+        :key="user.username"
+        role="button"
+        tabindex="0"
+        class="mission-card p-4 cursor-pointer hover:border-white/20 flex flex-col gap-3"
+        :class="{ 'border-mission-accent/40': selectedUsernames.has(user.username) }"
+        @click="openUser(user.username)"
+        @keydown.enter="openUser(user.username)"
+      >
+        <div class="flex items-start gap-3">
+          <span
+            class="grid place-items-center w-10 h-10 rounded-full text-sm font-semibold text-mission-ink flex-shrink-0"
+            :class="[avatarClass(user.username), { 'opacity-50': !user.isActive }]"
+          >{{ initials(user.fullName || user.username) }}</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold truncate">{{ user.fullName || user.username }}</div>
+            <div class="font-mono text-xs text-mission-muted truncate">{{ user.username }}</div>
+          </div>
+          <input
+            type="checkbox"
+            class="checkbox mt-1"
+            :checked="selectedUsernames.has(user.username)"
+            @click.stop
+            @change="toggleSelected(user.username)"
+          />
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <StatusBadge v-if="isRole(user.role)" :role="user.role">{{ user.role }}</StatusBadge>
+          <template v-if="user.vpnIpAddress">
+            <StatusBadge v-if="user.machineUsage?.isOnline" status="completed" show-dot>Online</StatusBadge>
+            <StatusBadge v-else variant="gray" show-dot>Offline</StatusBadge>
+          </template>
+          <StatusBadge v-if="!user.isActive" variant="gray">Disabled</StatusBadge>
+          <StatusBadge v-if="machineIssue(user)" variant="amber"><span class="normal-case">{{ machineIssue(user) }}</span></StatusBadge>
+          <span v-if="user.group" class="text-xs text-mission-muted ml-auto truncate">{{ user.group }}</span>
+        </div>
+      </div>
+    </div>
+
+    <UserDrawer
+      :username="drawerUsername"
+      @close="closeDrawer"
+      @updated="handleUserUpdated"
+      @deleted="handleUserDeleted"
+    />
 
     <!-- Batch User Modal -->
     <BatchUserModal
@@ -215,75 +247,61 @@
       @complete="handleBatchComplete"
     />
 
-    <!-- Bulk Delete Confirmation Modal -->
     <MissionModal
-      :show="showDeleteConfirm"
-      title="CONFIRM BULK DELETE"
-      :loading="deleting"
+      :show="bulkAction !== null"
+      :title="bulkTitle"
+      max-width="md"
+      :loading="bulkRunning"
       :show-actions="false"
-      @close="showDeleteConfirm = false"
+      @close="bulkAction = null"
     >
-      <div class="space-y-4">
-        <div class="p-4 border border-mission-red bg-mission-red/10 text-center">
-          <Trash2 :size="48" class="mx-auto mb-4 text-mission-red" />
-          <p class="text-lg font-semibold text-white mb-2">
-            Delete {{ filteredUsers.length }} users?
-          </p>
-          <p class="text-sm text-gray-400">
-            This will permanently delete all users matching your current filters:
-          </p>
-        </div>
-
-        <div class="p-4 bg-mission-gray font-mono text-sm space-y-1">
-          <div class="flex justify-between">
-            <span class="text-gray-400">Search:</span>
-            <span class="text-white">"{{ searchQuery }}"</span>
-          </div>
-          <div v-if="selectedRole !== 'all'" class="flex justify-between">
-            <span class="text-gray-400">Role:</span>
-            <span class="text-white">{{ selectedRole }}</span>
-          </div>
-          <div v-if="selectedGroup !== 'all'" class="flex justify-between">
-            <span class="text-gray-400">Group:</span>
-            <span class="text-white">{{ selectedGroup }}</span>
-          </div>
-          <div v-if="activeOnly" class="flex justify-between">
-            <span class="text-gray-400">Status:</span>
-            <span class="text-white">Active only</span>
-          </div>
-        </div>
-
-        <p class="text-xs text-gray-500 text-center">
-          Note: The admin user will never be deleted.
+      <div class="space-y-4 text-sm">
+        <template v-if="bulkAction === 'move'">
+          <p class="text-gray-300">Move {{ plural(bulkTargets.length, 'user') }} to:</p>
+          <MissionSelect
+            v-model="bulkGroup"
+            :options="(bulkGroupOptions as any)"
+            placeholder="Select a group"
+            :searchable="true"
+          />
+        </template>
+        <p v-else-if="bulkAction === 'disable'" class="text-gray-300">
+          Disable {{ plural(bulkTargets.length, 'user') }}? They will be signed out and can't sign in until enabled again.
+        </p>
+        <p v-else-if="bulkAction === 'enable'" class="text-gray-300">
+          Enable {{ plural(bulkTargets.length, 'user') }}?
+        </p>
+        <p v-else-if="bulkAction === 'delete'" class="text-gray-300">
+          Delete {{ plural(bulkTargets.length, 'user') }}? This can't be undone.
         </p>
 
-        <div class="flex items-center gap-3 pt-4">
-          <button
-            type="button"
-            @click="handleBulkDelete"
-            :disabled="deleting"
-            class="btn-danger flex-1 flex items-center justify-center gap-2"
-          >
-            <RotateCw v-if="deleting" :size="20" class="animate-spin" />
-            <Trash2 v-else :size="20" />
-            <span>{{ deleting ? 'DELETING...' : 'DELETE USERS' }}</span>
-          </button>
-          <button
-            type="button"
-            @click="showDeleteConfirm = false"
-            :disabled="deleting"
-            class="btn-secondary px-8"
-          >
-            CANCEL
-          </button>
+        <div v-if="bulkAction !== 'move' && bulkTargets.length" class="max-h-32 overflow-y-auto rounded-xl bg-mission-gray px-3 py-2 font-mono text-xs text-mission-muted">
+          {{ bulkTargets.join(', ') }}
         </div>
+
+        <p v-if="bulkSkipped.length" class="text-xs text-mission-muted">
+          Skipped: <span class="font-mono">{{ bulkSkipped.join(', ') }}</span> (your account and the admin account are never {{ bulkAction === 'delete' ? 'deleted' : 'disabled' }} here).
+        </p>
       </div>
+
+      <template #actions>
+        <button type="button" class="btn-secondary" :disabled="bulkRunning" @click="bulkAction = null">Cancel</button>
+        <button
+          type="button"
+          :class="bulkAction === 'delete' ? 'btn-danger' : 'btn-primary'"
+          :disabled="bulkRunning || !bulkTargets.length || (bulkAction === 'move' && !bulkGroup)"
+          @click="runBulk"
+        >
+          <RotateCw v-if="bulkRunning" :size="16" class="animate-spin" />
+          {{ bulkRunning ? 'Working…' : bulkConfirmLabel }}
+        </button>
+      </template>
     </MissionModal>
 
     <!-- Create User Modal -->
     <MissionModal
       :show="showCreateModal"
-      title="CREATE NEW USER"
+      title="Create user"
       :error="createError"
       :loading="creating"
       :show-actions="false"
@@ -292,91 +310,66 @@
       <form @submit.prevent="handleCreateUser" class="space-y-4">
         <!-- Username -->
         <div>
-          <label class="tech-label block mb-2">USERNAME *</label>
+          <label class="tech-label block mb-1.5">Username</label>
           <input
             v-model="newUser.username"
             type="text"
             required
-            class="input-mission"
-            placeholder="Enter username..."
+            class="input-mission font-mono"
+            placeholder="e.g. team01"
           />
         </div>
 
         <!-- Full Name -->
         <div>
-          <label class="tech-label block mb-2">FULL NAME *</label>
+          <label class="tech-label block mb-1.5">Full name</label>
           <input
             v-model="newUser.fullName"
             type="text"
             required
             class="input-mission"
-            placeholder="Enter full name..."
+            placeholder="Full name"
           />
         </div>
 
         <!-- Password -->
         <div>
-          <label class="tech-label block mb-2">PASSWORD *</label>
+          <label class="tech-label block mb-1.5">Password</label>
           <input
             v-model="newUser.password"
             type="password"
             required
+            autocomplete="new-password"
             class="input-mission"
-            placeholder="Enter password..."
+            placeholder="Password"
           />
         </div>
 
         <!-- Role -->
         <div>
-          <label class="tech-label block mb-2">ROLE *</label>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <button
-              v-for="role in ['admin', 'coach', 'contestant', 'guest'] as const"
-              :key="role"
-              type="button"
-              @click="newUser.role = role as 'admin' | 'coach' | 'contestant' | 'guest'"
-              class="px-4 py-3 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
-              :class="newUser.role === role
-                ? 'border-mission-accent text-mission-accent bg-mission-accent/10'
-                : 'border-white/20 text-gray-400 hover:border-white/40'"
-            >
-              {{ role }}
-            </button>
-          </div>
+          <label class="tech-label block mb-1.5">Role</label>
+          <FilterButtonGroup v-model="newUser.role" :options="ROLES" />
         </div>
 
         <!-- Group -->
         <div>
-          <label class="tech-label block mb-2">GROUP (OPTIONAL)</label>
+          <label class="tech-label block mb-1.5">Group (optional)</label>
           <MissionSelect
             v-model="newUser.group"
             :options="(groupOptions as any)"
-            placeholder="Select a group..."
+            placeholder="Select a group"
             :searchable="true"
           />
         </div>
 
         <!-- Actions -->
-        <div class="flex items-center gap-3 pt-4">
-          <button
-            type="submit"
-            :disabled="creating"
-            class="btn-primary flex-1 flex items-center justify-center gap-2"
-          >
-            <RotateCw
-              v-if="creating"
-              :size="20"
-              :stroke-width="2"
-              class="animate-spin"
-            />
-            <span>{{ creating ? 'CREATING...' : 'CREATE USER' }}</span>
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" @click="closeCreateModal" class="btn-secondary">
+            Cancel
           </button>
-          <button
-            type="button"
-            @click="closeCreateModal"
-            class="btn-secondary px-8"
-          >
-            CANCEL
+          <button type="submit" :disabled="creating" class="btn-primary">
+            <RotateCw v-if="creating" :size="16" :stroke-width="2" class="animate-spin" />
+            {{ creating ? 'Creating…' : 'Create user' }}
           </button>
         </div>
       </form>
@@ -385,28 +378,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { Plus, RotateCw, Upload, Trash2 } from 'lucide-vue-next';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { Plus, RotateCw, Upload, Trash2, List, LayoutGrid, FolderInput, UserX, UserCheck } from 'lucide-vue-next';
 import { useUsersStore } from '~/stores/users';
 import { useGroupsStore } from '~/stores/groups';
+import { useAuthStore } from '~/stores/auth';
 import { internalApi } from '~/services/api';
-import type { CreateUserDto } from '@libs/api/internal';
+import type { CreateUserDto, UserEntity, UpdateUserDto } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
 import BatchUserModal from '~/components/batch-user/BatchUserModal.vue';
+import UserDrawer from '~/components/UserDrawer.vue';
 
+type Role = 'admin' | 'coach' | 'contestant' | 'guest';
+type RoleFilter = 'all' | Role;
+type StatusFilter = 'any' | 'online' | 'offline' | 'issue';
+type BulkAction = 'move' | 'disable' | 'enable' | 'delete';
+
+const ROLES: Role[] = ['contestant', 'coach', 'admin', 'guest'];
+const STATUSES: StatusFilter[] = ['any', 'online', 'offline', 'issue'];
+const ROLE_PLURALS: Record<RoleFilter, string> = { all: 'All', contestant: 'Contestants', coach: 'Coaches', admin: 'Admins', guest: 'Guests' };
+const STATUS_LABELS: Record<StatusFilter, string> = { any: 'Any status', online: 'Online', offline: 'Offline', issue: 'Needs a look' };
+const AVATARS = ['bg-mission-blue', 'bg-mission-pink', 'bg-mission-purple', 'bg-mission-mint'];
+const HIGH_USAGE = 85;
+const HIGH_PING = 200;
+const BULK_CONCURRENCY = 8;
+
+const route = useRoute();
 const router = useRouter();
 const usersStore = useUsersStore();
 const groupsStore = useGroupsStore();
+const authStore = useAuthStore();
 const toast = useToast();
 
 // State
 const loading = ref(false);
 const searchQuery = ref('');
-const selectedRole = ref<'all' | 'admin' | 'coach' | 'contestant' | 'guest'>('all');
+const selectedRole = ref<RoleFilter>('all');
+const selectedStatus = ref<StatusFilter>('any');
 const selectedGroup = ref<string>('all');
-const onlineOnly = ref(false);
-const activeOnly = ref(true);
+const showDisabled = ref(false);
+const viewMode = ref<'table' | 'cards'>('table');
 const syncingVpn = ref(false);
 
 // Create modal state
@@ -424,9 +436,10 @@ const newUser = ref<CreateUserDto>({
 // Batch modal state
 const showBatchModal = ref(false);
 
-// Bulk delete state
-const showDeleteConfirm = ref(false);
-const deleting = ref(false);
+const selectedUsernames = ref(new Set<string>());
+const bulkAction = ref<BulkAction | null>(null);
+const bulkGroup = ref<string | null>(null);
+const bulkRunning = ref(false);
 
 // Computed
 interface SelectOption {
@@ -440,22 +453,64 @@ interface GroupOption {
 }
 
 const users = computed(() => usersStore.users);
+const drawerUsername = computed(() => (route.params.username as string | undefined) || null);
 
 const groupOptions = computed(() => [
-  { label: 'No Group', value: undefined },
+  { label: 'No group', value: undefined },
   ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
 ] as GroupOption[]);
 
 const groupFilterOptions = computed(() => [
-  { label: 'All Groups', value: 'all' },
+  { label: 'All groups', value: 'all' },
   ...groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code }))
 ] as SelectOption[]);
 
-// Bulk delete is only enabled when there's a text search filter
-const canBulkDelete = computed(() => searchQuery.value.trim().length > 0);
+const bulkGroupOptions = computed(() =>
+  groupsStore.groups.map(g => ({ label: `${g.code} - ${g.name}`, value: g.code })) as SelectOption[]
+);
 
-const filteredUsers = computed(() => {
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+function isRole(role: string): role is Role {
+  return (ROLES as string[]).includes(role);
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function avatarClass(name: string): string {
+  let hash = 0;
+  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATARS[hash % AVATARS.length];
+}
+
+function machineIssue(u: UserEntity): string | null {
+  const m = u.machineUsage;
+  if (!m?.isOnline) return null;
+  if (m.cpu > HIGH_USAGE) return `CPU ${Math.round(m.cpu)}%`;
+  if (m.memory > HIGH_USAGE) return `Memory ${Math.round(m.memory)}%`;
+  if (m.disk > HIGH_USAGE) return `Disk ${Math.round(m.disk)}%`;
+  if (m.ping > HIGH_PING) return `Ping ${Math.round(m.ping)} ms`;
+  return null;
+}
+
+function matchesStatus(u: UserEntity, status: StatusFilter): boolean {
+  if (status === 'online') return !!u.machineUsage?.isOnline;
+  if (status === 'offline') return !!u.vpnIpAddress && !u.machineUsage?.isOnline;
+  if (status === 'issue') return machineIssue(u) !== null;
+  return true;
+}
+
+const baseUsers = computed(() => {
   let filtered = users.value;
+
+  // Active filter
+  if (!showDisabled.value) {
+    filtered = filtered.filter((u) => u.isActive);
+  }
 
   // Search filter
   if (searchQuery.value) {
@@ -467,35 +522,92 @@ const filteredUsers = computed(() => {
     );
   }
 
-  // Role filter
-  if (selectedRole.value !== 'all') {
-    filtered = filtered.filter((u) => u.role === selectedRole.value);
-  }
-
   // Group filter
   if (selectedGroup.value !== 'all') {
     filtered = filtered.filter((u) => u.group === selectedGroup.value);
   }
 
-  // Online filter
-  if (onlineOnly.value) {
-    filtered = filtered.filter((u) => u.machineUsage?.isOnline);
-  }
-
-  // Active filter
-  if (activeOnly.value) {
-    filtered = filtered.filter((u) => u.isActive);
-  }
-
   return filtered;
 });
+
+const onlineCount = computed(() => baseUsers.value.filter((u) => u.machineUsage?.isOnline).length);
+
+const byStatus = computed(() => baseUsers.value.filter((u) => matchesStatus(u, selectedStatus.value)));
+const byRole = computed(() =>
+  selectedRole.value === 'all' ? baseUsers.value : baseUsers.value.filter((u) => u.role === selectedRole.value)
+);
+
+const filteredUsers = computed(() =>
+  selectedRole.value === 'all' ? byStatus.value : byStatus.value.filter((u) => u.role === selectedRole.value)
+);
+
+const roleOptions = computed<RoleFilter[]>(() => {
+  const options: RoleFilter[] = ['all', 'contestant', 'coach', 'admin'];
+  if (users.value.some((u) => u.role === 'guest')) options.push('guest');
+  return options;
+});
+
+function roleLabel(role: RoleFilter): string {
+  const count = role === 'all' ? byStatus.value.length : byStatus.value.filter((u) => u.role === role).length;
+  return `${ROLE_PLURALS[role]} · ${count}`;
+}
+
+function statusLabel(status: StatusFilter): string {
+  if (status === 'any') return STATUS_LABELS.any;
+  return `${STATUS_LABELS[status]} · ${byRole.value.filter((u) => matchesStatus(u, status)).length}`;
+}
+
+const allVisibleSelected = computed(() =>
+  filteredUsers.value.length > 0 && filteredUsers.value.every((u) => selectedUsernames.value.has(u.username))
+);
+const someVisibleSelected = computed(() =>
+  filteredUsers.value.some((u) => selectedUsernames.value.has(u.username))
+);
+
+const selectedUsers = computed(() => users.value.filter((u) => selectedUsernames.value.has(u.username)));
+const selectedActive = computed(() => selectedUsers.value.filter((u) => u.isActive));
+const selectedInactive = computed(() => selectedUsers.value.filter((u) => !u.isActive));
+
+function isProtected(username: string): boolean {
+  return username === 'admin' || username === authStore.user?.username;
+}
+
+const bulkCandidates = computed(() => {
+  if (bulkAction.value === 'disable') return selectedActive.value;
+  if (bulkAction.value === 'enable') return selectedInactive.value;
+  return selectedUsers.value;
+});
+
+const bulkSkipped = computed(() =>
+  bulkAction.value === 'delete' || bulkAction.value === 'disable'
+    ? bulkCandidates.value.filter((u) => isProtected(u.username)).map((u) => u.username)
+    : []
+);
+
+const bulkTargets = computed(() =>
+  bulkCandidates.value.map((u) => u.username).filter((name) => !bulkSkipped.value.includes(name))
+);
+
+const bulkTitle = computed(() => ({
+  move: 'Move to group',
+  disable: 'Disable users',
+  enable: 'Enable users',
+  delete: 'Delete users',
+}[bulkAction.value ?? 'move']));
+
+const bulkConfirmLabel = computed(() => ({
+  move: 'Move',
+  disable: 'Disable',
+  enable: 'Enable',
+  delete: 'Delete',
+}[bulkAction.value ?? 'move']));
 
 // Methods
 async function loadUsers() {
   loading.value = true;
   try {
     const data = await internalApi.user.getUsers({
-      isActive: activeOnly.value ? true : undefined,
+      isActive: showDisabled.value ? undefined : true,
     });
     usersStore.setUsers(data);
   } catch (error: any) {
@@ -508,7 +620,7 @@ async function loadUsers() {
 
 async function refreshUsers() {
   await loadUsers();
-  toast.success('User data synchronized');
+  toast.success('Users refreshed');
 }
 
 async function syncVpn() {
@@ -523,8 +635,91 @@ async function syncVpn() {
   }
 }
 
-function navigateToUser(username: string) {
-  router.push(`/users/${username}`);
+function openUser(username: string) {
+  router.push({ name: 'UserDetail', params: { username } });
+}
+
+function closeDrawer() {
+  router.push({ name: 'Users' });
+}
+
+function handleUserUpdated(user: UserEntity) {
+  usersStore.updateUser(user.username, user);
+}
+
+function handleUserDeleted(username: string) {
+  usersStore.removeUser(username);
+  selectedUsernames.value.delete(username);
+  closeDrawer();
+}
+
+function toggleSelected(username: string) {
+  if (selectedUsernames.value.has(username)) selectedUsernames.value.delete(username);
+  else selectedUsernames.value.add(username);
+}
+
+function toggleAllVisible() {
+  if (allVisibleSelected.value) {
+    for (const u of filteredUsers.value) selectedUsernames.value.delete(u.username);
+  } else {
+    for (const u of filteredUsers.value) selectedUsernames.value.add(u.username);
+  }
+}
+
+function clearSelection() {
+  selectedUsernames.value.clear();
+}
+
+function openBulk(action: BulkAction) {
+  bulkGroup.value = null;
+  bulkAction.value = action;
+}
+
+async function runEach(usernames: string[], fn: (username: string) => Promise<void>) {
+  const failed: string[] = [];
+  for (let i = 0; i < usernames.length; i += BULK_CONCURRENCY) {
+    const chunk = usernames.slice(i, i + BULK_CONCURRENCY);
+    const results = await Promise.allSettled(chunk.map(fn));
+    results.forEach((r, j) => {
+      if (r.status === 'rejected') failed.push(chunk[j]);
+    });
+  }
+  return failed;
+}
+
+async function runBulk() {
+  const action = bulkAction.value;
+  const targets = [...bulkTargets.value];
+  if (!action || !targets.length) return;
+  if (action === 'move' && !bulkGroup.value) return;
+
+  bulkRunning.value = true;
+  try {
+    let failed: string[];
+    if (action === 'delete') {
+      failed = await runEach(targets, async (username) => {
+        await internalApi.user.deleteUser(username);
+        usersStore.removeUser(username);
+      });
+    } else {
+      const update: UpdateUserDto =
+        action === 'move' ? { group: bulkGroup.value! } : { isActive: action === 'enable' };
+      failed = await runEach(targets, async (username) => {
+        await internalApi.user.updateUser(username, update);
+        usersStore.updateUser(username, update as Partial<UserEntity>);
+      });
+    }
+
+    const done = targets.length - failed.length;
+    const verb = { move: 'Moved', disable: 'Disabled', enable: 'Enabled', delete: 'Deleted' }[action];
+    if (done) toast.success(`${verb} ${plural(done, 'user')}`);
+    if (failed.length) toast.error(`Failed for ${plural(failed.length, 'user')}: ${failed.join(', ')}`);
+
+    selectedUsernames.value = new Set(failed);
+    bulkAction.value = null;
+  } finally {
+    bulkRunning.value = false;
+  }
 }
 
 function closeCreateModal() {
@@ -543,32 +738,6 @@ function handleBatchComplete(_result: { created: number; failed: number }) {
   // Users are already added to the store during batch creation
 }
 
-async function handleBulkDelete() {
-  if (!searchQuery.value.trim()) return;
-
-  deleting.value = true;
-  try {
-    const result = await internalApi.user.bulkDeleteUsers({
-      q: searchQuery.value.trim(),
-      role: selectedRole.value !== 'all' ? selectedRole.value : undefined,
-      group: selectedGroup.value !== 'all' ? selectedGroup.value : undefined,
-      isActive: activeOnly.value ? true : undefined,
-    });
-
-    // Remove deleted users from store
-    for (const username of result.deletedUsernames) {
-      usersStore.removeUser(username);
-    }
-
-    toast.success(`Deleted ${result.deletedCount} users`);
-    showDeleteConfirm.value = false;
-  } catch (error: any) {
-    toast.error(error.response?.data?.message || 'Failed to delete users');
-  } finally {
-    deleting.value = false;
-  }
-}
-
 async function handleCreateUser() {
   creating.value = true;
   createError.value = '';
@@ -579,11 +748,12 @@ async function handleCreateUser() {
       fullName: newUser.value.fullName,
       password: newUser.value.password,
       role: newUser.value.role,
+      group: newUser.value.group || undefined,
     };
 
     const createdUser = await internalApi.user.createUser(userData);
     usersStore.addUser(createdUser);
-    toast.success(`User ${createdUser.username} created successfully`);
+    toast.success(`Created ${createdUser.username}`);
     closeCreateModal();
   } catch (error: any) {
     createError.value = error.response?.data?.message || 'Failed to create user';
@@ -592,6 +762,10 @@ async function handleCreateUser() {
     creating.value = false;
   }
 }
+
+watch(showDisabled, () => loadUsers());
+
+watch([searchQuery, selectedRole, selectedStatus, selectedGroup, showDisabled], () => clearSelection());
 
 onMounted(async () => {
   loadUsers();
@@ -605,3 +779,9 @@ onMounted(async () => {
   }
 });
 </script>
+
+<style scoped>
+.checkbox {
+  @apply w-4 h-4 rounded accent-mission-accent cursor-pointer;
+}
+</style>

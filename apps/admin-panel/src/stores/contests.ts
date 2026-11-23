@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { ParticipantResponse } from '@libs/api/internal';
+import { contestStatus, isFrozen } from '~/common/contestStatus';
 
 export type ContestFormat = 'ICPC' | 'VNOJ';
 
@@ -92,20 +93,7 @@ export const useContestsStore = defineStore('contests', () => {
   const error = ref<string | null>(null);
 
   // Computed - Calculate contest status
-  const getContestStatus = (contest: ContestEntity): ContestStatus => {
-    const now = new Date();
-    const start = new Date(contest.start_time);
-    const end = new Date(contest.end_time);
-
-    // Check if frozen_at exists and current time is past frozen_at
-    if (contest.frozen_at && now >= new Date(contest.frozen_at)) {
-      return 'frozen';
-    }
-
-    if (now < start) return 'upcoming';
-    if (now >= start && now <= end) return 'ongoing';
-    return 'past';
-  };
+  const getContestStatus = (contest: ContestEntity): ContestStatus => contestStatus(contest);
 
   // Check if contest is in pre-freeze window (5 minutes before frozen_at)
   const isInPreFreezeWindow = (contest: ContestEntity): boolean => {
@@ -121,8 +109,7 @@ export const useContestsStore = defineStore('contests', () => {
 
   // Check if contest should show frozen design (pre-freeze or frozen)
   const shouldShowFrozenDesign = (contest: ContestEntity): boolean => {
-    console.log('Checking frozen design for contest:', contest.code);
-    return isInPreFreezeWindow(contest) || getContestStatus(contest) === 'frozen';
+    return isInPreFreezeWindow(contest) || isFrozen(contest);
   };
 
   // Computed - Contests with status

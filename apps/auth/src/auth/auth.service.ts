@@ -5,6 +5,7 @@ import {
 } from '@libs/common-db/schemas/systemConfig.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Role } from '@libs/common/decorators/role.decorator';
+import { getCoachAccessStatus } from '@libs/common/guards/coachAccess';
 import { MACHINE_BOUND_ROLES } from '@libs/common/machine/machine-auth';
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -55,6 +56,7 @@ export class AuthService {
     }
 
     await this.ensureContestantLoginIsOpen(user.role);
+    await this.ensureCoachAccessIsOpen(user.role);
 
     const tokens = await this.generateTokens(user.username);
 
@@ -66,6 +68,12 @@ export class AuthService {
     );
 
     return new TokensEntity(tokens);
+  }
+
+  private async ensureCoachAccessIsOpen(role: string) {
+    if (role === Role.COACH && (await getCoachAccessStatus(this.userModel.db)).locked) {
+      throw new ForbiddenException('Coach access is closed while the scoreboard is frozen');
+    }
   }
 
   private async ensureContestantLoginIsOpen(role: string) {
@@ -125,6 +133,7 @@ export class AuthService {
     }
 
     await this.ensureContestantLoginIsOpen(user.role);
+    await this.ensureCoachAccessIsOpen(user.role);
 
     const refreshTokenValid = await argon2.verify(user.refreshToken, refreshToken);
 

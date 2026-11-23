@@ -7,11 +7,11 @@
     ></video>
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
-      <p class="text-gray-500 font-mono text-sm mt-4">Loading stream...</p>
+      <p class="text-mission-muted text-sm mt-4">Loading stream…</p>
     </div>
     <div v-else-if="error" class="error-state">
       <AlertCircle class="w-16 h-16 text-mission-red mx-auto mb-4" :size="64" :stroke-width="2" />
-      <p class="text-mission-red font-mono text-sm">{{ error }}</p>
+      <p class="text-mission-red text-sm">{{ error }}</p>
     </div>
   </div>
 </template>
@@ -213,7 +213,7 @@ watch(() => props.src, (newSrc, oldSrc) => {
   width: 3rem;
   height: 3rem;
   border: 4px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #00e5ff;
+  border-top-color: #a8b8ff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }

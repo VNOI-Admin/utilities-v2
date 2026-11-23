@@ -1,10 +1,9 @@
 <template>
   <div>
-    <h1 class="text-4xl font-display font-bold text-glow flex items-center gap-3">
-      <span class="text-mission-accent">█</span>
+    <h1 class="text-2xl font-semibold tracking-tight text-gray-100">
       {{ title }}
     </h1>
-    <p v-if="subtitle" class="text-sm font-mono text-gray-500 mt-2 uppercase tracking-wider">
+    <p v-if="subtitle" class="text-sm text-mission-muted mt-1">
       {{ subtitle }}
     </p>
   </div>

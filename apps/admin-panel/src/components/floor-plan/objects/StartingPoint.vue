@@ -30,7 +30,7 @@ const pixelPosition = computed(() => ({
   y: props.position.y * props.gridSize,
 }));
 
-const strokeColor = computed(() => (isSelected.value ? '#00ff9d' : '#00d4ff'));
+const strokeColor = computed(() => (isSelected.value ? '#a8b8ff' : '#9fd8ff'));
 
 function handleDragStart() {
   if (props.readonly) return;
@@ -89,13 +89,10 @@ function handleClick(e: any) {
       :config="{
         width: props.gridSize,
         height: props.gridSize,
-        fill: 'rgba(0, 212, 255, 0.3)',
+        fill: 'rgba(159, 216, 255, 0.15)',
         stroke: strokeColor,
         strokeWidth: isSelected ? 4 : 3,
         cornerRadius: 4,
-        shadowColor: isSelected ? '#00ff9d' : '#00d4ff',
-        shadowBlur: isSelected ? 15 : 10,
-        shadowOpacity: 0.5,
       }"
     />
 

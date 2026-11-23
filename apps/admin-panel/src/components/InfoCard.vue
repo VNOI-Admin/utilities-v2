@@ -1,8 +1,8 @@
 <template>
   <div class="mission-card p-6" :class="cardClass">
-    <div class="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
-      <span :class="iconColorClass">●</span>
-      <h2 class="text-lg font-display font-semibold uppercase tracking-wider">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="w-1.5 h-1.5 rounded-full bg-current" :class="iconColorClass"></span>
+      <h2 class="text-sm font-semibold">
         {{ title }}
       </h2>
       <div v-if="$slots.actions" class="ml-auto">
@@ -37,8 +37,8 @@ const iconColorClass = computed(() => {
     cyan: 'text-mission-cyan',
     red: 'text-mission-red',
     amber: 'text-mission-amber',
-    purple: 'text-purple-500',
-    gray: 'text-gray-500',
+    purple: 'text-mission-purple',
+    gray: 'text-mission-muted',
   };
   return colorMap[props.iconVariant];
 });
