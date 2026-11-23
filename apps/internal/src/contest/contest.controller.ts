@@ -1,29 +1,21 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
+import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
+import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
 import { AccessTokenOptional } from '@libs/common/decorators/accessTokenOptional.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { IPAddressGuard } from '@libs/common/guards/ipAddress.guard';
 import { MachineGuard } from '@libs/common/guards/machine.guard';
-import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
-import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { ContestService } from './contest.service';
+import { AddParticipantDto, AddParticipantResponseDto } from './dtos/addParticipant.dto';
 import { CreateContestDto } from './dtos/createContest.dto';
-import { UpdateContestDto } from './dtos/updateContest.dto';
-import { LinkParticipantDto } from './dtos/linkParticipant.dto';
 import { ContestFilter, GetContestsDto } from './dtos/getContests.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
-import { AddParticipantDto, AddParticipantResponseDto } from './dtos/addParticipant.dto';
+import { LinkParticipantDto } from './dtos/linkParticipant.dto';
+import { RecalculateContestResponseDto } from './dtos/recalculateContest.dto';
+import { UpdateContestDto } from './dtos/updateContest.dto';
+import { UpdateProblemDto } from './dtos/updateProblem.dto';
 
 @ApiTags('Contest')
 @ApiBearerAuth()
@@ -102,6 +94,17 @@ export class ContestController {
     return this.contestService.getProblems(code);
   }
 
+  @Patch(':code/problems/:problemCode')
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Update a problem (display name, assumed judging runtime)' })
+  async updateProblem(
+    @Param('code') code: string,
+    @Param('problemCode') problemCode: string,
+    @Body() dto: UpdateProblemDto,
+  ) {
+    return this.contestService.updateProblem(code, problemCode, dto);
+  }
+
   @Patch('participants/:participantId/link-user')
   @RequiredRoles(Role.ADMIN)
   @ApiOperation({ summary: 'Link participant to internal user' })
@@ -128,6 +131,16 @@ export class ContestController {
   @ApiOperation({ summary: 'Force-sync all submissions from VNOJ API and fill any missing submissions' })
   async forceSyncSubmissions(@Param('code') code: string) {
     return this.contestService.forceSyncSubmissions(code);
+  }
+
+  @Post(':code/recalculate')
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'Recalculate submission data (rank change, score) and participant standings from stored submissions',
+  })
+  @ApiOkResponse({ type: RecalculateContestResponseDto })
+  async recalculateContestData(@Param('code') code: string) {
+    return this.contestService.recalculateContestData(code);
   }
 
   @Post(':code/participants')

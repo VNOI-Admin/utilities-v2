@@ -37,9 +37,9 @@
                 <span class="participant-name">{{ participant.displayName }}</span>
               </div>
               <span class="participant-stats">
-                <span class="solved-count">{{ participant.solvedCount }}</span>
+                <span class="solved-count">{{ primaryMetric(participant, format) }}</span>
                 <span class="stat-separator">/</span>
-                <span class="penalty">{{ participant.totalPenalty }}</span>
+                <span class="penalty">{{ secondaryMetric(participant, format) }}</span>
               </span>
             </div>
             <!-- Duplicate set for seamless loop -->
@@ -60,9 +60,9 @@
                 <span class="participant-name">{{ participant.displayName }}</span>
               </div>
               <span class="participant-stats">
-                <span class="solved-count">{{ participant.solvedCount }}</span>
+                <span class="solved-count">{{ primaryMetric(participant, format) }}</span>
                 <span class="stat-separator">/</span>
-                <span class="penalty">{{ participant.totalPenalty }}</span>
+                <span class="penalty">{{ secondaryMetric(participant, format) }}</span>
               </span>
             </div>
           </div>
@@ -77,6 +77,7 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { internalApi } from '~/services/api';
 import type { ParticipantResponse } from '@libs/api/internal';
 import { useContestsStore } from '~/stores/contests';
+import { resolveFormat, primaryMetric, secondaryMetric, type RankingFormat } from '~/common/ranking';
 
 const props = defineProps<{
   contestId: string;
@@ -90,6 +91,9 @@ const currentContest = computed(() => {
   if (!props.contestId) return null;
   return contestsStore.getContestByCode(props.contestId);
 });
+
+// Ranking format (VNOJ shows score/time; ICPC shows solved/penalty).
+const format = computed<RankingFormat>(() => resolveFormat(participants.value[0] ?? currentContest.value));
 
 // Check if frozen design should be shown
 const showFrozenDesign = computed(() => {

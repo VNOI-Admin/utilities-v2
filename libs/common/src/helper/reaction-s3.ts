@@ -1,4 +1,4 @@
-import { ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 
 export class ReactionS3ConfigError extends Error {
   override readonly name = 'ReactionS3ConfigError';
@@ -60,22 +60,25 @@ export function reactionObjectPublicUrl(config: ReactionS3Config, fullKey: strin
   return `${baseUrl}/${fullKey}`;
 }
 
-export type ReactionWebmListItem = {
+export type ReactionVideoListItem = {
   key: string;
   url: string;
   lastModified?: Date;
   size?: number;
 };
 
+/** Renders are MP4 now; `.webm` stays listed so older objects remain visible. */
+const REACTION_VIDEO_EXTENSIONS = ['.mp4', '.webm'] as const;
+
 /**
- * Lists `.webm` objects under the reaction prefix, paged until complete.
+ * Lists reaction video objects under the reaction prefix, paged until complete.
  */
-export async function listReactionWebmObjects(
+export async function listReactionVideoObjects(
   client: S3Client,
   config: ReactionS3Config,
-): Promise<ReactionWebmListItem[]> {
+): Promise<ReactionVideoListItem[]> {
   const prefix = reactionS3ListPrefix(config);
-  const out: ReactionWebmListItem[] = [];
+  const out: ReactionVideoListItem[] = [];
   let continuationToken: string | undefined;
 
   do {
@@ -89,7 +92,8 @@ export async function listReactionWebmObjects(
 
     for (const obj of response.Contents ?? []) {
       const key = obj.Key;
-      if (!key || !key.toLowerCase().endsWith('.webm')) {
+      const lower = key?.toLowerCase();
+      if (!key || !lower || !REACTION_VIDEO_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
         continue;
       }
       out.push({
@@ -107,14 +111,48 @@ export async function listReactionWebmObjects(
 }
 
 /**
- * Uploads a WebM buffer to S3 under `{keyPrefix}/{key}` and returns
+ * Full object keys a submission's reaction could be stored under, across every
+ * known extension. The current renderer only emits `.mp4`, but older objects may
+ * still be `.webm`, so a delete has to sweep both.
+ */
+export function reactionVideoKeysForSubmission(config: ReactionS3Config, submissionId: string): string[] {
+  const prefix = reactionS3ListPrefix(config);
+  return REACTION_VIDEO_EXTENSIONS.map((ext) => `${prefix}${submissionId}${ext}`);
+}
+
+/**
+ * Deletes the stored reaction video(s) for the given submission ids, across every
+ * known extension. S3 deletes are idempotent — absent keys are a no-op — so this
+ * is safe to call before a re-render whether or not a clip currently exists.
+ * Batched to S3's 1000-key-per-request limit.
+ */
+export async function deleteReactionVideos(
+  client: S3Client,
+  config: ReactionS3Config,
+  submissionIds: string[],
+): Promise<void> {
+  const keys = submissionIds.flatMap((id) => reactionVideoKeysForSubmission(config, id));
+  for (let i = 0; i < keys.length; i += 1000) {
+    const chunk = keys.slice(i, i + 1000);
+    await client.send(
+      new DeleteObjectsCommand({
+        Bucket: config.bucket,
+        Delete: { Objects: chunk.map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
+  }
+}
+
+/**
+ * Uploads a rendered reaction video to S3 under `{keyPrefix}/{key}` and returns
  * the public URL built from REACTION_S3_PUBLIC_BASE_URL.
  */
-export async function putReactionWebm(
+export async function putReactionVideo(
   client: S3Client,
   config: ReactionS3Config,
   key: string,
   body: Buffer,
+  contentType = 'video/mp4',
 ): Promise<string> {
   const fullKey = config.keyPrefix ? `${config.keyPrefix}/${key}` : key;
 
@@ -123,7 +161,7 @@ export async function putReactionWebm(
       Bucket: config.bucket,
       Key: fullKey,
       Body: body,
-      ContentType: 'video/webm',
+      ContentType: contentType,
     }),
   );
 

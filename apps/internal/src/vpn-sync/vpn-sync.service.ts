@@ -4,7 +4,7 @@ import { Role } from '@libs/common/decorators/role.decorator';
 import { getErrorMessage } from '@libs/common/helper/error';
 import { VPN_ENABLED_ROLES, roleHasVpn } from '@libs/common/helper/vpn';
 import { InjectQueue } from '@nestjs/bullmq';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, type OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Queue } from 'bullmq';
@@ -20,9 +20,13 @@ type DesiredVpnPeerState = {
 
 const VPN_USER_SYNC_QUEUE = 'vpn-user-sync';
 const VPN_USER_SYNC_JOB_NAME = 'sync-user-vpn';
+const WG_INTERFACE_POST_UP =
+  'iptables -w -t nat -A POSTROUTING -o eth0 -j MASQUERADE; ip6tables -w -t nat -A POSTROUTING -o eth0 -j MASQUERADE';
+const WG_INTERFACE_POST_DOWN =
+  'iptables -w -t nat -D POSTROUTING -o eth0 -j MASQUERADE; ip6tables -w -t nat -D POSTROUTING -o eth0 -j MASQUERADE';
 
 @Injectable()
-export class VpnSyncService {
+export class VpnSyncService implements OnModuleInit {
   private readonly interfaceId: string;
   private readonly wgPortalApi: WgPortalApi;
 
@@ -40,6 +44,14 @@ export class VpnSyncService {
       password: this.requireConfig('WG_PORTAL_CORE_ADMIN_API_TOKEN'),
     });
     setUserVpnSyncQueue((usernames) => this.queueUserSyncMany(usernames));
+  }
+
+  async onModuleInit(): Promise<void> {
+    try {
+      await this.ensureInterface();
+    } catch (error) {
+      console.error(`Unable to reconcile WireGuard interface ${this.interfaceId}:`, error);
+    }
   }
 
   async queueUserSync(username: string): Promise<void> {
@@ -170,6 +182,35 @@ export class VpnSyncService {
     for (const peer of peers) {
       await this.wgPortalApi.deletePeer(peer.Identifier);
     }
+  }
+
+  private async ensureInterface(): Promise<void> {
+    const coreAddress = this.requireConfig('WG_CORE_IP_ADDRESS');
+    const publicIp = this.configService.get<string>('WG_CORE_PUBLIC_IP') ?? '';
+    const listenPort = Number(this.requireConfig('WG_LISTEN_PORT'));
+    const mtu = Number(this.requireConfig('WG_MTU'));
+    const allowedIps = this.requireConfig('WG_CORE_ALLOWED_IPS')
+      .split(',')
+      .map((value) => value.trim());
+
+    await this.wgPortalApi.upsertInterface(this.interfaceId, {
+      DisplayName: this.interfaceId,
+      Mode: 'server',
+      PrivateKey: this.requireConfig('WG_CORE_PRIVATE_KEY'),
+      PublicKey: this.requireConfig('WG_CORE_PUBLIC_KEY'),
+      Disabled: false,
+      SaveConfig: true,
+      ListenPort: listenPort,
+      Addresses: [coreAddress.includes('/') ? coreAddress : `${coreAddress}/32`],
+      Mtu: mtu,
+      PostUp: WG_INTERFACE_POST_UP,
+      PostDown: WG_INTERFACE_POST_DOWN,
+      PeerDefNetwork: allowedIps,
+      PeerDefEndpoint: publicIp ? `${publicIp}:${listenPort}` : '',
+      PeerDefAllowedIPs: allowedIps,
+      PeerDefMtu: mtu,
+      PeerDefPersistentKeepalive: Number(this.requireConfig('WG_PERSISTENT_KEEPALIVE')),
+    });
   }
 
   private requireConfig(key: string): string {

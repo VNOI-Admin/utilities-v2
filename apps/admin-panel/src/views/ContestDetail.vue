@@ -58,6 +58,34 @@
               />
               <span>{{ resyncingContest ? 'RESYNCING...' : 'RESYNC ALL' }}</span>
             </button>
+            <!-- Recalculate submission data (rank change, score) from stored submissions -->
+            <button
+              @click="recalculateContestData"
+              :disabled="recalculatingData"
+              class="px-4 py-2 border border-mission-amber text-mission-amber hover:bg-mission-amber hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+              :class="{ 'opacity-50 cursor-not-allowed': recalculatingData }"
+            >
+              <Calculator
+                :size="16"
+                :stroke-width="2"
+                :class="{ 'animate-pulse': recalculatingData }"
+              />
+              <span>{{ recalculatingData ? 'RECALCULATING...' : 'REGEN DATA' }}</span>
+            </button>
+            <!-- Re-render every accepted submission's reaction video -->
+            <button
+              @click="regenerateAllReactions"
+              :disabled="regeneratingAllReactions"
+              class="px-4 py-2 border border-mission-cyan text-mission-cyan hover:bg-mission-cyan hover:text-mission-dark transition-all duration-300 uppercase text-xs tracking-wider flex items-center gap-2"
+              :class="{ 'opacity-50 cursor-not-allowed': regeneratingAllReactions }"
+            >
+              <Video
+                :size="16"
+                :stroke-width="2"
+                :class="{ 'animate-pulse': regeneratingAllReactions }"
+              />
+              <span>{{ regeneratingAllReactions ? 'QUEUEING...' : 'REGEN REACTIONS' }}</span>
+            </button>
             <!-- Delete button -->
             <button
               @click="showDeleteModal = true"
@@ -140,6 +168,62 @@
                     <div>
                       <div class="tech-label mb-1">STATUS</div>
                       <div class="font-mono text-sm data-value">{{ contestStatus.toUpperCase() }}</div>
+                    </div>
+                    <div>
+                      <div class="tech-label mb-1">FORMAT</div>
+                      <select
+                        v-model="formatSelectValue"
+                        :disabled="savingFormat"
+                        @change="onFormatChange"
+                        class="input-mission font-mono text-sm w-full"
+                      >
+                        <option value="ICPC">ICPC (ranked by AC count)</option>
+                        <option value="VNOJ">VNOJ (ranked by points)</option>
+                      </select>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Changing format immediately recomputes standings, ranks, and submission rank history.
+                      </div>
+                    </div>
+                    <div>
+                      <div class="tech-label mb-1">PENALTY (MINUTES PER ATTEMPT)</div>
+                      <div class="flex gap-2">
+                        <input
+                          v-model.number="penaltyInput"
+                          type="number"
+                          min="0"
+                          :disabled="savingScoring"
+                          class="input-mission font-mono text-sm flex-1"
+                          :placeholder="String(defaultPenalty)"
+                        />
+                        <button
+                          class="btn-mission-secondary text-xs px-3"
+                          :disabled="savingScoring || penaltyInput === (contest.penalty ?? null)"
+                          @click="applyPenalty"
+                        >
+                          {{ savingScoring ? '...' : 'SET' }}
+                        </button>
+                      </div>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Every attempt before the first maximum-score submission is charged. Leave blank to use the
+                        format default ({{ defaultPenalty }}m for {{ formatSelectValue }}).
+                      </div>
+                    </div>
+                    <div v-if="formatSelectValue === 'VNOJ'">
+                      <div class="tech-label mb-1">LAST SUBMISSION ONLY (LSO)</div>
+                      <label class="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          :checked="contest.lso === true"
+                          :disabled="savingScoring"
+                          class="accent-mission-cyan"
+                          @change="applyLso(($event.target as HTMLInputElement).checked)"
+                        />
+                        <span class="font-mono text-sm">{{ contest.lso ? 'ENABLED' : 'DISABLED' }}</span>
+                      </label>
+                      <div class="text-xs text-gray-500 mt-1">
+                        Cumulative time counts only the latest scoring submission instead of the sum across problems.
+                        Penalties still apply.
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -353,7 +437,7 @@
                   <span class="tech-label">STATUS:</span>
                   <MissionSelect
                     v-model="submissionStatusFilter"
-                    :options="['all', 'AC', 'WA', 'RTE', 'RE', 'IR', 'OLE', 'MLE', 'TLE', 'IE', 'AB', 'CE', 'UNKNOWN']"
+                    :options="['all', 'AC', 'PAC', 'WA', 'RTE', 'RE', 'IR', 'OLE', 'MLE', 'TLE', 'SC', 'IE', 'AB', 'CE', 'UNKNOWN']"
                     :searchable="false"
                     container-class="w-32"
                   />
@@ -406,7 +490,7 @@
                   >
                     <div class="col-span-2 font-mono text-gray-400">{{ formatFullDateTime(submission.submittedAt) }}</div>
                     <div class="col-span-2 font-mono">{{ submission.author }}</div>
-                    <div class="col-span-1 font-mono text-mission-cyan">{{ submission.problem_code }}</div>
+                    <div class="col-span-1 font-mono text-mission-cyan">{{ problemName(submission.problem_code) }}</div>
                     <div class="col-span-2">
                       <span
                         class="px-2 py-1 font-mono uppercase border rounded-sm"
@@ -417,19 +501,49 @@
                     </div>
                     <div class="col-span-1 text-center font-mono data-value">{{ submission.data.score }}</div>
                     <div class="col-span-1 text-center font-mono text-gray-400">{{ submission.data.penalty }}</div>
+                    <!-- Always show both ends of the move: holding a place is a
+                         result too, and a blank cell reads as missing data. -->
                     <div class="col-span-2 text-center font-mono">
-                      <span v-if="submission.data.old_rank !== submission.data.new_rank">
-                        <span class="text-gray-500">{{ submission.data.old_rank }}</span>
-                        <ChevronRight :size="12" :stroke-width="2" class="inline mx-1" />
-                        <span :class="submission.data.new_rank < submission.data.old_rank ? 'text-mission-accent' : 'text-mission-red'">
-                          {{ submission.data.new_rank }}
-                        </span>
+                      <span class="text-gray-500">{{ submission.data.old_rank }}</span>
+                      <ChevronRight :size="12" :stroke-width="2" class="inline mx-1" />
+                      <span
+                        :class="submission.data.new_rank < submission.data.old_rank
+                          ? 'text-mission-accent'
+                          : submission.data.new_rank > submission.data.old_rank
+                            ? 'text-mission-red'
+                            : 'text-gray-500'"
+                      >
+                        {{ submission.data.new_rank }}
                       </span>
-                      <span v-else class="text-gray-500">—</span>
                     </div>
-                    <div class="col-span-1 text-center">
-                      <span v-if="submission.data.reaction" class="text-lg">{{ submission.data.reaction }}</span>
-                      <span v-else class="text-gray-600">—</span>
+                    <div class="col-span-1 flex items-center justify-center gap-1">
+                      <!-- Quick view: only meaningful once a clip exists. -->
+                      <button
+                        v-if="submission.data.reaction"
+                        @click="openReactionPreview(submission)"
+                        title="Play the rendered reaction"
+                        class="p-1 border border-white/20 text-gray-400 hover:border-mission-accent hover:text-mission-accent transition-all duration-300"
+                      >
+                        <Play :size="14" :stroke-width="2" />
+                      </button>
+                      <span v-else-if="submission.submissionStatus !== 'AC'" class="text-gray-600">—</span>
+                      <span v-else class="text-gray-600 font-mono">···</span>
+                      <!-- Regenerate: confirmed first, since it throws away the
+                           existing clip and re-renders from the raw feeds. -->
+                      <button
+                        v-if="submission.submissionStatus === 'AC'"
+                        @click="askRegenerateSubmissionReaction(submission)"
+                        :disabled="regeneratingReactionIds.has(submission._id)"
+                        title="Re-render this reaction"
+                        class="p-1 border border-white/20 text-gray-400 hover:border-mission-cyan hover:text-mission-cyan transition-all duration-300"
+                        :class="{ 'opacity-50 cursor-not-allowed': regeneratingReactionIds.has(submission._id) }"
+                      >
+                        <RotateCw
+                          :size="14"
+                          :stroke-width="2"
+                          :class="{ 'animate-spin': regeneratingReactionIds.has(submission._id) }"
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -505,8 +619,34 @@
                 >
                   <div class="flex items-center gap-2 mb-3">
                     <span class="text-mission-accent">●</span>
-                    <h3 class="font-mono font-semibold uppercase text-sm">{{ problem.code }}</h3>
+                    <h3 class="font-mono font-semibold uppercase text-sm">{{ problem.displayName || problem.code }}</h3>
+                    <span v-if="problem.displayName" class="font-mono text-[10px] text-gray-500 uppercase">({{ problem.code }})</span>
                   </div>
+
+                  <!-- Display-name mapping editor -->
+                  <div class="mb-4">
+                    <label class="tech-label block mb-1">DISPLAY NAME</label>
+                    <div class="flex items-center gap-2">
+                      <input
+                        v-model="problemNameDrafts[problem._id]"
+                        type="text"
+                        :placeholder="problem.code"
+                        class="flex-1 min-w-0 bg-mission-dark border border-white/10 px-2 py-1 font-mono text-xs text-white focus:border-mission-accent focus:outline-none"
+                        @keyup.enter="saveProblemName(problem)"
+                      />
+                      <button
+                        @click="saveProblemName(problem)"
+                        :disabled="savingProblemId === problem._id || (problemNameDrafts[problem._id] ?? '').trim() === (problem.displayName ?? '')"
+                        class="px-3 py-1 border font-mono text-xs uppercase tracking-wider transition-all duration-300"
+                        :class="savingProblemId === problem._id || (problemNameDrafts[problem._id] ?? '').trim() === (problem.displayName ?? '')
+                          ? 'border-white/10 text-gray-600 cursor-not-allowed'
+                          : 'border-mission-accent text-mission-accent hover:bg-mission-accent hover:text-mission-dark'"
+                      >
+                        {{ savingProblemId === problem._id ? '...' : 'SAVE' }}
+                      </button>
+                    </div>
+                  </div>
+
                   <div class="space-y-2 text-xs">
                     <div class="flex items-center justify-between">
                       <span class="tech-label">SUBMISSIONS</span>
@@ -537,14 +677,15 @@
                     <tr class="border-b border-white/10 bg-mission-gray">
                       <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 w-12">#</th>
                       <th class="px-3 py-3 text-left font-mono text-xs uppercase tracking-wider text-gray-400 min-w-[150px]">Participant</th>
-                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20">Solved</th>
-                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-24">Penalty</th>
+                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20">{{ primaryLabel(rankingFormat) }}</th>
+                      <th class="px-3 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-24">{{ secondaryLabel(rankingFormat) }}</th>
                       <th
                         v-for="problem in sortedProblems"
                         :key="problem._id"
                         class="px-2 py-3 text-center font-mono text-xs uppercase tracking-wider text-gray-400 w-20"
+                        :title="problem.displayName ? problem.code : undefined"
                       >
-                        {{ problem.code }}
+                        {{ problem.displayName || problem.code }}
                       </th>
                     </tr>
                   </thead>
@@ -565,13 +706,13 @@
                           @{{ row.participant.username }}
                         </div>
                       </td>
-                      <!-- Solved Count -->
+                      <!-- Primary metric (Score for VNOJ, Solved for ICPC) -->
                       <td class="px-3 py-3 text-center">
-                        <span class="font-mono text-sm data-value">{{ row.participant.solvedCount || 0 }}</span>
+                        <span class="font-mono text-sm data-value">{{ row.primary }}</span>
                       </td>
-                      <!-- Total Penalty -->
+                      <!-- Secondary metric (Time for VNOJ, Penalty for ICPC) -->
                       <td class="px-3 py-3 text-center">
-                        <span class="font-mono text-sm text-gray-400">{{ row.participant.totalPenalty || 0 }}</span>
+                        <span class="font-mono text-sm text-gray-400">{{ row.secondary }}</span>
                       </td>
                       <!-- Problem Cells -->
                       <td
@@ -580,17 +721,18 @@
                         class="px-2 py-3 text-center"
                       >
                         <div
-                          v-if="row.problemStates[problem.code]?.tries > 0"
+                          v-if="row.problemStates[problem.code]?.attempted"
                           class="inline-flex flex-col items-center justify-center min-w-[50px] px-2 py-1 rounded text-xs font-mono"
                           :class="row.problemStates[problem.code]?.solved
                             ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                             : 'bg-red-500/20 text-red-400 border border-red-500/30'"
                         >
                           <span class="font-semibold">
-                            {{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}
+                            <template v-if="rankingFormat === 'VNOJ'">{{ row.problemStates[problem.code]?.points }}</template>
+                            <template v-else>{{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}</template>
                           </span>
                           <span v-if="row.problemStates[problem.code]?.solved" class="text-[10px] opacity-75">
-                            {{ row.problemStates[problem.code]?.penalty }}'
+                            {{ row.problemStates[problem.code]?.time }}'
                           </span>
                         </div>
                         <span v-else class="text-gray-600">-</span>
@@ -704,6 +846,79 @@
                   type="button"
                   @click="closeDeleteModal"
                   :disabled="deleting"
+                  class="btn-secondary px-8"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Change Format Confirmation Modal -->
+    <Teleport to="body">
+      <Transition name="modal">
+        <div
+          v-if="showFormatConfirm"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          @click.self="cancelFormatChange"
+        >
+          <div class="mission-card w-full max-w-lg mx-4 border-mission-amber overflow-hidden" style="animation: slideInModal 0.3s ease-out">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-white/10 bg-mission-gray">
+              <div class="flex items-center justify-between">
+                <h2 class="text-xl font-display font-bold flex items-center gap-2 text-mission-amber">
+                  <AlertCircle :size="24" :stroke-width="2" />
+                  CHANGE CONTEST FORMAT
+                </h2>
+                <button
+                  @click="cancelFormatChange"
+                  class="text-gray-400 hover:text-mission-amber transition-colors"
+                >
+                  <X :size="24" :stroke-width="2" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 space-y-4">
+              <div class="p-4 border border-mission-amber bg-mission-amber/10">
+                <p class="text-sm font-mono text-mission-amber">
+                  ⚠️ This contest is currently {{ contestStatus.toUpperCase() }}.
+                </p>
+              </div>
+
+              <p class="text-sm text-gray-300">
+                Switching <span class="font-mono text-mission-accent">{{ contest?.code }}</span> from
+                <span class="font-mono text-white">{{ contest?.format ?? 'ICPC' }}</span> to
+                <span class="font-mono text-white">{{ pendingFormat }}</span>
+                immediately recomputes participant standings, ranks, and every submission's rank
+                history using different ranking rules. This can visibly reshuffle the live leaderboard
+                and may take a moment for large contests.
+              </p>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  @click="confirmFormatChange"
+                  :disabled="savingFormat"
+                  class="flex-1 px-6 py-3 border font-mono text-sm uppercase tracking-wider transition-all duration-300 flex items-center justify-center gap-2 border-mission-amber text-mission-amber hover:bg-mission-amber hover:text-black disabled:opacity-50"
+                >
+                  <RotateCw
+                    v-if="savingFormat"
+                    :size="20"
+                    :stroke-width="2"
+                    class="animate-spin"
+                  />
+                  <span>{{ savingFormat ? 'APPLYING...' : `SWITCH TO ${pendingFormat}` }}</span>
+                </button>
+                <button
+                  type="button"
+                  @click="cancelFormatChange"
+                  :disabled="savingFormat"
                   class="btn-secondary px-8"
                 >
                   CANCEL
@@ -1124,18 +1339,175 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Quick view of a rendered reaction -->
+    <MissionModal
+      :show="previewSubmission !== null"
+      :title="previewSubmission ? `REACTION · ${previewSubmission.author} · ${problemName(previewSubmission.problem_code)}` : ''"
+      max-width="sm"
+      :show-actions="false"
+      @close="closeReactionPreview"
+    >
+      <div v-if="previewSubmission">
+        <video
+          :src="previewSubmission.data.reaction"
+          class="w-full rounded-lg bg-black border border-white/10"
+          controls
+          autoplay
+          playsinline
+        />
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-xs font-mono">
+          <dt class="tech-label">RANK CHANGE</dt>
+          <dd class="text-gray-300">
+            {{ previewSubmission.data.old_rank }} → {{ previewSubmission.data.new_rank }}
+          </dd>
+          <dt class="tech-label">SCORE</dt>
+          <dd class="text-gray-300">{{ previewSubmission.data.score }}</dd>
+          <dt class="tech-label">SUBMITTED</dt>
+          <dd class="text-gray-300">{{ formatFullDateTime(previewSubmission.submittedAt) }}</dd>
+        </dl>
+        <div class="flex gap-3 pt-4">
+          <a
+            :href="previewSubmission.data.reaction"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-primary flex-1 text-sm text-center"
+          >
+            OPEN
+          </a>
+        </div>
+      </div>
+    </MissionModal>
+
+    <!-- Confirmation for a single re-render -->
+    <MissionModal
+      :show="regenTarget !== null"
+      title="REGENERATE REACTION"
+      max-width="lg"
+      confirm-text="REGENERATE"
+      cancel-text="CANCEL"
+      loading-text="QUEUEING..."
+      :loading="regenTarget !== null && regeneratingReactionIds.has(regenTarget._id)"
+      @confirm="confirmRegenerateSubmissionReaction"
+      @close="regenTarget = null"
+    >
+      <div v-if="regenTarget" class="space-y-4">
+        <p class="text-sm text-gray-300">
+          Queue a fresh render for
+          <span class="font-mono text-mission-accent">{{ regenTarget.author }}</span> on
+          <span class="font-mono text-mission-cyan">{{ problemName(regenTarget.problem_code) }}</span>?
+        </p>
+        <ul class="space-y-2 text-sm text-gray-400 font-mono">
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>The stored clip is discarded and re-rendered from the raw feeds</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>It will use the current rank change {{ regenTarget.data.old_rank }} → {{ regenTarget.data.new_rank }}</span>
+          </li>
+        </ul>
+      </div>
+    </MissionModal>
+
+    <!-- Confirmation for the contest-wide re-render -->
+    <MissionModal
+      :show="showRegenAllConfirm"
+      title="REGENERATE ALL REACTIONS"
+      max-width="lg"
+      confirm-text="REGENERATE ALL"
+      cancel-text="CANCEL"
+      loading-text="QUEUEING..."
+      :loading="regeneratingAllReactions"
+      @confirm="confirmRegenerateAllReactions"
+      @close="showRegenAllConfirm = false"
+    >
+      <div class="space-y-4">
+        <p class="text-sm text-gray-300">
+          Queue a fresh render for every accepted submission in
+          <span class="font-mono text-mission-accent">{{ contest?.code }}</span>.
+        </p>
+        <ul class="space-y-2 text-sm text-gray-400 font-mono">
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>{{ acceptedSubmissionCount }} accepted submission(s) on this page's contest</span>
+          </li>
+          <li class="flex items-center gap-2">
+            <span class="text-mission-amber">•</span>
+            <span>Every stored clip is discarded; rendering is serialized and can take a while</span>
+          </li>
+        </ul>
+      </div>
+    </MissionModal>
+
+    <!-- On-screen record of what was queued, so the outcome outlives the toast -->
+    <Teleport to="body">
+      <div
+        v-if="reactionLog.length > 0"
+        class="fixed bottom-4 right-4 z-40 w-96 max-w-[calc(100vw-2rem)] mission-card bg-mission-gray border border-white/10"
+      >
+        <div class="flex items-center justify-between px-4 py-2 border-b border-white/10">
+          <span class="tech-label">REACTION ACTIVITY</span>
+          <button @click="reactionLog = []" class="text-gray-500 hover:text-mission-red transition-colors">
+            <X :size="14" :stroke-width="2" />
+          </button>
+        </div>
+        <div class="max-h-48 overflow-y-auto divide-y divide-white/5">
+          <div
+            v-for="entry in reactionLog"
+            :key="entry.id"
+            class="px-4 py-2 text-xs font-mono flex gap-2"
+            :class="entry.ok ? 'text-gray-300' : 'text-mission-red'"
+          >
+            <span class="text-gray-500 shrink-0">{{ entry.time }}</span>
+            <span>{{ entry.message }}</span>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import type { ParticipantResponse, UserEntity } from '@libs/api/internal';
+import {
+  AlertCircle,
+  Calculator,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  Download,
+  EyeOff,
+  FileText,
+  Info,
+  Play,
+  RotateCw,
+  Trash2,
+  Trophy,
+  UserPlus,
+  Users,
+  Video,
+  X,
+} from 'lucide-vue-next';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useContestsStore } from '~/stores/contests';
-import type { ContestEntity, SubmissionEntity, ProblemEntity } from '~/stores/contests';
-import { internalApi } from '~/services/api';
-import type { UserEntity, ParticipantResponse } from '@libs/api/internal';
 import { useToast } from 'vue-toastification';
-import { RotateCw, Trash2, UserPlus, AlertCircle, Users, EyeOff, Info, Check, X, FileText, ChevronRight, ChevronLeft, Download, ClipboardList, Trophy } from 'lucide-vue-next';
+import {
+  type ProblemState,
+  type RankingFormat,
+  buildProblemState,
+  primaryLabel,
+  primaryMetric,
+  resolveFormat,
+  secondaryLabel,
+  secondaryMetric,
+} from '~/common/ranking';
+import MissionModal from '~/components/MissionModal.vue';
+import { internalApi, internalClient } from '~/services/api';
+import { useContestsStore } from '~/stores/contests';
+import type { ContestEntity, ProblemEntity, SubmissionEntity } from '~/stores/contests';
+import { resolveProblemName } from '~/utils/problemName';
 
 const route = useRoute();
 const router = useRouter();
@@ -1154,9 +1526,41 @@ const submissions = ref<SubmissionEntity[]>([]);
 const problems = ref<ProblemEntity[]>([]);
 const availableUsers = ref<UserEntity[]>([]);
 
+// Draft display-name values per problem (keyed by _id) for the Problems tab editor.
+const problemNameDrafts = ref<Record<string, string>>({});
+const savingProblemId = ref<string | null>(null);
+const savingFormat = ref(false);
+const formatSelectValue = ref<'ICPC' | 'VNOJ'>('ICPC');
+const pendingFormat = ref<'ICPC' | 'VNOJ' | null>(null);
+const showFormatConfirm = ref(false);
+
+const savingScoring = ref(false);
+// null means "unset" — the contest falls back to the format's default penalty.
+const penaltyInput = ref<number | null>(null);
+
+// Judge defaults: ICPC charges 20 minutes per attempt, VNOJ only 5.
+const defaultPenalty = computed(() => (formatSelectValue.value === 'VNOJ' ? 5 : 20));
+
+// Keep the dropdown in sync with the loaded contest's actual format.
+watch(
+  () => contest.value?.format,
+  (fmt) => {
+    formatSelectValue.value = (fmt ?? 'ICPC') as 'ICPC' | 'VNOJ';
+  },
+  { immediate: true },
+);
+
+watch(
+  () => contest.value?.penalty,
+  (penalty) => {
+    penaltyInput.value = penalty ?? null;
+  },
+  { immediate: true },
+);
+
 // Tab state
 const validTabs = ['details', 'participants', 'submissions', 'problems', 'ranking'] as const;
-type TabType = typeof validTabs[number];
+type TabType = (typeof validTabs)[number];
 
 // Initialize activeTab from URL query parameter
 const getInitialTab = (): TabType => {
@@ -1186,6 +1590,28 @@ const syncingParticipants = ref(false);
 // Resync state
 const resyncingContest = ref(false);
 const forceSyncingSubmissions = ref(false);
+const recalculatingData = ref(false);
+const regeneratingAllReactions = ref(false);
+// Per-row spinner state, so queueing one submission does not lock the others.
+const regeneratingReactionIds = ref(new Set<string>());
+const previewSubmission = ref<SubmissionEntity | null>(null);
+const regenTarget = ref<SubmissionEntity | null>(null);
+const showRegenAllConfirm = ref(false);
+// Toasts vanish; re-rendering is slow enough that the operator wants a record
+// of what they queued while it runs.
+const reactionLog = ref<{ id: number; time: string; message: string; ok: boolean }[]>([]);
+let reactionLogSeq = 0;
+
+const acceptedSubmissionCount = computed(
+  () => submissions.value.filter((submission) => submission.submissionStatus === 'AC').length,
+);
+
+function logReaction(message: string, ok = true) {
+  reactionLog.value = [
+    { id: ++reactionLogSeq, time: new Date().toLocaleTimeString(), message, ok },
+    ...reactionLog.value,
+  ].slice(0, 50);
+}
 
 // Submission state
 const submissionSearch = ref('');
@@ -1208,7 +1634,13 @@ const showAddParticipantModal = ref(false);
 const addParticipantMode = ref<'existing_user' | 'csv_import' | 'create_user' | 'auto_create_user'>('existing_user');
 const addingParticipant = ref(false);
 const addParticipantError = ref('');
-const addParticipantResult = ref<{added: number; skipped: number; total: number; errors: string[]; generatedCredentials?: {username: string; password: string}[]} | null>(null);
+const addParticipantResult = ref<{
+  added: number;
+  skipped: number;
+  total: number;
+  errors: string[];
+  generatedCredentials?: { username: string; password: string }[];
+} | null>(null);
 const newParticipant = ref({
   participantUsername: '',
   userId: '',
@@ -1224,7 +1656,7 @@ const quickMappingAll = ref(false);
 // Delete participant modal state
 const showDeleteParticipantModal = ref(false);
 const deletingParticipant = ref(false);
-const participantToDelete = ref<{id: string; displayName: string} | null>(null);
+const participantToDelete = ref<{ id: string; displayName: string } | null>(null);
 
 // Computed
 const contestStatus = computed(() => {
@@ -1235,16 +1667,17 @@ const contestStatus = computed(() => {
 const filteredParticipants = computed(() => {
   if (!participantSearch.value) return participants.value;
   const query = participantSearch.value.toLowerCase();
-  return participants.value.filter(p =>
-    p.displayName.toLowerCase().includes(query) ||
-    p.username.toLowerCase().includes(query) ||
-    (p.mapToUser && p.mapToUser.toLowerCase().includes(query))
+  return participants.value.filter(
+    (p) =>
+      p.displayName.toLowerCase().includes(query) ||
+      p.username.toLowerCase().includes(query) ||
+      p.mapToUser?.toLowerCase().includes(query),
   );
 });
 
 // Count of participants without mapped users
 const unmappedParticipantsCount = computed(() => {
-  return participants.value.filter(p => !p.mapToUser).length;
+  return participants.value.filter((p) => !p.mapToUser).length;
 });
 
 const canSubmitParticipant = computed(() => {
@@ -1270,37 +1703,43 @@ const sortedProblems = computed(() => {
   return [...problems.value].sort((a, b) => a.code.localeCompare(b.code));
 });
 
-// Ranking computed - participants sorted by ICPC rules with problem states
+// Map problem code -> display name, so surfaces that only carry a code
+// (e.g. the submissions table) can show the mapped name.
+const problemNameByCode = computed(() => {
+  const map = new Map<string, string>();
+  for (const problem of problems.value) {
+    map.set(problem.code, resolveProblemName(problem.code, problem.displayName));
+  }
+  return map;
+});
+
+function problemName(code: string): string {
+  return problemNameByCode.value.get(code) ?? code;
+}
+
+// Ranking format for this contest (VNOJ: score/time; ICPC: solved/penalty).
+const rankingFormat = computed<RankingFormat>(() => resolveFormat(contest.value ?? participants.value[0]));
+
+// Ranking computed - participants ordered by the server-computed rank (which is
+// already format-aware), enriched with per-problem display state.
 const rankingData = computed(() => {
-  // Sort participants: more solved first, then lower penalty
-  const sorted = [...participants.value].sort((a, b) => {
-    const solvedDiff = (b.solvedCount || 0) - (a.solvedCount || 0);
-    if (solvedDiff !== 0) return solvedDiff;
-    return (a.totalPenalty || 0) - (b.totalPenalty || 0);
-  });
+  const fmt = rankingFormat.value;
+  // Order by stored rank (falls back to index for un-ranked participants).
+  const sorted = [...participants.value].sort(
+    (a, b) => (a.rank || Number.MAX_SAFE_INTEGER) - (b.rank || Number.MAX_SAFE_INTEGER),
+  );
 
   return sorted.map((participant, index) => {
-    // Build problem states for this participant
-    const problemStates: Record<string, { solved: boolean; tries: number; penalty: number }> = {};
-
+    const problemStates: Record<string, ProblemState> = {};
     for (const problem of sortedProblems.value) {
-      const problemDataMap = participant.problemData as Record<string, { solveTime: number; wrongTries: number }> | undefined;
-      const problemData = problemDataMap?.[problem.code];
-      if (problemData) {
-        const solved = participant.solvedProblems?.includes(problem.code) || false;
-        problemStates[problem.code] = {
-          solved,
-          tries: problemData.wrongTries + (solved ? 1 : 0), // Total attempts including AC
-          penalty: solved ? problemData.solveTime : 0,
-        };
-      } else {
-        problemStates[problem.code] = { solved: false, tries: 0, penalty: 0 };
-      }
+      problemStates[problem.code] = buildProblemState(participant, problem.code, fmt);
     }
 
     return {
-      rank: participant.rank || (index + 1), // Use stored rank, fallback to calculated
+      rank: participant.rank || index + 1,
       participant,
+      primary: primaryMetric(participant, fmt),
+      secondary: secondaryMetric(participant, fmt),
       problemStates,
     };
   });
@@ -1343,30 +1782,32 @@ function formatFullDateTime(date: string | Date): string {
 
 function getStatusClass(status: string): string {
   const classes: Record<string, string> = {
-    'AC': 'border-mission-accent text-mission-accent bg-mission-accent/10',
-    'WA': 'border-mission-red text-mission-red bg-mission-red/10',
-    'RTE': 'border-mission-red text-mission-red bg-mission-red/10',
-    'RE': 'border-mission-red text-mission-red bg-mission-red/10',
-    'IR': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'OLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'MLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'TLE': 'border-mission-amber text-mission-amber bg-mission-amber/10',
-    'IE': 'border-gray-600 text-gray-500 bg-gray-600/10',
-    'AB': 'border-gray-600 text-gray-500 bg-gray-600/10',
-    'CE': 'border-gray-600 text-gray-500 bg-gray-600/10',
-    'UNKNOWN': 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
+    AC: 'border-mission-accent text-mission-accent bg-mission-accent/10',
+    PAC: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
+    WA: 'border-mission-red text-mission-red bg-mission-red/10',
+    RTE: 'border-mission-red text-mission-red bg-mission-red/10',
+    RE: 'border-mission-red text-mission-red bg-mission-red/10',
+    IR: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    OLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    MLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    TLE: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    SC: 'border-mission-amber text-mission-amber bg-mission-amber/10',
+    IE: 'border-gray-600 text-gray-500 bg-gray-600/10',
+    AB: 'border-gray-600 text-gray-500 bg-gray-600/10',
+    CE: 'border-gray-600 text-gray-500 bg-gray-600/10',
+    UNKNOWN: 'border-mission-cyan text-mission-cyan bg-mission-cyan/10',
   };
   return classes[status] || 'border-gray-600 text-gray-500';
 }
 
 function getProblemSubmissionCount(problemCode: string): number {
-  return submissions.value.filter(s => s.problem_code === problemCode).length;
+  return submissions.value.filter((s) => s.problem_code === problemCode).length;
 }
 
 function getProblemACRate(problemCode: string): string {
-  const problemSubmissions = submissions.value.filter(s => s.problem_code === problemCode);
+  const problemSubmissions = submissions.value.filter((s) => s.problem_code === problemCode);
   if (problemSubmissions.length === 0) return '0.0';
-  const acCount = problemSubmissions.filter(s => s.submissionStatus === 'AC').length;
+  const acCount = problemSubmissions.filter((s) => s.submissionStatus === 'AC').length;
   return ((acCount / problemSubmissions.length) * 100).toFixed(1);
 }
 
@@ -1378,13 +1819,16 @@ function changeTab(tab: TabType) {
 }
 
 // Watch for URL changes and update activeTab
-watch(() => route.query.tab, (newTab) => {
-  if (newTab && validTabs.includes(newTab as TabType)) {
-    activeTab.value = newTab as TabType;
-  } else if (!newTab) {
-    activeTab.value = 'details';
-  }
-});
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && validTabs.includes(newTab as TabType)) {
+      activeTab.value = newTab as TabType;
+    } else if (!newTab) {
+      activeTab.value = 'details';
+    }
+  },
+);
 
 async function loadContest() {
   loading.value = true;
@@ -1429,7 +1873,21 @@ async function loadSubmissions() {
       page: number;
       limit: number;
       search?: string;
-      status?: 'AC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
+      status?:
+        | 'AC'
+        | 'PAC'
+        | 'WA'
+        | 'RTE'
+        | 'RE'
+        | 'IR'
+        | 'OLE'
+        | 'MLE'
+        | 'TLE'
+        | 'SC'
+        | 'IE'
+        | 'AB'
+        | 'CE'
+        | 'UNKNOWN';
     } = {
       page: currentPage.value,
       limit: pageSize.value,
@@ -1469,11 +1927,128 @@ async function loadProblems() {
     const data = await internalApi.contest.getProblems(contest.value.code);
     problems.value = data;
     contestsStore.setProblems(data);
+    // Seed the editor drafts with the current display names.
+    problemNameDrafts.value = Object.fromEntries(
+      (data as ProblemEntity[]).map((problem) => [problem._id, problem.displayName ?? '']),
+    );
   } catch (err: any) {
     toast.error('Failed to load problems');
     console.error('Load problems error:', err);
   } finally {
     loadingProblems.value = false;
+  }
+}
+
+async function saveProblemName(problem: ProblemEntity) {
+  if (!contest.value) return;
+  const draft = (problemNameDrafts.value[problem._id] ?? '').trim();
+  if (draft === (problem.displayName ?? '')) return;
+
+  savingProblemId.value = problem._id;
+  try {
+    await internalApi.contest.updateProblem(contest.value.code, problem.code, {
+      displayName: draft,
+    });
+    // Reflect the change locally without a full reload.
+    const updated = problems.value.map((p) => (p._id === problem._id ? { ...p, displayName: draft || undefined } : p));
+    problems.value = updated;
+    contestsStore.setProblems(updated);
+    problemNameDrafts.value[problem._id] = draft;
+    toast.success(draft ? `Renamed ${problem.code} → ${draft}` : `Cleared display name for ${problem.code}`);
+  } catch (err: any) {
+    toast.error('Failed to update problem name');
+    console.error('Update problem name error:', err);
+  } finally {
+    savingProblemId.value = null;
+  }
+}
+
+function onFormatChange() {
+  if (!contest.value) return;
+  const target = formatSelectValue.value;
+  const current = (contest.value.format ?? 'ICPC') as 'ICPC' | 'VNOJ';
+  if (target === current) return;
+
+  // Live contests (ongoing/frozen) get a confirmation step because switching
+  // format visibly reshuffles the leaderboard on the next sync.
+  const isLive = contestStatus.value === 'ongoing' || contestStatus.value === 'frozen';
+  if (isLive) {
+    pendingFormat.value = target;
+    showFormatConfirm.value = true;
+    return;
+  }
+
+  applyFormat(target);
+}
+
+function confirmFormatChange() {
+  if (pendingFormat.value) applyFormat(pendingFormat.value);
+}
+
+function cancelFormatChange() {
+  // Revert the dropdown to the contest's actual format.
+  formatSelectValue.value = (contest.value?.format ?? 'ICPC') as 'ICPC' | 'VNOJ';
+  pendingFormat.value = null;
+  showFormatConfirm.value = false;
+}
+
+/**
+ * Push a scoring-rule change. The API recomputes standings, ranks and the
+ * per-submission rank history itself, so reload both lists afterwards.
+ */
+async function applyScoringChange(updates: { penalty?: number; lso?: boolean }, label: string) {
+  if (!contest.value) return;
+
+  savingScoring.value = true;
+  try {
+    const updated = await internalApi.contest.update(contest.value.code, updates);
+    contest.value = updated;
+    contestsStore.setCurrentContest(updated);
+    contestsStore.updateContest(updated.code, updates);
+    await Promise.all([loadSubmissions(), loadParticipants()]);
+    toast.success(`${label} updated — standings recalculated`);
+  } catch (err: any) {
+    // Revert the inputs to whatever the contest actually holds.
+    penaltyInput.value = contest.value?.penalty ?? null;
+    toast.error(`Failed to update ${label.toLowerCase()}`);
+    console.error('Update contest scoring error:', err);
+  } finally {
+    savingScoring.value = false;
+  }
+}
+
+function applyPenalty() {
+  if (penaltyInput.value === null || penaltyInput.value < 0) {
+    toast.error('Penalty must be zero or more minutes');
+    return;
+  }
+  applyScoringChange({ penalty: penaltyInput.value }, 'Penalty');
+}
+
+function applyLso(enabled: boolean) {
+  applyScoringChange({ lso: enabled }, 'LSO');
+}
+
+async function applyFormat(format: 'ICPC' | 'VNOJ') {
+  if (!contest.value) return;
+
+  savingFormat.value = true;
+  try {
+    const updated = await internalApi.contest.update(contest.value.code, { format });
+    contest.value = updated;
+    contestsStore.setCurrentContest(updated);
+    contestsStore.updateContest(updated.code, { format: updated.format });
+    formatSelectValue.value = format;
+    toast.success(`Contest format set to ${format}`);
+  } catch (err: any) {
+    // Revert the dropdown on failure.
+    formatSelectValue.value = (contest.value?.format ?? 'ICPC') as 'ICPC' | 'VNOJ';
+    toast.error('Failed to update contest format');
+    console.error('Update contest format error:', err);
+  } finally {
+    savingFormat.value = false;
+    pendingFormat.value = null;
+    showFormatConfirm.value = false;
   }
 }
 
@@ -1603,7 +2178,7 @@ async function saveParticipantMapping(participantId: string) {
 
     // Update local state
     contestsStore.updateParticipant(participantId, { mapToUser: userToLink || undefined });
-    const index = participants.value.findIndex(p => p._id === participantId);
+    const index = participants.value.findIndex((p) => p._id === participantId);
     if (index !== -1) {
       participants.value[index].mapToUser = userToLink || undefined;
     }
@@ -1626,7 +2201,7 @@ async function unlinkParticipant(participantId: string) {
 
     // Update local state
     contestsStore.updateParticipant(participantId, { mapToUser: undefined });
-    const index = participants.value.findIndex(p => p._id === participantId);
+    const index = participants.value.findIndex((p) => p._id === participantId);
     if (index !== -1) {
       participants.value[index].mapToUser = undefined;
     }
@@ -1652,9 +2227,7 @@ async function syncParticipants() {
     await loadParticipants();
 
     // Show success message with stats
-    toast.success(
-      `Participants synced: ${result.added} added, ${result.skipped} skipped (${result.total} total)`
-    );
+    toast.success(`Participants synced: ${result.added} added, ${result.skipped} skipped (${result.total} total)`);
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to sync participants');
     console.error('Sync participants error:', err);
@@ -1676,14 +2249,11 @@ async function resyncContest() {
     contestsStore.setCurrentContest(result.contest);
 
     // Reload all data
-    await Promise.all([
-      loadParticipants(),
-      loadProblems(),
-    ]);
+    await Promise.all([loadParticipants(), loadProblems()]);
 
     // Show detailed success message
     toast.success(
-      `Contest resynced! Problems: ${result.problems.added} added (${result.problems.total} total), Participants: ${result.participants.added} added (${result.participants.total} total)`
+      `Contest resynced! Problems: ${result.problems.added} added (${result.problems.total} total), Participants: ${result.participants.added} added (${result.participants.total} total)`,
     );
   } catch (err: any) {
     toast.error(err.response?.data?.message || 'Failed to resync contest');
@@ -1702,10 +2272,7 @@ async function forceSyncSubmissions() {
     const result = await internalApi.contest.forceSyncSubmissions(contest.value.code);
 
     // Reload submissions and participants to reflect updated data
-    await Promise.all([
-      loadSubmissions(),
-      loadParticipants(),
-    ]);
+    await Promise.all([loadSubmissions(), loadParticipants()]);
 
     // Show detailed success message
     toast.success(result.message);
@@ -1714,6 +2281,100 @@ async function forceSyncSubmissions() {
     console.error('Force-sync submissions error:', err);
   } finally {
     forceSyncingSubmissions.value = false;
+  }
+}
+
+/**
+ * Rebuild rank change / score on every stored submission plus the participant
+ * standings. Touches no external API, so it is the fix for data that was
+ * computed under older rules rather than data that is missing.
+ */
+async function recalculateContestData() {
+  if (!contest.value) return;
+
+  recalculatingData.value = true;
+
+  try {
+    const result = await internalApi.contest.recalculateContestData(contest.value.code);
+
+    await Promise.all([loadSubmissions(), loadParticipants()]);
+
+    toast.success(result.message);
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Failed to recalculate contest data');
+    console.error('Recalculate contest data error:', err);
+  } finally {
+    recalculatingData.value = false;
+  }
+}
+
+function openReactionPreview(submission: SubmissionEntity) {
+  previewSubmission.value = submission;
+}
+
+function closeReactionPreview() {
+  previewSubmission.value = null;
+}
+
+function regenerateAllReactions() {
+  showRegenAllConfirm.value = true;
+}
+
+async function confirmRegenerateAllReactions() {
+  if (!contest.value) return;
+
+  regeneratingAllReactions.value = true;
+
+  try {
+    const { data } = await internalClient.post<{ queued: number; alreadyQueued: number; message: string }>(
+      `/reactions/contests/${contest.value.code}/regenerate`,
+    );
+    toast.success(data.message);
+    logReaction(data.message);
+    showRegenAllConfirm.value = false;
+    await loadSubmissions();
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Failed to queue reaction renders';
+    toast.error(message);
+    logReaction(message, false);
+    console.error('Regenerate reactions error:', err);
+  } finally {
+    regeneratingAllReactions.value = false;
+  }
+}
+
+function askRegenerateSubmissionReaction(submission: SubmissionEntity) {
+  if (regeneratingReactionIds.value.has(submission._id)) return;
+  regenTarget.value = submission;
+}
+
+async function confirmRegenerateSubmissionReaction() {
+  const submission = regenTarget.value;
+  if (!submission) return;
+
+  const submissionId = submission._id;
+  if (regeneratingReactionIds.value.has(submissionId)) return;
+
+  // Sets are not deeply reactive, so swap in a new one on each mutation.
+  regeneratingReactionIds.value = new Set(regeneratingReactionIds.value).add(submissionId);
+
+  try {
+    const { data } = await internalClient.post<{ queued: number; alreadyQueued: number; message: string }>(
+      `/reactions/submissions/${submissionId}/regenerate`,
+    );
+    toast.success(data.message);
+    logReaction(`${submission.author} / ${problemName(submission.problem_code)} — ${data.message}`);
+    regenTarget.value = null;
+    await loadSubmissions();
+  } catch (err: any) {
+    const message = err.response?.data?.message || 'Failed to queue reaction render';
+    toast.error(message);
+    logReaction(`${submission.author} / ${problemName(submission.problem_code)} — ${message}`, false);
+    console.error('Regenerate submission reaction error:', err);
+  } finally {
+    const next = new Set(regeneratingReactionIds.value);
+    next.delete(submissionId);
+    regeneratingReactionIds.value = next;
   }
 }
 
@@ -1756,7 +2417,7 @@ async function handleDeleteContest() {
 
     // Show success message with deletion counts
     toast.success(
-      `Contest deleted successfully! Removed: ${result.deletedCounts.participants} participants, ${result.deletedCounts.submissions} submissions, ${result.deletedCounts.problems} problems`
+      `Contest deleted successfully! Removed: ${result.deletedCounts.participants} participants, ${result.deletedCounts.submissions} submissions, ${result.deletedCounts.problems} problems`,
     );
 
     // Navigate back to contests list
@@ -1789,14 +2450,17 @@ function copyCredentialsToClipboard() {
   if (!addParticipantResult.value?.generatedCredentials) return;
 
   const text = addParticipantResult.value.generatedCredentials
-    .map(cred => `${cred.username},${cred.password}`)
+    .map((cred) => `${cred.username},${cred.password}`)
     .join('\n');
 
-  navigator.clipboard.writeText(text).then(() => {
-    toast.success('Credentials copied to clipboard');
-  }).catch(() => {
-    toast.error('Failed to copy credentials');
-  });
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      toast.success('Credentials copied to clipboard');
+    })
+    .catch(() => {
+      toast.error('Failed to copy credentials');
+    });
 }
 
 async function handleAddParticipants() {
@@ -1861,7 +2525,7 @@ async function handleDeleteParticipant() {
     await internalApi.contest.removeParticipant(participantToDelete.value.id);
 
     // Remove from local state
-    const index = participants.value.findIndex(p => p._id === participantToDelete.value?.id);
+    const index = participants.value.findIndex((p) => p._id === participantToDelete.value?.id);
     if (index !== -1) {
       participants.value.splice(index, 1);
     }
@@ -1881,7 +2545,7 @@ async function quickMapAll() {
 
   try {
     // Get all unmapped participants
-    const unmappedParticipants = participants.value.filter(p => !p.mapToUser);
+    const unmappedParticipants = participants.value.filter((p) => !p.mapToUser);
 
     if (unmappedParticipants.length === 0) {
       toast.info('No unmapped participants found');
@@ -1896,7 +2560,7 @@ async function quickMapAll() {
     for (const participant of unmappedParticipants) {
       // Find users with matching username and CONTESTANT role
       const matchingUsers = availableUsers.value.filter(
-        user => user.username === participant.username && user.role === 'contestant'
+        (user) => user.username === participant.username && user.role === 'contestant',
       );
 
       if (matchingUsers.length === 0) {
@@ -1911,7 +2575,7 @@ async function quickMapAll() {
 
           // Update local state
           contestsStore.updateParticipant(participant._id, { mapToUser: matchingUsers[0].username });
-          const index = participants.value.findIndex(p => p._id === participant._id);
+          const index = participants.value.findIndex((p) => p._id === participant._id);
           if (index !== -1) {
             participants.value[index].mapToUser = matchingUsers[0].username;
           }
@@ -1925,7 +2589,7 @@ async function quickMapAll() {
       } else {
         // Error if multiple matching users found
         errors.push(
-          `Multiple CONTESTANT users found for participant "${participant.username}" (${matchingUsers.length} matches). Please map manually.`
+          `Multiple CONTESTANT users found for participant "${participant.username}" (${matchingUsers.length} matches). Please map manually.`,
         );
       }
     }
@@ -1954,12 +2618,7 @@ async function quickMapAll() {
 onMounted(async () => {
   await loadContest();
   if (contest.value) {
-    await Promise.all([
-      loadParticipants(),
-      loadSubmissions(),
-      loadProblems(),
-      loadUsers(),
-    ]);
+    await Promise.all([loadParticipants(), loadSubmissions(), loadProblems(), loadUsers()]);
     startAutoRefresh();
   }
 });

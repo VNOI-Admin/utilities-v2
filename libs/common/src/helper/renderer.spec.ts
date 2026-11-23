@@ -22,17 +22,12 @@ const canRun = font !== undefined && spawnSync('ffmpeg', ['-version']).status ==
   });
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-  const style = { background: '#000000', foreground: '#ffffff' };
   const config = (): Configuration => ({
     backgroundSrc: file('bg.png'),
     logoSrc: file('logo.png'),
     fontPath: font as string,
-    padding: 10,
-    width: 360,
-    height: 640,
-    barHeight: 40,
-    fontSize: { base: 16, teamName: 16, universityName: 12, problem: 16 },
-    style: { base: style, banner: style },
+    width: 1080,
+    height: 1920,
     text: { headerLeft: 'left', headerRight: 'right', footer: 'footer' },
   });
   const params = (sources: Pick<Params, 'webcamSrc' | 'screenSrc'>): Params => ({
@@ -52,11 +47,11 @@ const canRun = font !== undefined && spawnSync('ffmpeg', ['-version']).status ==
     'renders the clip length with %s',
     async (_, sources: { webcamSrc?: string; screenSrc?: string }) => {
       const resolved = Object.fromEntries(Object.entries(sources).map(([k, v]) => [k, file(v)])) as Pick<Params, 'webcamSrc' | 'screenSrc'>;
-      const webm = await render(config(), params(resolved), { webcamHasAudio: false, screenHasAudio: false });
-      writeFileSync(file('out.webm'), webm);
+      const video = await render(config(), params(resolved), { webcamHasAudio: false, screenHasAudio: false });
+      writeFileSync(file('out.mp4'), video);
       const probe = spawnSync('ffprobe', [
         '-v', 'error', '-count_frames', '-select_streams', 'v:0',
-        '-show_entries', 'stream=nb_read_frames', '-of', 'csv=p=0', file('out.webm'),
+        '-show_entries', 'stream=nb_read_frames', '-of', 'csv=p=0', file('out.mp4'),
       ]);
       expect(Number(probe.stdout.toString().trim())).toBeGreaterThanOrEqual(15);
     },

@@ -263,6 +263,12 @@ export interface UpdateContestDto {
   start_time?: string;
   end_time?: string;
   frozen_at?: string;
+  /** Ranking format: ICPC (default, ranked by AC count) or VNOJ (ranked by points) */
+  format?: 'ICPC' | 'VNOJ';
+  /** Minutes of penalty per counted attempt. Left unset the format decides: ICPC 20, VNOJ 5. */
+  penalty?: number;
+  /** VNOJ only — Last Submission Only. When set, cumulative time is the time of the single latest scoring submission instead of the sum across problems. */
+  lso?: boolean;
 }
 
 export interface PaginationMetadata {
@@ -297,6 +303,24 @@ export interface ParticipantResponse {
   solvedProblems: string[];
   /** Per-problem tracking data */
   problemData: object;
+  /** Contest ranking format */
+  format?: 'ICPC' | 'VNOJ';
+  /** VNOJ: total points scored */
+  score?: number;
+  /** VNOJ: primary tiebreak — solve times + penalties (minutes) */
+  cumtime?: number;
+  /** VNOJ: secondary tiebreak — latest scoring submission time (minutes) */
+  tiebreaker?: number;
+  /** VNOJ frozen board: total points scored before the freeze */
+  frozenScore?: number;
+  /** VNOJ frozen board: cumulative time (minutes) */
+  frozenCumtime?: number;
+  /** VNOJ frozen board: latest scoring submission time (minutes) */
+  frozenTiebreaker?: number;
+  /** VNOJ frozen board: rank (1-indexed) */
+  frozenRank?: number;
+  /** VNOJ frozen board: per-problem tracking data */
+  frozenProblemData?: object;
   /** Group code from the mapped user */
   groupCode?: string;
   /** Group name from the groups collection */
@@ -849,6 +873,29 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         path: `/users/bulk`,
         method: 'DELETE',
         query: query,
+        secure: true,
+        format: 'json',
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags User
+     * @name SyncAllVpnUsers
+     * @summary Queue VPN sync for all VPN users
+     * @request POST:/users/vpn/sync-all
+     * @secure
+     */
+    syncAllVpnUsers: (params: RequestParams = {}) =>
+      this.request<
+        {
+          count?: number;
+        },
+        any
+      >({
+        path: `/users/vpn/sync-all`,
+        method: 'POST',
         secure: true,
         format: 'json',
         ...params,
@@ -1492,7 +1539,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         /** Search by author or problem code */
         search?: string;
         /** Filter by submission status */
-        status?: 'AC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
+        status?: 'AC' | 'PAC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'SC' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
       },
       params: RequestParams = {},
     ) =>
@@ -1564,6 +1611,30 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
      * No description
      *
      * @tags Contest
+     * @name UpdateProblem
+     * @summary Update a problem (e.g. set its display name)
+     * @request PATCH:/contests/{code}/problems/{problemCode}
+     * @secure
+     */
+    updateProblem: (
+      code: string,
+      problemCode: string,
+      data: { displayName?: string },
+      params: RequestParams = {},
+    ) =>
+      this.request<any, any>({
+        path: `/contests/${code}/problems/${problemCode}`,
+        method: 'PATCH',
+        body: data,
+        secure: true,
+        type: ContentType.Json,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
      * @name LinkParticipant
      * @summary Link participant to internal user
      * @request PATCH:/contests/participants/{participantId}/link-user
@@ -1627,6 +1698,31 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         path: `/contests/${code}/force-sync-submissions`,
         method: 'POST',
         secure: true,
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Contest
+     * @name RecalculateContestData
+     * @summary Recalculate submission data (rank change, score) and participant standings from stored submissions
+     * @request POST:/contests/{code}/recalculate
+     * @secure
+     */
+    recalculateContestData: (code: string, params: RequestParams = {}) =>
+      this.request<
+        {
+          submissionsUpdated: number;
+          participantsUpdated: number;
+          message: string;
+        },
+        any
+      >({
+        path: `/contests/${code}/recalculate`,
+        method: 'POST',
+        secure: true,
+        format: 'json',
         ...params,
       }),
 

@@ -1,36 +1,42 @@
+import * as fs from 'node:fs/promises';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
+import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
+import { RemoteJobRunStatus } from '@libs/common-db/schemas/remoteJobRun.schema';
+import { Submission, type SubmissionDocument, SubmissionStatus } from '@libs/common-db/schemas/submission.schema';
 import {
-  buildReactionParamsPartial,
-  ReactionLogoError,
+  REACTION_TIMING_CONFIG_KEY,
+  SystemConfig,
+  type SystemConfigDocument,
+} from '@libs/common-db/schemas/systemConfig.schema';
+import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
+import {
   ReactionRenderConfigError,
   type ReactionRenderEnvLoaded,
+  buildReactionParamsPartial,
   readReactionRenderEnv,
-  renderReactionWebmFromSlicePaths,
+  renderReactionVideoFromSlicePaths,
   resolveUniversityLogoAbsolutePath,
 } from '@libs/common/helper/reaction-render';
 import {
   type ReactionS3Config,
   ReactionS3ConfigError,
   createReactionS3Client,
-  putReactionWebm,
+  putReactionVideo,
   readReactionS3Env,
 } from '@libs/common/helper/reaction-s3';
-import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
-import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
-import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
-import { RemoteJobRunStatus } from '@libs/common-db/schemas/remoteJobRun.schema';
+import { resolveReactionTiming, revealTimingFrom } from '@libs/common/helper/reaction-timing';
 import { RemoteControlService } from '@libs/common/remote-control/remote-control.service';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import type { S3Client } from '@aws-sdk/client-s3';
 import { Job } from 'bullmq';
 import { Model, Types } from 'mongoose';
-import * as fs from 'node:fs/promises';
-import * as os from 'node:os';
-import * as path from 'node:path';
 
-import { type ReactionRenderJobData, QUEUE_NAMES } from '../constants';
+import { QUEUE_NAMES, type ReactionRenderJobData } from '../constants';
 
 const EXTRACT_STREAM_SLICES_SCRIPT = 'extract-stream-slices';
 const EXTRACT_STREAM_SLICES_TIMEOUT_MS = 300_000;
@@ -43,6 +49,8 @@ export class ReactionRenderProcessor extends WorkerHost {
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Contest.name) private contestModel: Model<ContestDocument>,
+    @InjectModel(SystemConfig.name) private systemConfigModel: Model<SystemConfigDocument>,
     private readonly configService: ConfigService,
     private readonly remoteControlService: RemoteControlService,
   ) {
@@ -51,8 +59,10 @@ export class ReactionRenderProcessor extends WorkerHost {
 
   async process(job: Job<ReactionRenderJobData>): Promise<void> {
     const submissionId = job.data.submissionId;
+    this.logger.log(`[${submissionId}] START job ${job.id} - ${job.name} (attempt ${job.attemptsMade + 1})`);
+
     if (!Types.ObjectId.isValid(submissionId)) {
-      this.logger.warn(`Invalid submissionId on job ${job.id}: ${submissionId}`);
+      this.logger.warn(`[${submissionId}] SKIP: invalid submissionId on job ${job.id}`);
       return;
     }
 
@@ -61,7 +71,7 @@ export class ReactionRenderProcessor extends WorkerHost {
       envLoaded = readReactionRenderEnv((key) => this.configService.get<string>(key));
     } catch (error) {
       if (error instanceof ReactionRenderConfigError) {
-        this.logger.error(error.message);
+        this.logger.error(`[${submissionId}] ABORT: render config invalid - ${error.message}`);
         return;
       }
       throw error;
@@ -74,7 +84,7 @@ export class ReactionRenderProcessor extends WorkerHost {
       s3Client = createReactionS3Client(s3Config);
     } catch (error) {
       if (error instanceof ReactionS3ConfigError) {
-        this.logger.error(error.message);
+        this.logger.error(`[${submissionId}] ABORT: S3 config invalid - ${error.message}`);
         return;
       }
       throw error;
@@ -82,15 +92,24 @@ export class ReactionRenderProcessor extends WorkerHost {
 
     const submission = await this.submissionModel.findById(submissionId).exec();
     if (!submission) {
-      this.logger.warn(`Submission ${submissionId} not found`);
+      this.logger.warn(`[${submissionId}] SKIP: submission not found`);
       return;
     }
+
+    this.logger.log(
+      `[${submissionId}] Loaded submission: author=${submission.author}, contest=${submission.contest_code}, ` +
+        `problem=${submission.problem_code}, status=${submission.submissionStatus}, ` +
+        `judgedAt=${submission.judgedAt?.toISOString() ?? 'none'}, ` +
+        `judgeEndAt=${submission.judgeEndAt?.toISOString() ?? 'none'}, ` +
+        `renderRetries=${submission.data?.renderRetries ?? 0}`,
+    );
+
     if (submission.submissionStatus !== SubmissionStatus.AC) {
-      this.logger.log(`Submission ${submissionId} is not AC, skip`);
+      this.logger.log(`[${submissionId}] SKIP: status is ${submission.submissionStatus}, not AC`);
       return;
     }
     if (submission.data.reaction) {
-      this.logger.log(`Submission ${submissionId} already has reaction, skip`);
+      this.logger.log(`[${submissionId}] SKIP: already has reaction ${submission.data.reaction}`);
       return;
     }
 
@@ -104,10 +123,8 @@ export class ReactionRenderProcessor extends WorkerHost {
     s3Config: ReactionS3Config,
   ): Promise<void> {
     const submissionId = String(submission._id);
-    await this.submissionModel.updateOne(
-      { _id: submission._id },
-      { $inc: { 'data.renderRetries': 1 } },
-    );
+    const startedAt = Date.now();
+    await this.submissionModel.updateOne({ _id: submission._id }, { $inc: { 'data.renderRetries': 1 } });
     try {
       const mappedUsername = (
         await this.participantModel
@@ -119,59 +136,111 @@ export class ReactionRenderProcessor extends WorkerHost {
       const user = mappedUsername ? await this.userModel.findOne({ username: mappedUsername }).exec() : null;
       if (!user) {
         this.logger.warn(
-          `No mapped user for author=${submission.author}, contest=${submission.contest_code}, skip reaction`,
+          `[${submissionId}] SKIP: no mapped user for author=${submission.author}, contest=${submission.contest_code} ` +
+            `(mapToUser=${mappedUsername ?? 'unset'})`,
         );
         return;
       }
-      const anchor = submission.judgedAt ?? submission.submittedAt;
-      const anchorSec = anchor.getTime() / 1000;
-      const beforeSec = Number(this.configService.get('REACTION_BEFORE_SECONDS') ?? 5);
-      const afterSec = Number(this.configService.get('REACTION_AFTER_SECONDS') ?? 10);
-      const startUnix = anchorSec - beforeSec;
-      const endUnix = anchorSec + afterSec;
-
-      let universityLogoSrc: string;
-      try {
-        universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) =>
-          this.logger.warn(msg),
-        );
-      } catch (error) {
-        if (error instanceof ReactionLogoError) {
-          this.logger.error(`${error.message} (submission ${submissionId})`);
-          return;
-        }
-        throw error;
-      }
-
-      const paramsPartial = buildReactionParamsPartial(
-        submission,
-        user,
-        universityLogoSrc,
-        envLoaded.defaultUniversityName,
+      this.logger.log(
+        `[${submissionId}] Mapped ${submission.author} -> user ${user.username} (group=${user.group ?? 'none'})`,
       );
+
+      // Operator-tunable from the admin settings page, falling back to env then
+      // the built-in defaults, so a contest can be retimed without a redeploy.
+      const timing = await this.loadReactionTiming();
+
+      // judgeEndAt is when judging finished — the moment the verdict actually
+      // surfaces to the contestant. judgedAt is only when judging started, so it
+      // would flip the banner early; it is used solely as a fallback for
+      // submissions synced before the feed exposed judgeEndAt.
+      const judgeFinished = submission.judgeEndAt ?? submission.judgedAt;
+
+      // Feed window: BEFORE seconds ahead of the submission, through the whole
+      // judging gap, then AFTER seconds past the *verdict reveal* — judge finish
+      // plus the buffer — so the tail is measured from what the viewer actually
+      // sees. judgeEndAt is normally present for AC; submittedAt only backs the
+      // tail if neither timestamp is.
+      const submittedSec = submission.submittedAt.getTime() / 1000;
+      const judgeFinishedSec = judgeFinished ? judgeFinished.getTime() / 1000 : undefined;
+      const startUnix = submittedSec - timing.beforeSeconds;
+      const endUnix = (judgeFinishedSec ?? submittedSec) + timing.revealDelaySeconds + timing.afterSeconds;
+
+      // Never throws: users without a group fall back to the VNOI brand logo.
+      const universityLogoSrc = resolveUniversityLogoAbsolutePath(envLoaded, user.group, (msg) =>
+        this.logger.warn(`${msg} (submission ${submissionId})`),
+      );
+
+      // The banner holds "pending" amber until judging finished. Without either
+      // timestamp there is no instant to anchor to, so the pending phase is
+      // skipped rather than invented. The renderer adds the buffer
+      // (`revealDelaySeconds`) on top of this.
+      const verdictAtSeconds = judgeFinishedSec !== undefined ? judgeFinishedSec - startUnix : undefined;
+
+      const contest = await this.contestModel
+        .findOne({ code: submission.contest_code })
+        .select('start_time')
+        .lean()
+        .exec();
+      const clockStartSeconds = contest?.start_time ? startUnix - contest.start_time.getTime() / 1000 : undefined;
+
+      const paramsPartial = buildReactionParamsPartial(submission, user, universityLogoSrc, {
+        verdictAtSeconds,
+        clockStartSeconds,
+        revealTiming: revealTimingFrom(timing),
+      });
 
       const workDir = await fs.mkdtemp(path.join(os.tmpdir(), 'reaction-slices-'));
 
       try {
+        this.logger.log(
+          `[${submissionId}] Extracting stream slices from ${user.username} ` +
+            `(window ${startUnix.toFixed(3)} -> ${endUnix.toFixed(3)}, ${(endUnix - startUnix).toFixed(1)}s; ` +
+            `anchor=${submission.judgeEndAt ? 'judgeEndAt' : 'judgedAt (fallback)'}, ` +
+            `buffer=${timing.revealDelaySeconds}s, ` +
+            `reveal at t=${verdictAtSeconds !== undefined ? (verdictAtSeconds + timing.revealDelaySeconds).toFixed(1) : 'n/a'}s)`,
+        );
         const { webcamPath, screenPath } = await this.extractStreamSlices(user.username, startUnix, endUnix, workDir);
 
-        const webm = await renderReactionWebmFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
-        this.logger.log(`Rendered reaction WebM (${webm.length} bytes) for submission ${submissionId}`);
+        this.logger.log(`[${submissionId}] Rendering reaction video`);
+        const video = await renderReactionVideoFromSlicePaths(envLoaded, webcamPath, screenPath, paramsPartial);
+        this.logger.log(`[${submissionId}] Rendered reaction MP4 (${video.length} bytes)`);
 
-        const s3Key = `${submissionId}.webm`;
-        const publicUrl = await putReactionWebm(s3Client, s3Config, s3Key, webm);
+        const s3Key = `${submissionId}.mp4`;
+        this.logger.log(`[${submissionId}] Uploading to S3 key ${s3Key}`);
+        const publicUrl = await putReactionVideo(s3Client, s3Config, s3Key, video);
 
-        await this.submissionModel.updateOne(
-          { _id: submission._id },
-          { $set: { 'data.reaction': publicUrl } },
-        );
-        this.logger.log(`Uploaded reaction to ${publicUrl} for submission ${submissionId}`);
+        await this.submissionModel.updateOne({ _id: submission._id }, { $set: { 'data.reaction': publicUrl } });
+        this.logger.log(`[${submissionId}] DONE in ${Date.now() - startedAt}ms: reaction available at ${publicUrl}`);
       } finally {
         await fs.rm(workDir, { recursive: true, force: true });
       }
     } catch (error) {
-      this.logger.error(`Error generating reaction for submission ${submissionId}:`, error);
+      this.logger.error(
+        `[${submissionId}] FAILED after ${Date.now() - startedAt}ms ` +
+          `(author=${submission.author}, contest=${submission.contest_code}, problem=${submission.problem_code}): ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
     }
+  }
+
+  /**
+   * Reads the operator-set timing from the settings store, falling back to env
+   * then the built-in defaults. Read per job rather than cached so a change made
+   * mid-contest takes effect on the next render without restarting the worker.
+   * A DB hiccup degrades to env/defaults rather than failing the render.
+   */
+  private async loadReactionTiming(): Promise<ReturnType<typeof resolveReactionTiming>> {
+    let stored: unknown;
+    try {
+      stored = (await this.systemConfigModel.findOne({ key: REACTION_TIMING_CONFIG_KEY }).lean().exec())?.value;
+    } catch (error) {
+      this.logger.warn(
+        `Could not read ${REACTION_TIMING_CONFIG_KEY} settings, using env/defaults: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    return resolveReactionTiming(stored, (key) => this.configService.get<string>(key));
   }
 
   private async extractStreamSlices(

@@ -515,22 +515,22 @@ export class RemoteControlService implements OnModuleInit {
   ) {
     const agents = await this.resolveAgents(targets);
 
-    for (let index = 0; index < targets.length; index += DISPATCH_CONCURRENCY) {
-      const batch = targets.slice(index, index + DISPATCH_CONCURRENCY);
-      await Promise.allSettled(
-        batch.map(async (target) => {
-          const agent = agents.get(target);
+    const queue = [...targets];
+    const worker = async () => {
+      for (let target = queue.shift(); target !== undefined; target = queue.shift()) {
+        const agent = agents.get(target);
+        try {
           if (!agent) {
-            return this.failRun(jobId, target, 'target vpn ip not found');
+            await this.failRun(jobId, target, 'target vpn ip not found');
+            continue;
           }
-          try {
-            await this.postRunToAgent(agent, jobId, payload, files);
-          } catch (error) {
-            await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`);
-          }
-        }),
-      );
-    }
+          await this.postRunToAgent(agent, jobId, payload, files);
+        } catch (error) {
+          await this.failRun(jobId, target, `dispatch failed: ${getErrorMessage(error)}`).catch(() => undefined);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(DISPATCH_CONCURRENCY, targets.length) }, worker));
   }
 
   private async postRunToAgent(

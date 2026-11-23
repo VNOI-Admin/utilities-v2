@@ -2,7 +2,9 @@ import { OverlayLayout, OverlayLayoutDocument } from '@libs/common-db/schemas/ov
 import { User, UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Submission, SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import { Participant, ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
+import { Problem, ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Role } from '@libs/common/decorators/role.decorator';
+import { resolveProblemName } from '@libs/common/helper/problem-name';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
@@ -31,6 +33,7 @@ export interface SubmissionWithAuthor {
   submissionStatus: string;
   contest_code: string;
   problem_code: string;
+  problemDisplayName: string;
   authorFullName: string;
   [key: string]: unknown;
 }
@@ -48,6 +51,8 @@ export class OverlayService {
     private readonly submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name)
     private readonly participantModel: Model<ParticipantDocument>,
+    @InjectModel(Problem.name)
+    private readonly problemModel: Model<ProblemDocument>,
 
     private readonly configService: ConfigService,
   ) {
@@ -346,6 +351,13 @@ export class OverlayService {
       .limit(limit)
       .lean();
 
+    // Manual problem display-name overrides for this contest, keyed by code.
+    const problems = await this.problemModel
+      .find({ contest: contestCode })
+      .select('code displayName')
+      .lean<ProblemDocument[]>();
+    const problemDisplayNames = new Map(problems.map((problem) => [problem.code, problem.displayName]));
+
     // Fetch participant and mapped user details to compute displayName
     const submissionsWithUserDetails = await Promise.all(
       submissions.map(async (submission) => {
@@ -374,6 +386,10 @@ export class OverlayService {
         return {
           ...submission,
           authorFullName: displayName,
+          problemDisplayName: resolveProblemName(
+            submission.problem_code,
+            problemDisplayNames.get(submission.problem_code),
+          ),
         } as SubmissionWithAuthor;
       }),
     );

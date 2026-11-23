@@ -42,6 +42,7 @@ export class UserService implements OnModuleInit {
         role: 'admin',
         isActive: true,
         refreshToken: null,
+        machineUsage: new MachineUsage(),
       });
     }
     const defaultPasswordCheck = await argon2.verify(admin.password, 'admin');

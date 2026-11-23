@@ -45,13 +45,40 @@
 
       <div v-if="showAdvanced" class="space-y-4 p-4 border border-white/10 bg-black/20">
         <div>
-          <label class="tech-label block mb-2">ARGS (ONE PER LINE)</label>
-          <textarea
-            v-model="argsText"
-            rows="4"
-            class="input-mission w-full"
-            :placeholder="'--force\n--verbose'"
-          />
+          <div class="flex items-center justify-between mb-2">
+            <label class="tech-label">ARGS</label>
+            <button
+              type="button"
+              class="text-xs font-mono text-mission-accent hover:text-white transition-colors"
+              @click="addArgRow"
+            >
+              + ADD ARG
+            </button>
+          </div>
+
+          <div ref="argsContainer" class="space-y-2">
+            <div
+              v-for="(row, index) in argRows"
+              :key="row.id"
+              class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start"
+            >
+              <textarea
+                v-model="row.value"
+                rows="1"
+                class="input-mission w-full resize-y overflow-hidden"
+                :placeholder="`${row.name || `ARG ${index + 1}`}${row.required ? ' *' : ''}`"
+                @input="resizeArgInput"
+              />
+              <button
+                type="button"
+                class="px-3 min-h-10 border border-white/20 text-gray-400 hover:text-mission-red hover:border-mission-red/50 transition-all"
+                :disabled="argRows.length === 1 || row.required"
+                @click="removeArgRow(index)"
+              >
+                <Trash2 :size="16" :stroke-width="2" />
+              </button>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -112,19 +139,13 @@
             <div
               v-for="(row, index) in fileRows"
               :key="row.id"
-              class="grid grid-cols-[minmax(120px,0.4fr)_minmax(0,1fr)_auto] gap-2 items-center"
+              class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center"
             >
-              <input
-                v-model="row.key"
-                type="text"
-                class="input-mission"
-                placeholder="KEY"
-              />
               <label
                 class="min-h-[40px] px-3 py-2 border border-white/20 bg-black/20 text-xs font-mono text-gray-400 hover:border-mission-accent hover:text-white transition-all cursor-pointer flex items-center justify-between gap-3"
               >
                 <span class="truncate">
-                  {{ row.file ? `${row.file.name} (${formatFileSize(row.file.size)})` : 'Choose file...' }}
+                  {{ row.file ? `${row.file.name} (${formatFileSize(row.file.size)})` : `Choose ${row.name || 'file'}${row.required ? ' *' : ''}...` }}
                 </span>
                 <Upload :size="14" :stroke-width="2" class="shrink-0" />
                 <input
@@ -136,7 +157,7 @@
               <button
                 type="button"
                 class="px-3 h-10 border border-white/20 text-gray-400 hover:text-mission-red hover:border-mission-red/50 transition-all"
-                :disabled="fileRows.length === 1"
+                :disabled="fileRows.length === 1 || row.required"
                 @click="removeFileRow(index)"
               >
                 <Trash2 :size="16" :stroke-width="2" />
@@ -184,8 +205,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
 import { ChevronDown, Play, RotateCw, Trash2, Upload } from 'lucide-vue-next';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useToast } from 'vue-toastification';
 import MissionModal from '~/components/MissionModal.vue';
 import MissionSelect from '~/components/MissionSelect.vue';
@@ -200,10 +221,24 @@ interface EnvRow {
   value: string;
 }
 
+interface ArgRow {
+  id: number;
+  name: string;
+  value: string;
+  required: boolean;
+}
+
 interface FileRow {
   id: number;
-  key: string;
+  name: string;
+  required: boolean;
   file: File | null;
+}
+
+interface ScriptMetadata {
+  args: Array<{ name: string; defaultValue: string; required: boolean }>;
+  envs: Array<{ key: string; defaultValue: string }>;
+  files: Array<{ name: string; required: boolean }>;
 }
 
 interface Props {
@@ -228,17 +263,20 @@ const toast = useToast();
 const selectedScriptName = ref<string | null>(null);
 const selectedTargets = ref<string[]>([]);
 const targetOptions = ref<RemoteControlTargetOption[]>([]);
-const argsText = ref('');
 const showAdvanced = ref(false);
+const argsContainer = ref<HTMLElement | null>(null);
+const argRows = ref<ArgRow[]>([{ id: 1, name: '', value: '', required: false }]);
 const envRows = ref<EnvRow[]>([{ id: 1, key: '', value: '' }]);
-const fileRows = ref<FileRow[]>([{ id: 1, key: '', file: null }]);
+const fileRows = ref<FileRow[]>([{ id: 1, name: '', required: false, file: null }]);
 
 const loadingOptions = ref(false);
 const submitting = ref(false);
 const errorText = ref('');
 
+let argRowCounter = 2;
 let envRowCounter = 2;
 let fileRowCounter = 2;
+let metadataRequest = 0;
 
 const scripts = computed(() => remoteControlStore.scripts);
 
@@ -255,6 +293,133 @@ function buildEnvRows(env?: Record<string, string>) {
   }));
 }
 
+function parseMetadataValue(raw: string): string | boolean {
+  const value = raw.trim();
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  if (value.startsWith('"') && value.endsWith('"')) return JSON.parse(value);
+  if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1).replace(/''/g, "'");
+  return value;
+}
+
+function parseScriptMetadata(content: string): ScriptMetadata | null {
+  try {
+    const match = content.match(
+      /^[ \t]*#\s*---BEGIN_SCRIPT_METADATA---\s*$([\s\S]*?)^[ \t]*#\s*---END_SCRIPT_METADATA---\s*$/m,
+    );
+    if (!match) return null;
+
+    const sections: Record<'args' | 'envs' | 'files', Array<Record<string, string | boolean>>> = {
+      args: [],
+      envs: [],
+      files: [],
+    };
+    let section: keyof typeof sections | null = null;
+    let item: Record<string, string | boolean> | null = null;
+
+    for (const sourceLine of match[1].split('\n')) {
+      if (!sourceLine.trim()) continue;
+      const comment = sourceLine.match(/^[ \t]*# ?(.*)$/);
+      if (!comment) throw new Error('Metadata lines must be comments');
+      const line = comment[1].replace(/\r$/, '');
+      if (!line.trim()) continue;
+
+      const sectionMatch = line.match(/^(args|envs|files):\s*$/);
+      if (sectionMatch) {
+        section = sectionMatch[1] as keyof typeof sections;
+        item = null;
+        continue;
+      }
+
+      const itemMatch = line.match(/^\s*-\s+([a-zA-Z]+):\s*(.*)$/);
+      if (itemMatch && section) {
+        item = { [itemMatch[1]]: parseMetadataValue(itemMatch[2]) };
+        sections[section].push(item);
+        continue;
+      }
+
+      const propertyMatch = line.match(/^\s+([a-zA-Z]+):\s*(.*)$/);
+      if (propertyMatch && item) {
+        item[propertyMatch[1]] = parseMetadataValue(propertyMatch[2]);
+        continue;
+      }
+
+      throw new Error('Invalid metadata');
+    }
+
+    const text = (value: string | boolean | undefined) => (value === undefined ? '' : String(value));
+    const metadata = {
+      args: sections.args.map((entry) => ({
+        name: text(entry.name),
+        defaultValue: text(entry.default),
+        required: entry.required === true,
+      })),
+      envs: sections.envs.map((entry) => ({
+        key: text(entry.key),
+        defaultValue: text(entry.default),
+      })),
+      files: sections.files.map((entry) => ({
+        name: text(entry.name),
+        required: entry.required === true,
+      })),
+    };
+    if (
+      metadata.args.some((entry) => !entry.name) ||
+      metadata.envs.some((entry) => !entry.key) ||
+      metadata.files.some((entry) => !entry.name) ||
+      metadata.args.some((entry, index) => entry.required && metadata.args.slice(0, index).some((arg) => !arg.required))
+    ) {
+      return null;
+    }
+    return metadata;
+  } catch {
+    return null;
+  }
+}
+
+function applyMetadata(metadata: ScriptMetadata | null, includePrefill: boolean) {
+  const prefill = includePrefill ? props.prefill : null;
+  const args = metadata?.args ?? [];
+  const prefillArgs = prefill?.args ?? [];
+  const argCount = Math.max(args.length, prefillArgs.length, 1);
+  argRows.value = Array.from({ length: argCount }, (_, index) => ({
+    id: index + 1,
+    name: args[index]?.name ?? '',
+    value: prefillArgs[index] ?? args[index]?.defaultValue ?? '',
+    required: args[index]?.required ?? false,
+  }));
+  argRowCounter = argRows.value.length + 1;
+
+  envRows.value = prefill?.env
+    ? buildEnvRows(prefill.env)
+    : metadata?.envs.length
+      ? metadata.envs.map((entry, index) => ({ id: index + 1, key: entry.key, value: entry.defaultValue }))
+      : [{ id: 1, key: '', value: '' }];
+  envRowCounter = envRows.value.length + 1;
+
+  fileRows.value = metadata?.files.length
+    ? metadata.files.map((entry, index) => ({ id: index + 1, ...entry, file: null }))
+    : [{ id: 1, name: '', required: false, file: null }];
+  fileRowCounter = fileRows.value.length + 1;
+
+  if (metadata && (metadata.args.length || metadata.envs.length || metadata.files.length)) showAdvanced.value = true;
+  void resizeArgInputs();
+}
+
+async function loadScriptMetadata(name: string | null, includePrefill = false) {
+  const request = ++metadataRequest;
+  applyMetadata(null, includePrefill);
+  if (!name) return;
+
+  try {
+    const script = await remoteControlStore.getScriptByName(name);
+    if (request !== metadataRequest || selectedScriptName.value !== name) return;
+    applyMetadata(parseScriptMetadata(script.content), includePrefill);
+  } catch {
+    // Metadata is optional; keep the blank/prefilled rows.
+  }
+}
+
 function applyPrefill() {
   const prefill = props.prefill || {};
   const initialScriptName = prefill.scriptName || props.preselectedScriptName || null;
@@ -265,13 +430,8 @@ function applyPrefill() {
 
   selectedScriptName.value = initialScriptName;
   selectedTargets.value = [...new Set(initialTargets)];
-  argsText.value = initialArgs.join('\n');
   showAdvanced.value = hasAdvancedValues;
-  fileRows.value = [{ id: 1, key: '', file: null }];
-  fileRowCounter = 2;
-
-  envRows.value = buildEnvRows(initialEnv);
-  envRowCounter = envRows.value.length + 1;
+  applyMetadata(null, true);
 }
 
 function resetForm() {
@@ -283,13 +443,22 @@ function addEnvRow() {
   envRows.value.push({ id: envRowCounter++, key: '', value: '' });
 }
 
+function addArgRow() {
+  argRows.value.push({ id: argRowCounter++, name: '', value: '', required: false });
+}
+
+function removeArgRow(index: number) {
+  if (argRows.value.length === 1) return;
+  argRows.value.splice(index, 1);
+}
+
 function removeEnvRow(index: number) {
   if (envRows.value.length === 1) return;
   envRows.value.splice(index, 1);
 }
 
 function addFileRow() {
-  fileRows.value.push({ id: fileRowCounter++, key: '', file: null });
+  fileRows.value.push({ id: fileRowCounter++, name: '', required: false, file: null });
 }
 
 function removeFileRow(index: number) {
@@ -298,10 +467,11 @@ function removeFileRow(index: number) {
 }
 
 function parseArgs(): string[] {
-  return argsText.value
-    .split('\n')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const missing = argRows.value.find((row) => row.required && !row.value.trim());
+  if (missing) throw new Error(`${missing.name || 'Argument'} is required`);
+  const args = argRows.value.map((row) => row.value);
+  while (args.at(-1) === '') args.pop();
+  return args;
 }
 
 function parseEnv(): Record<string, string> {
@@ -320,19 +490,33 @@ function handleFileSelect(index: number, event: Event) {
   input.value = '';
 }
 
+function resizeArgInput(event: Event) {
+  const input = event.target as HTMLTextAreaElement;
+  input.style.height = 'auto';
+  input.style.height = `${input.scrollHeight}px`;
+}
+
+async function resizeArgInputs() {
+  await nextTick();
+  for (const input of argsContainer.value?.querySelectorAll('textarea') ?? []) {
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight}px`;
+  }
+}
+
 function parseFiles(): CreateRemoteJobFile[] {
-  const rows = fileRows.value.filter((row) => row.key.trim() || row.file);
+  const missing = fileRows.value.find((row) => row.required && !row.file);
+  if (missing) throw new Error(`${missing.name || 'File'} is required`);
+  const rows = fileRows.value.filter((row) => row.file);
   const seen = new Set<string>();
 
   return rows.map((row) => {
-    const key = row.key.trim();
     const file = row.file;
-    if (!key) throw new Error('File key is required');
-    if (!file) throw new Error(`File is required for ${key}`);
-    if (seen.has(key)) throw new Error(`Duplicate file key: ${key}`);
-    seen.add(key);
+    if (!file) throw new Error('File is required');
+    if (seen.has(file.name)) throw new Error(`Duplicate file name: ${file.name}`);
+    seen.add(file.name);
 
-    return { key, file };
+    return { key: file.name, file };
   });
 }
 
@@ -362,15 +546,12 @@ async function loadOptions() {
   errorText.value = '';
 
   try {
-    await Promise.all([
-      remoteControlStore.fetchScripts(),
-      fetchTargetOptions(),
-    ]);
+    await Promise.all([remoteControlStore.fetchScripts(), fetchTargetOptions()]);
 
-    if (selectedScriptName.value
-      && !scripts.value.some((script) => script.name === selectedScriptName.value)) {
+    if (selectedScriptName.value && !scripts.value.some((script) => script.name === selectedScriptName.value)) {
       selectedScriptName.value = null;
     }
+    await loadScriptMetadata(selectedScriptName.value, true);
   } catch (error: any) {
     errorText.value = error.response?.data?.message || error.message || 'Failed to load options';
   } finally {
@@ -432,11 +613,18 @@ watch(
   },
 );
 
+watch(selectedScriptName, (name, previousName) => {
+  if (!props.show || name === previousName) return;
+  const includePrefill = name === props.prefill?.scriptName || name === props.preselectedScriptName;
+  void loadScriptMetadata(name, includePrefill);
+});
+
 watch(
   () => props.preselectedScriptName,
   () => {
     if (!props.show) return;
     applyPrefill();
+    void loadScriptMetadata(selectedScriptName.value, true);
   },
 );
 
@@ -445,6 +633,7 @@ watch(
   () => {
     if (!props.show) return;
     applyPrefill();
+    void loadScriptMetadata(selectedScriptName.value, true);
   },
   { deep: true },
 );
