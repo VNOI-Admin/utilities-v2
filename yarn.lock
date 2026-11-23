@@ -4218,6 +4218,7 @@ __metadata:
     axios: "npm:^1.6.8"
     highlight.js: "npm:^11.11.1"
     js-cookie: "npm:^3.0.5"
+    jsqr: "npm:^1.4.0"
     konva: "npm:^10.0.12"
     lucide-vue-next: "npm:^0.554.0"
     pinia: "npm:^2.1.7"
@@ -8083,6 +8084,13 @@ __metadata:
     ms: "npm:^2.1.1"
     semver: "npm:^7.5.4"
   checksum: 10c0/6ca7f1e54886ea3bde7146a5a22b53847c46e25453c7f7307a69818b9a6ad48c390b2e59d5690fcfd03c529b01960060cc4bb0c686991d6edae2285dfd30f4ba
+  languageName: node
+  linkType: hard
+
+"jsqr@npm:^1.4.0":
+  version: 1.4.0
+  resolution: "jsqr@npm:1.4.0"
+  checksum: 10c0/69fbfe4c866a04c97b377901a166544a583bfc76b838c275efa9af058d64e5612267079b1e96ea7b6434385803571b1c6a97a43c85f4373e8afa4f4034fc916c
   languageName: node
   linkType: hard
 
