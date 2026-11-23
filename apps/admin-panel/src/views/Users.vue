@@ -9,6 +9,14 @@
         />
         <div class="flex items-center gap-2">
           <button
+            @click="syncVpn"
+            :disabled="syncingVpn"
+            class="btn-secondary flex items-center gap-2"
+          >
+            <RotateCw :size="20" :stroke-width="2" :class="{ 'animate-spin': syncingVpn }" />
+            <span class="hidden md:inline">{{ syncingVpn ? 'SYNCING VPN...' : 'SYNC VPN' }}</span>
+          </button>
+          <button
             @click="showBatchModal = true"
             class="btn-secondary flex items-center gap-2"
           >
@@ -399,6 +407,7 @@ const selectedRole = ref<'all' | 'admin' | 'coach' | 'contestant' | 'guest'>('al
 const selectedGroup = ref<string>('all');
 const onlineOnly = ref(false);
 const activeOnly = ref(true);
+const syncingVpn = ref(false);
 
 // Create modal state
 const showCreateModal = ref(false);
@@ -500,6 +509,18 @@ async function loadUsers() {
 async function refreshUsers() {
   await loadUsers();
   toast.success('User data synchronized');
+}
+
+async function syncVpn() {
+  syncingVpn.value = true;
+  try {
+    const result = await internalApi.user.syncAllVpnUsers();
+    toast.success(`Queued VPN sync for ${result.count ?? 0} users`);
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to sync VPN');
+  } finally {
+    syncingVpn.value = false;
+  }
 }
 
 function navigateToUser(username: string) {

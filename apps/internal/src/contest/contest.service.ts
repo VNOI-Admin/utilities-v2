@@ -1,8 +1,18 @@
 import { randomFillSync } from 'crypto';
-import { Contest, type ContestDocument } from '@libs/common-db/schemas/contest.schema';
+import {
+  Contest,
+  ContestFormat,
+  resolvePenaltyMinutes,
+  type ContestDocument,
+} from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
 import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
+import {
+  computeParticipantScore,
+  replaySubmissionRanks,
+  type ProblemSubmissions,
+} from '@libs/common-db/scoring/contest-scoring';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { type VnojProblem, type VnojParticipant, type VNOJApi, VNOJ_API_CLIENT } from '@libs/api/vnoj';
@@ -10,14 +20,16 @@ import { Role } from '@libs/common/decorators/role.decorator';
 import { ParticipantResponse } from '@libs/common/dtos/ParticipantResponse.entity';
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { ContestFilter } from './dtos/getContests.dto';
 import type { CreateContestDto } from './dtos/createContest.dto';
 import type { UpdateContestDto } from './dtos/updateContest.dto';
 import type { LinkParticipantDto } from './dtos/linkParticipant.dto';
+import type { UpdateProblemDto } from './dtos/updateProblem.dto';
 import { GetSubmissionsDto, PaginatedSubmissionsResponse } from './dtos/getSubmissions.dto';
 import { AddParticipantDto, AddParticipantMode, AddParticipantResponseDto } from './dtos/addParticipant.dto';
+import { RecalculateContestResponseDto } from './dtos/recalculateContest.dto';
 import { UserService } from '../user/user.service';
 import { CreateUserDto } from '../user/dtos/createUser.dto';
 
@@ -151,6 +163,19 @@ export class ContestService {
   }
 
   async update(code: string, updateContestDto: UpdateContestDto): Promise<ContestDocument> {
+    // Capture the previous scoring settings so we can detect a rules change.
+    const existing = await this.contestModel.findOne({ code }).exec();
+    if (!existing) {
+      throw new NotFoundException(`Contest with code ${code} not found`);
+    }
+    const before = {
+      format: existing.format || ContestFormat.ICPC,
+      penalty: resolvePenaltyMinutes(existing),
+      lso: existing.lso ?? false,
+      startTime: existing.start_time.getTime(),
+      frozenAt: existing.frozen_at?.getTime(),
+    };
+
     const contest = await this.contestModel
       .findOneAndUpdate({ code }, updateContestDto, {
         new: true,
@@ -161,7 +186,136 @@ export class ContestService {
       throw new NotFoundException(`Contest with code ${code} not found`);
     }
 
+    // Any of these changes how every standing is computed, so recompute
+    // participant standings/ranks and per-submission rank snapshots immediately
+    // instead of leaving stale numbers until the next sync.
+    const after = {
+      format: contest.format || ContestFormat.ICPC,
+      penalty: resolvePenaltyMinutes(contest),
+      lso: contest.lso ?? false,
+      startTime: contest.start_time.getTime(),
+      frozenAt: contest.frozen_at?.getTime(),
+    };
+    const scoringChanged = (Object.keys(before) as (keyof typeof before)[]).some(
+      (key) => before[key] !== after[key],
+    );
+    if (scoringChanged) {
+      await this.fullRecalculate(contest);
+    }
+
     return contest;
+  }
+
+  /**
+   * Recompute everything derived from submissions for a contest:
+   * participant aggregate data, participant ranks (live + frozen), and each
+   * submission's rank/score snapshot. Used when the ranking format changes so
+   * standings reflect the new rules right away, and exposed to admins as a
+   * manual "regenerate submission data" action.
+   */
+  private async fullRecalculate(contest: ContestDocument): Promise<number> {
+    console.log(`Full recalculation triggered for contest ${contest.code} (format: ${contest.format})`);
+    await this.recalculateParticipantData(contest);
+    await this.updateParticipantRanks(contest);
+    const submissionsUpdated = await this.recalculateSubmissionRanks(contest);
+    console.log(`Full recalculation completed for contest ${contest.code}`);
+    return submissionsUpdated;
+  }
+
+  /**
+   * Admin-triggered rebuild of everything derived from the stored submissions.
+   * Touches no external API, so it is safe to run at any point in a contest to
+   * repair standings that were computed under older/buggy rules.
+   */
+  async recalculateContestData(code: string): Promise<RecalculateContestResponseDto> {
+    const contest = await this.findOne(code);
+    const submissionsUpdated = await this.fullRecalculate(contest);
+    const participantsUpdated = await this.participantModel.countDocuments({ contest: code });
+
+    return {
+      submissionsUpdated,
+      participantsUpdated,
+      message: `Recalculated ${submissionsUpdated} submissions and ${participantsUpdated} participants for ${code}`,
+    };
+  }
+
+  /**
+   * Replay every submission in chronological order to compute the author's
+   * scoreboard position immediately before and after each submission, storing
+   * them as data.old_rank / data.new_rank, and refresh data.score/data.penalty
+   * from the submission itself.
+   *
+   * Ranks are computed live (freeze-agnostic) against the full participant
+   * field using the contest's current format.
+   */
+  private async recalculateSubmissionRanks(contest: ContestDocument): Promise<number> {
+    const [submissions, participants] = await Promise.all([
+      this.submissionModel
+        .find({ contest_code: contest.code })
+        .sort({ submittedAt: 1, _id: 1 })
+        .select('_id author problem_code submittedAt submissionStatus points')
+        .lean()
+        .exec(),
+      this.participantModel.find({ contest: contest.code }).select('username').lean().exec(),
+    ]);
+
+    if (submissions.length === 0) {
+      return 0;
+    }
+
+    const ranks = replaySubmissionRanks(
+      submissions.map((submission) => ({
+        id: String(submission._id),
+        author: submission.author,
+        problemCode: submission.problem_code,
+        status: submission.submissionStatus,
+        submittedAt: submission.submittedAt,
+        points: submission.points ?? undefined,
+      })),
+      participants.map((participant) => participant.username),
+      {
+        format: contest.format || ContestFormat.ICPC,
+        startTime: contest.start_time,
+        penaltyPerWrong: resolvePenaltyMinutes(contest),
+        lso: contest.lso,
+      },
+    );
+
+    // The per-submission score/penalty columns describe the submission itself,
+    // so they are rebuilt here too: submissions stored before these fields were
+    // written otherwise keep showing a hardcoded 0.
+    const pointsById = new Map(submissions.map((s) => [String(s._id), s.points ?? 0]));
+    const penaltyById = new Map(
+      submissions.map((s) => [
+        String(s._id),
+        Math.floor((s.submittedAt.getTime() - contest.start_time.getTime()) / 60000),
+      ]),
+    );
+
+    const bulkOps = ranks.map((rank) => ({
+      updateOne: {
+        filter: { _id: new Types.ObjectId(rank.id) },
+        update: {
+          $set: {
+            'data.old_rank': rank.oldRank,
+            'data.new_rank': rank.newRank,
+            'data.score': pointsById.get(rank.id) ?? 0,
+            'data.penalty': penaltyById.get(rank.id) ?? 0,
+          },
+        },
+      },
+    }));
+
+    // Write in chunks to keep individual bulk operations bounded.
+    const CHUNK_SIZE = 1000;
+    for (let i = 0; i < bulkOps.length; i += CHUNK_SIZE) {
+      await this.submissionModel.bulkWrite(bulkOps.slice(i, i + CHUNK_SIZE));
+    }
+
+    console.log(
+      `Recalculated old/new ranks for ${bulkOps.length} submissions in contest ${contest.code}`,
+    );
+    return bulkOps.length;
   }
 
   async delete(code: string): Promise<{ success: boolean; deletedCounts: { problems: number; submissions: number; participants: number } }> {
@@ -234,10 +388,18 @@ export class ContestService {
   }
 
   async getParticipants(code: string): Promise<ParticipantResponse[]> {
+    // Resolve the contest format so the scoreboard is sorted by the correct rules.
+    const contest = await this.contestModel.findOne({ code }).lean().exec();
+    const format = contest?.format || ContestFormat.ICPC;
+    const sort: Record<string, 1 | -1> =
+      format === ContestFormat.VNOJ
+        ? { score: -1, cumtime: 1, tiebreaker: 1 }
+        : { solvedCount: -1, totalPenalty: 1 };
+
     // Query 1: Get all participants for this contest
     const participants = await this.participantModel
       .find({ contest: code })
-      .sort({ solvedCount: -1, totalPenalty: 1 })
+      .sort(sort)
       .lean()
       .exec();
 
@@ -292,6 +454,15 @@ export class ContestService {
         rank: participant.rank,
         solvedProblems: participant.solvedProblems,
         problemData: participant.problemData as Record<string, any>,
+        format,
+        score: participant.score,
+        cumtime: participant.cumtime,
+        tiebreaker: participant.tiebreaker,
+        frozenScore: participant.frozenScore,
+        frozenCumtime: participant.frozenCumtime,
+        frozenTiebreaker: participant.frozenTiebreaker,
+        frozenRank: participant.frozenRank,
+        frozenProblemData: participant.frozenProblemData as Record<string, any>,
         groupCode,
         groupName: groupData?.name,
         groupLogoUrl: groupData?.logoUrl,
@@ -301,6 +472,52 @@ export class ContestService {
 
   async getProblems(code: string): Promise<ProblemDocument[]> {
     return this.problemModel.find({ contest: code }).sort({ code: 1 }).exec();
+  }
+
+  /**
+   * Sets (or clears) the manual overrides for a single problem.
+   *
+   * A true partial update: only fields present on the DTO are touched, so a
+   * body naming one field cannot silently drop another. Clearing is explicit —
+   * an empty/whitespace-only `displayName` unsets the override.
+   */
+  async updateProblem(contestCode: string, problemCode: string, dto: UpdateProblemDto): Promise<ProblemDocument> {
+    const $set: Record<string, unknown> = {};
+    const $unset: Record<string, ''> = {};
+
+    if (dto.displayName !== undefined) {
+      const trimmed = dto.displayName.trim();
+      if (trimmed) {
+        $set.displayName = trimmed;
+      } else {
+        $unset.displayName = '';
+      }
+    }
+
+    const update: Record<string, unknown> = {};
+    if (Object.keys($set).length > 0) {
+      update.$set = $set;
+    }
+    if (Object.keys($unset).length > 0) {
+      update.$unset = $unset;
+    }
+
+    // An update document with no atomic operators is rejected by the driver, so
+    // a body that names no known field is a plain read rather than a write.
+    const problem =
+      Object.keys(update).length > 0
+        ? await this.problemModel
+            .findOneAndUpdate({ contest: contestCode, code: problemCode }, update, { new: true })
+            .exec()
+        : await this.problemModel.findOne({ contest: contestCode, code: problemCode }).exec();
+
+    if (!problem) {
+      throw new NotFoundException(
+        `Problem with code ${problemCode} not found in contest ${contestCode}`,
+      );
+    }
+
+    return problem;
   }
 
   async linkParticipant(participantId: string, linkDto: LinkParticipantDto): Promise<ParticipantDocument> {
@@ -800,12 +1017,18 @@ export class ContestService {
               $set: {
                 submittedAt,
                 judgedAt: vnojSub.judgedAt ? new Date(vnojSub.judgedAt) : undefined,
+                judgeEndAt: vnojSub.judgeEndAt ? new Date(vnojSub.judgeEndAt) : undefined,
                 author: vnojSub.author,
                 submissionStatus,
                 contest_code: contest.code,
                 problem_code: this.stripContestPrefix(vnojSub.problem_code, contest.code),
                 external_id: vnojSub.id,
+                points: vnojSub.points,
+                'data.score': vnojSub.points ?? 0,
                 'data.penalty': penaltyMinutes,
+              },
+              $setOnInsert: {
+                'data.renderRetries': 0,
               },
             },
             upsert: true,
@@ -823,7 +1046,12 @@ export class ContestService {
       await this.recalculateParticipantData(contest);
 
       // Update participant ranks
-      await this.updateParticipantRanks(contest.code);
+      await this.updateParticipantRanks(contest);
+
+      // Backfilled submissions land in the middle of the timeline, which shifts
+      // the standings every later submission was ranked against, so the
+      // snapshots are replayed rather than left as they were.
+      await this.recalculateSubmissionRanks(contest);
 
       return {
         totalFetched: vnojSubmissions.length,
@@ -842,6 +1070,7 @@ export class ContestService {
   private mapVnojResultToStatus(result: string): SubmissionStatus {
     const statusMap: Record<string, SubmissionStatus> = {
       AC: SubmissionStatus.AC,
+      PAC: SubmissionStatus.PAC,
       WA: SubmissionStatus.WA,
       RTE: SubmissionStatus.RTE,
       RE: SubmissionStatus.RE,
@@ -849,6 +1078,7 @@ export class ContestService {
       OLE: SubmissionStatus.OLE,
       MLE: SubmissionStatus.MLE,
       TLE: SubmissionStatus.TLE,
+      SC: SubmissionStatus.SC,
       IE: SubmissionStatus.IE,
       AB: SubmissionStatus.AB,
       CE: SubmissionStatus.CE,
@@ -863,11 +1093,18 @@ export class ContestService {
     // Get all participants for this contest
     const participants = await this.participantModel.find({ contest: contest.code }).exec();
 
-    const penaltyPerWrong = contest.penalty || 20;
+    const config = {
+      format: contest.format || ContestFormat.ICPC,
+      startTime: contest.start_time,
+      penaltyPerWrong: resolvePenaltyMinutes(contest),
+      lso: contest.lso,
+      frozenAt: contest.frozen_at,
+    };
 
     interface SubmissionInfo {
       status: string;
       submittedAt: Date;
+      points?: number;
     }
 
     interface ProblemStat {
@@ -895,72 +1132,42 @@ export class ContestService {
               $push: {
                 status: '$submissionStatus',
                 submittedAt: '$submittedAt',
+                points: '$points',
               },
             },
           },
         },
       ]);
 
-      const problemData = new Map<string, { solveTime: number; wrongTries: number }>();
-      const solvedProblems: string[] = [];
-      let solvedCount = 0;
-      let totalPenalty = 0;
+      const problems: ProblemSubmissions[] = problemStats.map((stat) => ({
+        problemCode: stat._id,
+        submissions: stat.submissions.map((sub) => ({
+          status: sub.status,
+          submittedAt: new Date(sub.submittedAt),
+          points: sub.points ?? undefined,
+        })),
+      }));
 
-      for (const problemStat of problemStats) {
-        const problemCode = problemStat._id;
-        const submissions = problemStat.submissions;
+      const result = computeParticipantScore(problems, config);
 
-        // Find first AC
-        const firstACIndex = submissions.findIndex((sub) => sub.status === 'AC');
-
-        if (firstACIndex !== -1) {
-          // Problem is solved
-          const firstAC = submissions[firstACIndex];
-          const solveTime = Math.floor(
-            (new Date(firstAC.submittedAt).getTime() - contest.start_time.getTime()) / 60000,
-          );
-
-          // Count wrong tries before first AC (excluding CE and IE)
-          const wrongTries = submissions
-            .slice(0, firstACIndex)
-            .filter((sub) => !['CE', 'IE', 'AC'].includes(sub.status))
-            .length;
-
-          problemData.set(problemCode, {
-            solveTime,
-            wrongTries,
-          });
-
-          solvedProblems.push(problemCode);
-          solvedCount++;
-
-          // Calculate penalty for this problem
-          const problemPenalty = solveTime + wrongTries * penaltyPerWrong;
-          totalPenalty += problemPenalty;
-        } else {
-          // Problem not solved, count all non-AC wrong submissions
-          const wrongTries = submissions
-            .filter((sub) => !['CE', 'IE', 'AC'].includes(sub.status))
-            .length;
-
-          if (wrongTries > 0) {
-            problemData.set(problemCode, {
-              solveTime: 0,
-              wrongTries,
-            });
-          }
-        }
-      }
-
-      // Update participant with calculated data
+      // Update participant with calculated data. VNOJ/frozen fields are written
+      // unconditionally (defaulting to 0 / empty) so stale values are cleared
+      // if a contest switches format or loses its freeze time.
       await this.participantModel.updateOne(
         { _id: participant._id },
         {
           $set: {
-            problemData,
-            solvedProblems,
-            solvedCount,
-            totalPenalty,
+            problemData: result.problemData,
+            solvedProblems: result.solvedProblems,
+            solvedCount: result.solvedCount,
+            totalPenalty: result.totalPenalty,
+            score: result.score,
+            cumtime: result.cumtime,
+            tiebreaker: result.tiebreaker,
+            frozenProblemData: result.frozen?.problemData ?? {},
+            frozenScore: result.frozen?.score ?? 0,
+            frozenCumtime: result.frozen?.cumtime ?? 0,
+            frozenTiebreaker: result.frozen?.tiebreaker ?? 0,
           },
         },
       );
@@ -969,14 +1176,24 @@ export class ContestService {
     console.log(`Recalculated data for ${participants.length} participants in contest ${contest.code}`);
   }
 
-  private async updateParticipantRanks(contestCode: string): Promise<void> {
-    try {
-      console.log(`Updating participant ranks for contest ${contestCode}`);
+  private async updateParticipantRanks(contest: ContestDocument): Promise<void> {
+    const contestCode = contest.code;
+    const format = contest.format || ContestFormat.ICPC;
 
-      // Fetch all participants for the contest, sorted by ICPC ranking rules
+    try {
+      console.log(`Updating participant ranks for contest ${contestCode} (format: ${format})`);
+
+      // Username breaks any remaining tie so the order is reproducible and
+      // matches the replay behind the per-submission rank snapshots.
+      const liveSort: Record<string, 1 | -1> =
+        format === ContestFormat.VNOJ
+          ? { score: -1, cumtime: 1, tiebreaker: 1, username: 1 }
+          : { solvedCount: -1, totalPenalty: 1, username: 1 };
+
+      // Fetch all participants for the contest, sorted by the format's rules
       const participants = await this.participantModel
         .find({ contest: contestCode })
-        .sort({ solvedCount: -1, totalPenalty: 1 })
+        .sort(liveSort)
         .exec();
 
       if (participants.length === 0) {
@@ -985,20 +1202,37 @@ export class ContestService {
       }
 
       // Update rank for each participant using bulkWrite for efficiency
-      const bulkOps = participants.map((participant, index) => {
-        const rank = index + 1; // Rank is 1-indexed
-        return {
-          updateOne: {
-            filter: { _id: participant._id },
-            update: { $set: { rank } },
-          },
-        };
-      });
+      const bulkOps = participants.map((participant, index) => ({
+        updateOne: {
+          filter: { _id: participant._id },
+          update: { $set: { rank: index + 1 } }, // Rank is 1-indexed
+        },
+      }));
 
       const result = await this.participantModel.bulkWrite(bulkOps);
       console.log(
         `Updated ranks for ${result.modifiedCount} participants in contest ${contestCode}`,
       );
+
+      // Frozen scoreboard ranks (VNOJ contests with a freeze time only)
+      if (format === ContestFormat.VNOJ && contest.frozen_at) {
+        const frozenParticipants = await this.participantModel
+          .find({ contest: contestCode })
+          .sort({ frozenScore: -1, frozenCumtime: 1, frozenTiebreaker: 1, username: 1 })
+          .exec();
+
+        const frozenOps = frozenParticipants.map((participant, index) => ({
+          updateOne: {
+            filter: { _id: participant._id },
+            update: { $set: { frozenRank: index + 1 } },
+          },
+        }));
+
+        if (frozenOps.length > 0) {
+          await this.participantModel.bulkWrite(frozenOps);
+          console.log(`Updated frozen ranks for ${frozenOps.length} participants in contest ${contestCode}`);
+        }
+      }
     } catch (error) {
       console.error(`Error updating participant ranks for contest ${contestCode}:`, error);
       // Don't throw - rank updates are not critical enough to fail the sync

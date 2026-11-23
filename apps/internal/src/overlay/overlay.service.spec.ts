@@ -11,7 +11,7 @@ describe('OverlayService.assertStreamTarget', () => {
     exists: async (q: { vpnIpAddress: string; role: string }) =>
       users.some((u) => u.vpnIpAddress === q.vpnIpAddress && u.role === q.role) ? { _id: 1 } : null,
   };
-  const service = new OverlayService(userModel as any, {} as any, {} as any, {} as any, { get: () => '' } as any);
+  const service = new OverlayService(userModel as any, {} as any, {} as any, {} as any, {} as any, { get: () => '' } as any);
 
   it('allows a contestant machine', async () => {
     await expect(service.assertStreamTarget('/stream-source/10.10.0.5/stream.m3u8')).resolves.toBeUndefined();
@@ -33,7 +33,7 @@ describe('OverlayService.setMultiUserStream', () => {
     const userModel = { findOne: async () => ({ username: 'alice', vpnIpAddress: '10.10.0.5' }) };
     const layoutModel = { updateOne: jest.fn(), updateMany: jest.fn() };
     const config = { get: (key: string) => (key === 'LIVESTREAM_PROXY_URL' ? 'https://proxy' : undefined) };
-    const service = new OverlayService(userModel as any, layoutModel as any, {} as any, {} as any, config as any);
+    const service = new OverlayService(userModel as any, layoutModel as any, {} as any, {} as any, {} as any, config as any);
 
     await service.setMultiUserStream(['alice']);
 

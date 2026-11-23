@@ -6,21 +6,11 @@
           <BackButton to="/remote-control/jobs" label="BACK" />
           <PageHeader
             :title="`JOB_${shortJobId}`"
-            subtitle="PER-TARGET RUN STATUS / LOG STREAM"
+            subtitle="PER-TARGET RUN STATUS / LOGS"
           />
         </div>
 
         <div class="flex items-center gap-2">
-          <div class="px-3 py-2 border border-white/20 bg-mission-gray text-xs font-mono flex items-center gap-2">
-            <span
-              class="inline-block w-2 h-2 rounded-full"
-              :class="remoteControlStore.eventsConnected ? 'bg-mission-accent animate-pulse' : 'bg-gray-600'"
-            ></span>
-            <span :class="remoteControlStore.eventsConnected ? 'text-mission-accent' : 'text-gray-500'">
-              {{ remoteControlStore.eventsConnected ? 'LIVE' : 'DISCONNECTED' }}
-            </span>
-          </div>
-
           <button
             class="btn-secondary flex items-center gap-2"
             :disabled="refreshing || !job"
@@ -255,7 +245,7 @@
       </div>
 
       <div
-        v-if="remoteControlStore.jobsError || remoteControlStore.runsError || remoteControlStore.eventsError"
+        v-if="remoteControlStore.jobsError || remoteControlStore.runsError"
         class="space-y-2"
       >
         <div
@@ -270,12 +260,6 @@
         >
           {{ remoteControlStore.runsError }}
         </div>
-        <div
-          v-if="remoteControlStore.eventsError"
-          class="p-3 border border-mission-amber bg-mission-amber/10 text-mission-amber text-sm font-mono"
-        >
-          {{ remoteControlStore.eventsError }}
-        </div>
       </div>
     </div>
 
@@ -289,9 +273,9 @@
 </template>
 
 <script setup lang="ts">
+import { Check, ChevronDown, Copy, Download, RotateCw } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Check, ChevronDown, Copy, Download, RotateCw } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import BackButton from '~/components/BackButton.vue';
 import PageHeader from '~/components/PageHeader.vue';
@@ -444,12 +428,7 @@ async function loadJobContext(targetJobId: string) {
   if (!targetJobId) return;
 
   try {
-    await Promise.all([
-      remoteControlStore.fetchJob(targetJobId),
-      remoteControlStore.fetchRuns(targetJobId),
-    ]);
-
-    remoteControlStore.connectJobEvents(targetJobId);
+    await Promise.all([remoteControlStore.fetchJob(targetJobId), remoteControlStore.fetchRuns(targetJobId)]);
   } catch (error: any) {
     toast.error(error.response?.data?.message || error.message || 'Failed to load job details');
   }
@@ -493,7 +472,6 @@ onBeforeUnmount(() => {
     clearTimeout(copiedLogTimeout);
   }
 
-  remoteControlStore.disconnectJobEvents();
   remoteControlStore.clearJobContext();
 });
 </script>

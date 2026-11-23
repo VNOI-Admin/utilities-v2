@@ -4,4 +4,5 @@ set -euo pipefail
 export OUTPUT_DIR="/var/vnoi/jobs/$REMOTE_JOB_ID/output"
 
 mkdir -p "$OUTPUT_DIR"
+export STREAM_RECORDS_DIR="/opt/vnoi/misc/records"
 exec /opt/vnoi/bin/extract-stream-slices "$1" "$2"

@@ -224,13 +224,17 @@
                 </div>
                 <div class="h-8 w-px bg-white/20"></div>
                 <div>
-                  <div class="tech-label mb-1">SOLVED</div>
-                  <div class="font-mono text-xs md:text-sm text-white">{{ participantData.solvedCount || 0 }}</div>
+                  <div class="tech-label mb-1">{{ participantData.format === 'VNOJ' ? 'SCORE' : 'SOLVED' }}</div>
+                  <div class="font-mono text-xs md:text-sm text-white">
+                    {{ participantData.format === 'VNOJ' ? (participantData.score || 0) : (participantData.solvedCount || 0) }}
+                  </div>
                 </div>
                 <div class="h-8 w-px bg-white/20"></div>
                 <div>
-                  <div class="tech-label mb-1">PENALTY</div>
-                  <div class="font-mono text-xs md:text-sm text-white">{{ participantData.totalPenalty || 0 }}m</div>
+                  <div class="tech-label mb-1">{{ participantData.format === 'VNOJ' ? 'TIME' : 'PENALTY' }}</div>
+                  <div class="font-mono text-xs md:text-sm text-white">
+                    {{ secondaryMinutes }}m
+                  </div>
                 </div>
               </template>
             </div>
@@ -248,6 +252,7 @@ import { internalApi } from '~/services/api';
 import { useOverlayStore } from '~/stores/overlay';
 import VideoPlayer from '~/components/VideoPlayer.vue';
 import { ArrowLeft, ArrowDownUp, Maximize, AlertCircle, Eye, Monitor, Camera } from 'lucide-vue-next';
+import { resolveFormat, secondaryMetric } from '~/common/ranking';
 
 const route = useRoute();
 const router = useRouter();
@@ -260,6 +265,11 @@ const swapped = ref(false);
 const streamContainerRef = ref<HTMLElement | null>(null);
 const participantRank = ref<number | null>(null);
 const participantData = ref<any>(null);
+
+// VNOJ stores cumtime in seconds, ICPC penalty in minutes; both display as minutes.
+const secondaryMinutes = computed(() =>
+  participantData.value ? secondaryMetric(participantData.value, resolveFormat(participantData.value)) : 0,
+);
 
 // Screen width detection for custom breakpoint
 const screenWidth = ref(window.innerWidth);
