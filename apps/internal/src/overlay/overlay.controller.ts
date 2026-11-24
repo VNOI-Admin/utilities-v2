@@ -19,6 +19,7 @@ import { AnnouncementConfig } from './layouts/announcement-config';
 import { RankingConfig } from './layouts/ranking-config';
 import { OverlayService, type SubmissionWithAuthor } from './overlay.service';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
+import { StreamTokenGuard } from './stream-token.guard';
 
 @ApiTags('Overlay')
 @Controller('overlay')
@@ -42,7 +43,7 @@ export class OverlayController {
   }
 
   @ApiBearerAuth()
-  @UseGuards(AccessTokenGuard)
+  @UseGuards(StreamTokenGuard, AccessTokenGuard)
   @RequiredRoles(Role.ADMIN, Role.COACH)
   @ApiOperation({ summary: 'nginx auth_request check for /stream-source/<ip>/ (X-Original-URI)' })
   @ApiResponse({ status: 204 })

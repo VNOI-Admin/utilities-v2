@@ -5,6 +5,7 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ClicsModule } from './clics/clics.module';
 import { SystemConfigModule } from './config/system-config.module';
 import { ContestModule } from './contest/contest.module';
 import { FirewallProbeModule } from './firewall-probe/firewall-probe.module';
@@ -40,6 +41,7 @@ import { UserModule } from './user/user.module';
     MachineModule,
     SystemConfigModule,
     MachinesModule,
+    ClicsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
