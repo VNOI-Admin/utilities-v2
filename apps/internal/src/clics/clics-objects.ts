@@ -68,22 +68,30 @@ export function formatReltime(ms: number): string {
 
 const JUDGEMENT_TYPE_NAMES: Record<string, string> = {
   AC: 'Accepted',
-  PAC: 'Partially Accepted',
   WA: 'Wrong Answer',
   TLE: 'Time Limit Exceeded',
   MLE: 'Memory Limit Exceeded',
   OLE: 'Output Limit Exceeded',
-  IR: 'Invalid Return',
-  RTE: 'Runtime Error',
-  RE: 'Runtime Error',
-  CE: 'Compilation Error',
-  IE: 'Internal Error',
-  SC: 'Short Circuited',
-  AB: 'Aborted',
-  UNKNOWN: 'Unknown',
+  RTE: 'Run-Time Error',
+  CE: 'Compile Error',
+  RE: 'Rejected',
+  JE: 'Judging Error',
+  CS: 'Contact Staff',
 };
 
-const PENALTY_FREE = new Set(['AC', 'CE', 'IE']);
+const SPEC_JUDGEMENT_TYPE: Record<string, string> = {
+  RE: 'RTE',
+  IR: 'RTE',
+  PAC: 'RE',
+  SC: 'RE',
+  IE: 'JE',
+};
+
+function judgementTypeId(status: string): string {
+  return SPEC_JUDGEMENT_TYPE[status] ?? (status in JUDGEMENT_TYPE_NAMES ? status : 'CS');
+}
+
+const PENALTY_FREE = new Set(['AC', 'CE', 'JE']);
 
 const IMAGE_MIME: Record<string, string> = {
   svg: 'image/svg+xml',
@@ -158,6 +166,7 @@ export function buildCollections(data: ClicsData, media: ClicsMedia) {
     label: problem.label ?? problemLabel(index),
     name: problem.displayName?.trim() || problem.name || problem.code,
     ordinal: problem.ordinal ?? index,
+    test_data_count: 0,
   }));
 
   const stream = (ip: string, file: string): ClicsFile[] => [
@@ -214,8 +223,7 @@ export function buildCollections(data: ClicsData, media: ClicsMedia) {
       return {
         id,
         submission_id: id,
-        judgement_type_id:
-          submission.submissionStatus in JUDGEMENT_TYPE_NAMES ? submission.submissionStatus : 'UNKNOWN',
+        judgement_type_id: judgementTypeId(submission.submissionStatus),
         current: true,
         start_time: formatTime(started),
         start_contest_time: reltime(started),
@@ -227,7 +235,7 @@ export function buildCollections(data: ClicsData, media: ClicsMedia) {
 
   const languages = [...new Set(submissions.map((submission) => submission.language_id))]
     .sort()
-    .map((id) => ({ id, name: id, extensions: [] as string[] }));
+    .map((id) => ({ id, name: id, entry_point_required: false, extensions: [] as string[] }));
 
   const judgementTypes = Object.entries(JUDGEMENT_TYPE_NAMES).map(([id, name]) => ({
     id,

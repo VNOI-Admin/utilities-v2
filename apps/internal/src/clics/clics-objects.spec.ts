@@ -114,8 +114,8 @@ describe('buildCollections', () => {
 
   it('orders problems by ordinal and prefers the manual display name', () => {
     expect(collections.problems).toEqual([
-      { id: 'a', label: 'A', name: 'Rocks', ordinal: 0 },
-      { id: 'b', label: 'B', name: 'Bottles', ordinal: 1 },
+      { id: 'a', label: 'A', name: 'Rocks', ordinal: 0, test_data_count: 0 },
+      { id: 'b', label: 'B', name: 'Bottles', ordinal: 1, test_data_count: 0 },
     ]);
   });
 
@@ -178,8 +178,8 @@ describe('buildCollections', () => {
       },
     ]);
     expect(collections.languages).toEqual([
-      { id: 'CPP17', name: 'CPP17', extensions: [] },
-      { id: 'unknown', name: 'unknown', extensions: [] },
+      { id: 'CPP17', name: 'CPP17', entry_point_required: false, extensions: [] },
+      { id: 'unknown', name: 'unknown', entry_point_required: false, extensions: [] },
     ]);
   });
 
@@ -188,8 +188,26 @@ describe('buildCollections', () => {
     expect(types.AC).toEqual([true, false]);
     expect(types.WA).toEqual([false, true]);
     expect(types.CE).toEqual([false, false]);
-    expect(types.IE).toEqual([false, false]);
-    expect(types.PENDING).toBeUndefined();
+    expect(types.JE).toEqual([false, false]);
+    expect(Object.keys(types).sort()).toEqual(['AC', 'CE', 'CS', 'JE', 'MLE', 'OLE', 'RE', 'RTE', 'TLE', 'WA']);
+  });
+
+  it('maps VNOJ-only verdicts onto the spec judgement type IDs', () => {
+    const verdicts = ['RE', 'IR', 'PAC', 'SC', 'AB', 'IE', 'UNKNOWN', 'XYZ'];
+    const { judgements } = buildCollections(
+      {
+        ...data,
+        submissions: verdicts.map((status, i) => ({
+          external_id: String(i),
+          author: 'alpha',
+          problem_code: 'a',
+          submittedAt: at(i),
+          submissionStatus: status,
+        })),
+      },
+      media,
+    );
+    expect(judgements.map((j) => j.judgement_type_id)).toEqual(['RTE', 'RTE', 'RE', 'RE', 'CS', 'JE', 'CS', 'CS']);
   });
 });
 
