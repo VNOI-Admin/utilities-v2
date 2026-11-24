@@ -5,9 +5,17 @@ import {
   type ContestDocument,
 } from '@libs/common-db/schemas/contest.schema';
 import { Participant, type ParticipantDocument } from '@libs/common-db/schemas/participant.schema';
+import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.schema';
+import {
+  applyClicsSyncPlan,
+  clicsFeedEnabled,
+  parseEventFeed,
+  planClicsSync,
+} from '@libs/common-db/clics/clics-sync';
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import {
   computeParticipantScore,
+  rankSort,
   replaySubmissionRanks,
   type ProblemSubmissions,
 } from '@libs/common-db/scoring/contest-scoring';
@@ -28,6 +36,7 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     @InjectModel(Contest.name) private contestModel: Model<ContestDocument>,
     @InjectModel(Submission.name) private submissionModel: Model<SubmissionDocument>,
     @InjectModel(Participant.name) private participantModel: Model<ParticipantDocument>,
+    @InjectModel(Problem.name) private problemModel: Model<ProblemDocument>,
     @Inject(VNOJ_API_CLIENT) private vnojApi: VNOJApi<unknown>,
   ) {
     super();
@@ -73,7 +82,34 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     await this.syncContestSubmissions(contest, true);
   }
 
+  private async syncContestFromClics(contest: ContestDocument): Promise<void> {
+    const feed = await this.vnojApi.contest.getClicsEventFeed(contest.code);
+    const plan = planClicsSync(parseEventFeed(feed), contest.code);
+    const result = await applyClicsSyncPlan(
+      {
+        contestModel: this.contestModel,
+        problemModel: this.problemModel,
+        participantModel: this.participantModel,
+        submissionModel: this.submissionModel,
+      },
+      contest.code,
+      plan,
+    );
+    this.logger.log(
+      `CLICS feed for ${contest.code}: ${plan.submissions.length} submissions (${result.upserted} new, ${result.modified} updated)`,
+    );
+
+    const refreshed = (await this.contestModel.findOne({ code: contest.code }).exec()) ?? contest;
+    await this.recalculateParticipantData(refreshed);
+    await this.updateParticipantRanks(refreshed);
+    await this.recalculateSubmissionRanks(refreshed);
+  }
+
   private async syncContestSubmissions(contest: ContestDocument, forceSync = false): Promise<void> {
+    if (clicsFeedEnabled() && (contest.format ?? ContestFormat.ICPC) === ContestFormat.ICPC) {
+      return this.syncContestFromClics(contest);
+    }
+
     try {
       this.logger.log(`Syncing submissions for contest ${contest.code} (forceSync: ${forceSync})`);
 
@@ -278,6 +314,8 @@ export class SyncSubmissionsProcessor extends WorkerHost {
             frozenScore: result.frozen?.score ?? 0,
             frozenCumtime: result.frozen?.cumtime ?? 0,
             frozenTiebreaker: result.frozen?.tiebreaker ?? 0,
+            frozenSolvedCount: result.frozen?.solvedCount ?? 0,
+            frozenPenalty: result.frozen?.totalPenalty ?? 0,
           },
         },
       );
@@ -398,15 +436,10 @@ export class SyncSubmissionsProcessor extends WorkerHost {
     try {
       this.logger.log(`Updating participant ranks for contest ${contestCode} (format: ${format})`);
 
-      const liveSort: Record<string, 1 | -1> =
-        format === ContestFormat.VNOJ
-          ? { score: -1, cumtime: 1, tiebreaker: 1, username: 1 }
-          : { solvedCount: -1, totalPenalty: 1, username: 1 };
-
       // Fetch all participants for the contest, sorted by the format's rules
       const participants = await this.participantModel
         .find({ contest: contestCode })
-        .sort(liveSort)
+        .sort(rankSort(format))
         .exec();
 
       if (participants.length === 0) {
@@ -428,10 +461,10 @@ export class SyncSubmissionsProcessor extends WorkerHost {
       );
 
       // Frozen scoreboard ranks (VNOJ contests with a freeze time only)
-      if (format === ContestFormat.VNOJ && contest.frozen_at) {
+      if (contest.frozen_at) {
         const frozenParticipants = await this.participantModel
           .find({ contest: contestCode })
-          .sort({ frozenScore: -1, frozenCumtime: 1, frozenTiebreaker: 1, username: 1 })
+          .sort(rankSort(format, true))
           .exec();
 
         const frozenOps = frozenParticipants.map((participant, index) => ({

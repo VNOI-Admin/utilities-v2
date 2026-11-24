@@ -17,6 +17,7 @@ export enum SubmissionStatus {
   IE = 'IE',
   AB = 'AB',
   CE = 'CE',
+  PENDING = 'PENDING',
   UNKNOWN = 'UNKNOWN',
 }
 

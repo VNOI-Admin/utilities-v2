@@ -10,9 +10,16 @@ import { Problem, type ProblemDocument } from '@libs/common-db/schemas/problem.s
 import { Submission, SubmissionStatus, type SubmissionDocument } from '@libs/common-db/schemas/submission.schema';
 import {
   computeParticipantScore,
+  rankSort,
   replaySubmissionRanks,
   type ProblemSubmissions,
 } from '@libs/common-db/scoring/contest-scoring';
+import {
+  applyClicsSyncPlan,
+  clicsFeedEnabled,
+  parseEventFeed,
+  planClicsSync,
+} from '@libs/common-db/clics/clics-sync';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
 import { Group, type GroupDocument } from '@libs/common-db/schemas/group.schema';
 import { type VnojProblem, type VnojParticipant, type VNOJApi, VNOJ_API_CLIENT } from '@libs/api/vnoj';
@@ -391,15 +398,10 @@ export class ContestService {
     // Resolve the contest format so the scoreboard is sorted by the correct rules.
     const contest = await this.contestModel.findOne({ code }).lean().exec();
     const format = contest?.format || ContestFormat.ICPC;
-    const sort: Record<string, 1 | -1> =
-      format === ContestFormat.VNOJ
-        ? { score: -1, cumtime: 1, tiebreaker: 1 }
-        : { solvedCount: -1, totalPenalty: 1 };
-
     // Query 1: Get all participants for this contest
     const participants = await this.participantModel
       .find({ contest: code })
-      .sort(sort)
+      .sort(rankSort(format))
       .lean()
       .exec();
 
@@ -976,6 +978,10 @@ export class ContestService {
     // Verify contest exists
     const contest = await this.findOne(code);
 
+    if (clicsFeedEnabled() && (contest.format ?? ContestFormat.ICPC) === ContestFormat.ICPC) {
+      return this.forceSyncFromClics(contest);
+    }
+
     try {
       // Force-sync: Fetch ALL submissions from contest start time
       const fromTimestamp = contest.start_time.toISOString();
@@ -1064,6 +1070,41 @@ export class ContestService {
       throw new BadRequestException(
         `Failed to force-sync submissions from VNOJ API. Error: ${errorMessage}`,
       );
+    }
+  }
+
+  private async forceSyncFromClics(contest: ContestDocument): Promise<{
+    totalFetched: number;
+    totalSaved: number;
+    message: string;
+  }> {
+    try {
+      const feed = await this.vnojApi.contest.getClicsEventFeed(contest.code);
+      const plan = planClicsSync(parseEventFeed(feed), contest.code);
+      const { upserted, modified } = await applyClicsSyncPlan(
+        {
+          contestModel: this.contestModel,
+          problemModel: this.problemModel,
+          participantModel: this.participantModel,
+          submissionModel: this.submissionModel,
+        },
+        contest.code,
+        plan,
+      );
+
+      const refreshed = await this.findOne(contest.code);
+      await this.recalculateParticipantData(refreshed);
+      await this.updateParticipantRanks(refreshed);
+      await this.recalculateSubmissionRanks(refreshed);
+
+      return {
+        totalFetched: plan.submissions.length,
+        totalSaved: upserted + modified,
+        message: `Successfully force-synced ${upserted + modified} submissions from the CLICS feed (${upserted} new, ${modified} updated)`,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new BadRequestException(`Failed to force-sync from the VNOJ CLICS feed. Error: ${errorMessage}`);
     }
   }
 
@@ -1168,6 +1209,8 @@ export class ContestService {
             frozenScore: result.frozen?.score ?? 0,
             frozenCumtime: result.frozen?.cumtime ?? 0,
             frozenTiebreaker: result.frozen?.tiebreaker ?? 0,
+            frozenSolvedCount: result.frozen?.solvedCount ?? 0,
+            frozenPenalty: result.frozen?.totalPenalty ?? 0,
           },
         },
       );
@@ -1185,15 +1228,10 @@ export class ContestService {
 
       // Username breaks any remaining tie so the order is reproducible and
       // matches the replay behind the per-submission rank snapshots.
-      const liveSort: Record<string, 1 | -1> =
-        format === ContestFormat.VNOJ
-          ? { score: -1, cumtime: 1, tiebreaker: 1, username: 1 }
-          : { solvedCount: -1, totalPenalty: 1, username: 1 };
-
       // Fetch all participants for the contest, sorted by the format's rules
       const participants = await this.participantModel
         .find({ contest: contestCode })
-        .sort(liveSort)
+        .sort(rankSort(format))
         .exec();
 
       if (participants.length === 0) {
@@ -1215,10 +1253,10 @@ export class ContestService {
       );
 
       // Frozen scoreboard ranks (VNOJ contests with a freeze time only)
-      if (format === ContestFormat.VNOJ && contest.frozen_at) {
+      if (contest.frozen_at) {
         const frozenParticipants = await this.participantModel
           .find({ contest: contestCode })
-          .sort({ frozenScore: -1, frozenCumtime: 1, frozenTiebreaker: 1, username: 1 })
+          .sort(rankSort(format, true))
           .exec();
 
         const frozenOps = frozenParticipants.map((participant, index) => ({

@@ -38,6 +38,9 @@ export class Participant {
   @Prop({ required: false })
   mapToUser?: string;
 
+  @Prop({ required: false, default: false })
+  hidden!: boolean;
+
   // Number of solved problems (for efficient sorting)
   @Prop({ required: false, default: 0 })
   solvedCount!: number;
@@ -86,6 +89,12 @@ export class Participant {
 
   @Prop({ required: false, default: 0 })
   frozenTiebreaker!: number;
+
+  @Prop({ required: false, default: 0 })
+  frozenSolvedCount!: number;
+
+  @Prop({ required: false, default: 0 })
+  frozenPenalty!: number;
 
   // Rank on the frozen scoreboard (1-indexed).
   @Prop({ required: false, default: 0 })
