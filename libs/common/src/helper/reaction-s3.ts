@@ -162,6 +162,7 @@ export async function putReactionVideo(
       Key: fullKey,
       Body: body,
       ContentType: contentType,
+      ACL: 'public-read',
     }),
   );
 
