@@ -9,6 +9,7 @@ export interface ReactionVideoItem {
   group?: string;
   author?: string;
   problemCode?: string;
+  problemLabel?: string;
   problemDisplayName?: string;
   contestCode?: string;
   status?: string;

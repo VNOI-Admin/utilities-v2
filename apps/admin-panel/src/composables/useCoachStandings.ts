@@ -2,16 +2,18 @@ import type { ParticipantResponse } from '@libs/api/internal';
 import { useLocalStorage } from '@vueuse/core';
 import { type RankingFormat, buildProblemState, resolveFormat } from '~/common/ranking';
 import { internalApi } from '~/services/api';
-import { resolveProblemName } from '~/utils/problemName';
+import { type ProblemLike, labelProblems, problemTitle } from '~/utils/problemName';
 
 export interface StandingsProblem {
   code: string;
   label: string;
+  name: string;
 }
 
 export interface ProblemCell {
   code: string;
   label: string;
+  name: string;
   format: RankingFormat;
   state: 'solved' | 'tried' | 'none';
   solveTime: number;
@@ -33,13 +35,13 @@ export function useCoachPins() {
 export async function fetchStandings(contestCode: string) {
   const [participants, problems] = await Promise.all([
     internalApi.contest.getParticipants(contestCode),
-    internalApi.contest.getProblems(contestCode) as Promise<{ code: string; displayName?: string }[]>,
+    internalApi.contest.getProblems(contestCode) as Promise<ProblemLike[]>,
   ]);
-  const sorted = [...problems].sort((a, b) => a.code.localeCompare(b.code));
-  const standingsProblems: StandingsProblem[] = sorted.map((p, i) => {
-    const name = resolveProblemName(p.code, p.displayName);
-    return { code: p.code, label: name !== p.code ? name : String.fromCharCode(65 + i) };
-  });
+  const standingsProblems: StandingsProblem[] = labelProblems(problems).map((p) => ({
+    code: p.code,
+    label: p.letter,
+    name: p.fullName,
+  }));
   const byUser = new Map<string, ParticipantResponse>();
   for (const p of participants) if (p.mapToUser) byUser.set(p.mapToUser, p);
   return { problems: standingsProblems, byUser };
@@ -47,11 +49,12 @@ export async function fetchStandings(contestCode: string) {
 
 export function problemCells(participant: ParticipantResponse | undefined, problems: StandingsProblem[]): ProblemCell[] {
   const format = resolveFormat(participant);
-  return problems.map(({ code, label }) => {
+  return problems.map(({ code, label, name }) => {
     const s = participant ? buildProblemState(participant, code, format) : undefined;
     return {
       code,
       label,
+      name,
       format,
       state: s?.solved ? 'solved' : s?.attempted ? 'tried' : 'none',
       solveTime: s?.time ?? 0,
@@ -77,12 +80,13 @@ function plural(n: number, one: string, many: string): string {
 }
 
 export function cellTitle(cell: ProblemCell): string {
-  if (cell.state === 'none') return `${cell.code}: not tried`;
+  const title = problemTitle(cell.label, cell.name);
+  if (cell.state === 'none') return `${title}: not tried`;
   if (cell.format === 'VNOJ') {
     const pending = cell.pending ? `, ${cell.pending} pending` : '';
-    if (cell.state === 'solved') return `${cell.code}: ${plural(cell.points, 'point', 'points')} at ${cell.solveTime}′${pending}`;
-    return `${cell.code}: 0 points${cell.tries ? ` after ${plural(cell.tries, 'try', 'tries')}` : ''}${pending}`;
+    if (cell.state === 'solved') return `${title}: ${plural(cell.points, 'point', 'points')} at ${cell.solveTime}′${pending}`;
+    return `${title}: 0 points${cell.tries ? ` after ${plural(cell.tries, 'try', 'tries')}` : ''}${pending}`;
   }
-  if (cell.state === 'solved') return `${cell.code}: solved at ${cell.solveTime}′`;
-  return `${cell.code}: ${plural(cell.tries, 'wrong try', 'wrong tries')}`;
+  if (cell.state === 'solved') return `${title}: solved at ${cell.solveTime}′`;
+  return `${title}: ${plural(cell.tries, 'wrong try', 'wrong tries')}`;
 }
