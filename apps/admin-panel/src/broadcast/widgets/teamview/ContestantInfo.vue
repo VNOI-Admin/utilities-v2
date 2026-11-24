@@ -1,7 +1,7 @@
 <template>
   <div class="contestant-info" :style="wrapStyle">
     <ShrinkText class="info-rank" :style="rankStyle" :text="rankText" align="center" />
-    <ShrinkText class="info-name" :text="row?.name ?? '??'" />
+    <div class="info-name">{{ row?.name ?? '??' }}</div>
     <ShrinkText class="info-score" :text="row ? formatScore(row.solved, 1) : '??'" align="right" />
     <ShrinkText class="info-score" :text="row ? String(row.penalty) : ''" align="right" />
   </div>
@@ -36,7 +36,6 @@ const wrapStyle = computed(() => {
     borderRadius: props.radius ?? `${radius} ${props.roundBR ? radius : '0px'} ${radius} ${radius}`,
     '--rank-width': v.CONTESTER_INFO_RANK_WIDTH,
     '--rank-padding': v.CONTESTER_INFO_LEFT_PADDING,
-    '--name-width': v.CONTESTER_NAME_WIDTH,
     '--score-width': v.CONTESTER_INFO_SCORE_WIDTH,
     '--score-padding': v.CONTESTER_INFO_SCORE_RIGHT_PADDING,
   };
@@ -67,8 +66,11 @@ const rankStyle = computed(() => {
 }
 
 .info-name {
-  flex-grow: 1;
-  width: var(--name-width);
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .info-score {

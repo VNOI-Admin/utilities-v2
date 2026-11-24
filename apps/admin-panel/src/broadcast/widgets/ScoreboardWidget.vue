@@ -2,7 +2,7 @@
   <div class="scoreboard" :style="vars">
     <div class="caption-bar">
       <div class="title">Current {{ visual.SCOREBOARD_STANDINGS_NAME }}</div>
-      <div>{{ visual.SCOREBOARD_CAPTION }}</div>
+      <div class="caption">{{ visual.SCOREBOARD_CAPTION }}</div>
     </div>
     <div ref="content" class="content">
       <div class="table-header">
@@ -12,12 +12,7 @@
         <div class="header-cell">
           <ShrinkingBox :text="visual.SCOREBOARD_HEADER_PENALTY_TITLE" align="center" />
         </div>
-        <div
-          v-for="problem in problems"
-          :key="problem.code"
-          class="problem-label"
-          :style="{ color: isDarkText(visual.SCOREBOARD_HEADER_BACKGROUND_COLOR) ? '#000' : '#FFF' }"
-        >
+        <div v-for="problem in problems" :key="problem.code" class="problem-label">
           {{ problem.label }}
         </div>
       </div>
@@ -27,7 +22,7 @@
           :key="item.row.username"
           class="row-slot"
           :style="{
-            transform: `translate3d(0, ${Math.round((item.pos - scrollPos) * rowHeight - visual.SCOREBOARD_ROW_PADDING)}px, 0)`,
+            transform: `translate3d(0, ${Math.round((item.pos - scrollPos) * rowHeight)}px, 0)`,
             zIndex: rows.length - item.pos,
           }"
         >
@@ -46,7 +41,6 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { isDarkText } from '../config';
 import type { ScoreboardSettings } from '../types';
 import type { WidgetProps } from '../widget-props';
 import { firstSolveTimes } from './scoreboard/cells';
@@ -100,10 +94,17 @@ const vars = computed(() => {
     '--sb-columns': `${v.SCOREBOARD_CELL_PLACE_SIZE} ${v.SCOREBOARD_CELL_TEAMNAME_SIZE} ${v.SCOREBOARD_CELL_POINTS_SIZE} ${v.SCOREBOARD_CELL_PENALTY_SIZE} repeat(${Math.max(problems.value.length, 1)}, 1fr)`,
     '--sb-grid-gap': `${v.SCOREBOARD_BETWEEN_HEADER_PADDING}px`,
     '--sb-gap': v.SCOREBOARD_GAP,
-    '--sb-padding': `${v.SCOREBOARD_PADDING_TOP} ${v.SCOREBOARD_PADDING_RIGHT} 0 ${v.SCOREBOARD_PADDING_LEFT}`,
+    '--sb-padding': `${v.SCOREBOARD_PADDING_TOP} ${v.SCOREBOARD_PADDING_RIGHT} 14px ${v.SCOREBOARD_PADDING_LEFT}`,
     '--sb-text': v.SCOREBOARD_TEXT_COLOR,
-    '--sb-background': v.SCOREBOARD_BACKGROUND_COLOR,
-    '--sb-radius': v.SCOREBOARD_BORDER_RADIUS,
+    '--sb-background': v.PANEL_BACKGROUND,
+    '--sb-radius': v.PANEL_RADIUS,
+    '--sb-shadow': v.PANEL_SHADOW,
+    '--sb-muted': v.MUTED_TEXT_COLOR,
+    '--sb-label-font': v.LABEL_FONT_FAMILY,
+    '--sb-row-background': v.ROW_BACKGROUND,
+    '--sb-chip-radius': v.CHIP_RADIUS,
+    '--sb-cell-empty': v.CELL_EMPTY_BACKGROUND,
+    '--sb-first': v.FIRST_SOLVE_COLOR,
     '--sb-caption-padding-top': v.SCOREBOARD_HEADER_PADDING_TOP,
     '--sb-caption-font-size': v.SCOREBOARD_CAPTION_FONT_SIZE,
     '--sb-bold': String(v.GLOBAL_DEFAULT_FONT_WEIGHT_BOLD),
@@ -111,13 +112,10 @@ const vars = computed(() => {
     '--sb-header-height': `${v.SCOREBOARD_HEADER_HEIGHT}px`,
     '--sb-header-font-size': v.SCOREBOARD_HEADER_FONT_SIZE,
     '--sb-header-font-weight': String(v.SCOREBOARD_HEADER_FONT_WEIGHT),
-    '--sb-header-radius': `${v.SCOREBOARD_HEADER_BORDER_RADIUS_TOP_LEFT} ${v.SCOREBOARD_HEADER_BORDER_RADIUS_TOP_RIGHT} 0 0`,
-    '--sb-header-background': v.SCOREBOARD_HEADER_BACKGROUND_COLOR,
     '--sb-cell-padding': v.SCOREBOARD_CELL_PADDING,
     '--sb-row-height': `${v.SCOREBOARD_ROW_HEIGHT}px`,
     '--sb-row-font-size': v.SCOREBOARD_ROW_FONT_SIZE,
     '--sb-row-font-weight': String(v.SCOREBOARD_TABLE_ROW_FONT_WEIGHT),
-    '--sb-divider': v.SCOREBOARD_ROWS_DIVIDER_COLOR,
     '--sb-transition': `${v.SCOREBOARD_ROW_TRANSITION_TIME}ms`,
   };
 });
@@ -136,21 +134,36 @@ const vars = computed(() => {
   color: var(--sb-text);
   background-color: var(--sb-background);
   border-radius: var(--sb-radius);
+  box-shadow: var(--sb-shadow);
 }
 
 .caption-bar {
   display: flex;
   flex-direction: row;
+  align-items: baseline;
+  gap: 20px;
   width: 100%;
   padding-top: var(--sb-caption-padding-top);
-  font-size: var(--sb-caption-font-size);
-  font-weight: var(--sb-bold);
   font-family: var(--sb-font-family);
   font-style: normal;
 }
 
 .title {
-  flex: 1 0 0;
+  flex: 1 0 auto;
+  font-size: var(--sb-caption-font-size);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.caption {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--sb-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .content {
@@ -169,34 +182,31 @@ const vars = computed(() => {
   flex-shrink: 0;
   box-sizing: border-box;
   height: var(--sb-header-height);
-  font-size: var(--sb-header-font-size);
-  font-weight: var(--sb-header-font-weight);
-  font-style: normal;
+  font-family: var(--sb-label-font);
+  font-size: 15px;
+  font-weight: 600;
   line-height: var(--sb-header-height);
-  background-color: var(--sb-background);
-  border-radius: var(--sb-header-radius);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sb-muted);
 }
 
 .header-cell {
   min-width: 0;
-  padding: 0 var(--sb-cell-padding);
+  overflow: hidden;
   text-align: center;
-  font-family: var(--sb-font-family);
-  background-color: var(--sb-header-background);
 }
 
 .header-cell.name {
+  padding-left: var(--sb-cell-padding);
   text-align: left;
 }
 
 .problem-label {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   height: 100%;
-  font-family: var(--sb-font-family);
-  background: var(--sb-header-background);
 }
 
 .rows {

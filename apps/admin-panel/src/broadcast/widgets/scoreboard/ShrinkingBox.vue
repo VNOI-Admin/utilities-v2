@@ -8,6 +8,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, type CSSProperties } from 'vue';
+import { fitScale } from './fit';
 
 const props = withDefaults(defineProps<{ text: string | number; align?: string }>(), { align: 'left' });
 
@@ -22,8 +23,7 @@ const textStyle = computed<CSSProperties>(() => ({
 
 const measure = () => {
   if (!box.value || !content.value) return;
-  const width = content.value.offsetWidth;
-  scale.value = width > 0 ? Math.min(1, box.value.clientWidth / width) : 1;
+  scale.value = fitScale(box.value.clientWidth, getComputedStyle(box.value), content.value.offsetWidth);
 };
 
 let observer: ResizeObserver | undefined;

@@ -1,16 +1,16 @@
 <template>
   <div class="contestant" :style="wrapStyle">
     <ShrinkingBox class="rank" :text="formatRank(row.rank)" align="center" :style="rankStyle(row.medal, visual)" />
-    <ShrinkingBox class="name" :text="row.name" />
+    <div class="name">{{ row.name }}</div>
     <ShrinkingBox class="score" :text="formatScore(row.solved, 1)" align="right" />
-    <ShrinkingBox v-if="format !== 'VNOJ'" class="score" :text="String(row.penalty)" align="right" />
+    <ShrinkingBox v-if="format !== 'VNOJ'" class="score penalty" :text="String(row.penalty)" align="right" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { RankingFormat } from '~/common/ranking';
-import { isDarkText, type VisualConfig } from '../../config';
+import type { VisualConfig } from '../../config';
 import type { BroadcastRow } from '../../data';
 import { formatRank, formatScore, rankStyle } from '../scoreboard/cells';
 import ShrinkingBox from '../scoreboard/ShrinkingBox.vue';
@@ -23,14 +23,11 @@ const wrapStyle = computed(() => {
     height: v.TICKER_SCOREBOARD_CONTESTANT_INFO_HEIGHT,
     gap: v.CONTESTER_INFO_GAP,
     fontSize: v.CONTESTER_FONT_SIZE,
-    color: isDarkText(v.CONTESTER_BACKGROUND_COLOR) ? '#000' : '#FFF',
-    backgroundColor: v.CONTESTER_BACKGROUND_COLOR,
-    borderRadius: v.GLOBAL_BORDER_RADIUS,
-    '--ci-rank-width': v.CONTESTER_INFO_RANK_WIDTH,
-    '--ci-left-padding': v.CONTESTER_INFO_LEFT_PADDING,
-    '--ci-name-width': v.CONTESTER_NAME_WIDTH,
-    '--ci-score-width': v.CONTESTER_INFO_SCORE_WIDTH,
-    '--ci-score-padding': v.CONTESTER_INFO_SCORE_RIGHT_PADDING,
+    color: v.GLOBAL_TEXT_COLOR,
+    backgroundColor: v.PANEL_BACKGROUND,
+    borderRadius: v.VERDICT_CELL_BORDER_RADIUS,
+    boxShadow: v.PANEL_SHADOW,
+    '--ci-muted': v.MUTED_TEXT_COLOR,
   };
 });
 </script>
@@ -40,7 +37,11 @@ const wrapStyle = computed(() => {
   overflow: hidden;
   display: flex;
   align-items: center;
+  gap: 12px;
   width: 100%;
+  padding-right: 18px;
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
 }
 
 .rank {
@@ -49,19 +50,29 @@ const wrapStyle = computed(() => {
   justify-content: center;
   flex-shrink: 0;
   align-self: stretch;
-  width: var(--ci-rank-width);
-  padding-left: var(--ci-left-padding);
+  width: 52px;
+  font-weight: 700;
+  border-radius: 999px 0 0 999px;
 }
 
 .name {
-  flex-grow: 1;
-  width: var(--ci-name-width);
+  flex: 1 1 0;
+  min-width: 0;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .score {
   flex-shrink: 0;
-  box-sizing: content-box;
-  width: var(--ci-score-width);
-  padding-right: var(--ci-score-padding);
+  width: 30px;
+  font-weight: 700;
+}
+
+.score.penalty {
+  width: 64px;
+  font-weight: 500;
+  color: var(--ci-muted);
 }
 </style>

@@ -2,7 +2,7 @@ import type { ProblemState, RankingFormat } from '~/common/ranking';
 import { isDarkText, type VisualConfig } from '../../config';
 import type { BroadcastProblem, BroadcastRow } from '../../data';
 
-export const PROBLEM_COLOR_FALLBACK = '#B9DCFF';
+export const PROBLEM_COLOR_FALLBACK = '#332C48';
 
 export type TaskStatus = 'first' | 'solved' | 'unknown' | 'failed' | 'untouched';
 

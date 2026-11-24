@@ -1,7 +1,7 @@
 <template>
   <div class="statistics-wrap" :style="wrapStyle">
     <div class="statistics-header" :style="headerStyle">
-      <div class="statistics-title" :style="{ fontWeight: visual.GLOBAL_DEFAULT_FONT_WEIGHT_BOLD }">
+      <div class="statistics-title">
         {{ visual.STATISTICS_TITLE }}
       </div>
       <div class="statistics-caption">{{ visual.STATISTICS_CAPTION }}</div>
@@ -54,8 +54,9 @@ const bars = computed<StackedBar[]>(() => {
 const wrapStyle = computed(() => ({
   gap: props.visual.STATISTICS_CONTENT_GAP,
   padding: `${props.visual.STATISTICS_PADDING_VERTICAL} ${props.visual.STATISTICS_PADDING_HORIZONTAL}`,
-  backgroundColor: props.visual.CONTEST_COLOR,
-  borderRadius: props.visual.GLOBAL_BORDER_RADIUS,
+  backgroundColor: props.visual.PANEL_BACKGROUND,
+  borderRadius: props.visual.PANEL_RADIUS,
+  boxShadow: props.visual.PANEL_SHADOW,
 }));
 
 const headerStyle = computed(() => ({
@@ -93,6 +94,11 @@ onBeforeUnmount(() => observer?.disconnect());
   flex-flow: row;
   width: 100%;
   color: white;
+}
+
+.statistics-title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .statistics-caption {
