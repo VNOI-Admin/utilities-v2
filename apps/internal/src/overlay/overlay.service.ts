@@ -24,6 +24,9 @@ import { MULTI_CONTESTANT_KEY, MultiContestantConfig } from './layouts/multi-con
 import { ANNOUNCEMENTS_KEY, AnnouncementConfig } from './layouts/announcement-config';
 import { RANKING_KEY, RankingConfig } from './layouts/ranking-config';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
+import type { BroadcastStateDto } from './dtos/broadcast-state.dto';
+
+const BROADCAST_KEY = 'broadcast';
 
 export interface SubmissionWithAuthor {
   _id?: unknown;
@@ -217,6 +220,16 @@ export class OverlayService {
   }
 
   // New methods for overlay feature
+
+  async getBroadcast() {
+    const layout = await this.overlayLayoutModel.findOne({ key: BROADCAST_KEY }).lean();
+    return layout?.data ?? null;
+  }
+
+  async setBroadcast(state: BroadcastStateDto) {
+    await this.overlayLayoutModel.updateOne({ key: BROADCAST_KEY }, { data: state }, { upsert: true });
+    return state;
+  }
 
   async getGlobalConfig() {
     const layout = await this.overlayLayoutModel.findOne({

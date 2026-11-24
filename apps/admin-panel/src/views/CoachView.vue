@@ -137,7 +137,7 @@ import { useRouter } from 'vue-router';
 import type { ParticipantResponse, UserEntity } from '@libs/api/internal';
 import { useAuthStore } from '~/stores/auth';
 import { useGroupsStore } from '~/stores/groups';
-import { useOverlayStore } from '~/stores/overlay';
+import { fetchBroadcastState } from '~/broadcast/state';
 import { internalApi } from '~/services/api';
 import {
   useCoachPins,
@@ -158,7 +158,7 @@ const SORT_LABELS: Record<Sort, string> = { rank: 'Rank', last: 'Last solve', na
 const router = useRouter();
 const authStore = useAuthStore();
 const groupsStore = useGroupsStore();
-const overlayStore = useOverlayStore();
+const activeContestId = ref('');
 const { pins, isPinned, togglePin } = useCoachPins();
 
 const users = ref<UserEntity[]>([]);
@@ -171,7 +171,7 @@ const selectedGroup = ref<string>('all');
 const pinnedOnly = ref(false);
 const sortBy = ref<Sort>('rank');
 
-const contestCode = computed(() => overlayStore.activeContestId);
+const contestCode = computed(() => activeContestId.value);
 
 interface SelectOption {
   label: string;
@@ -249,7 +249,7 @@ async function loadUsers() {
 
 async function loadStandings() {
   standingsError.value = '';
-  await overlayStore.fetchGlobalConfig();
+  activeContestId.value = (await fetchBroadcastState()).contestId;
   if (!contestCode.value) {
     standings.value = new Map();
     standingsProblems.value = [];

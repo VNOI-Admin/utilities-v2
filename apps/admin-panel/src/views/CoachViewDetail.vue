@@ -24,9 +24,9 @@
 
         <div class="flex items-center gap-2 flex-shrink-0">
           <!-- Contest Indicator (hidden on narrow screens) -->
-          <div v-if="overlayStore.activeContestId && !isNarrowScreen" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-mission-gray text-sm text-mission-muted">
+          <div v-if="activeContestId && !isNarrowScreen" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-mission-gray text-sm text-mission-muted">
             <div class="w-1.5 h-1.5 bg-mission-ok rounded-full"></div>
-            <span>{{ overlayStore.activeContestId }}</span>
+            <span>{{ activeContestId }}</span>
           </div>
           <button
             v-if="user"
@@ -224,7 +224,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { internalApi } from '~/services/api';
-import { useOverlayStore } from '~/stores/overlay';
+import { fetchBroadcastState } from '~/broadcast/state';
 import VideoPlayer from '~/components/VideoPlayer.vue';
 import { ArrowLeft, ArrowDownUp, Maximize, AlertCircle, Eye, Monitor, Camera, Pin } from 'lucide-vue-next';
 import {
@@ -239,7 +239,7 @@ import { primaryLabel, primaryMetric, resolveFormat, secondaryLabel, secondaryMe
 
 const route = useRoute();
 const router = useRouter();
-const overlayStore = useOverlayStore();
+const activeContestId = ref('');
 
 const user = ref<any>(null);
 const loading = ref(true);
@@ -334,7 +334,7 @@ async function loadUser() {
 async function loadParticipantRank() {
   try {
     // Check if a contest is configured in overlay
-    if (!overlayStore.activeContestId) {
+    if (!activeContestId.value) {
       participantRank.value = null;
       participantData.value = null;
       return;
@@ -347,7 +347,7 @@ async function loadParticipantRank() {
     }
 
     // Fetch all participants for the contest
-    const { problems, byUser } = await fetchStandings(overlayStore.activeContestId);
+    const { problems, byUser } = await fetchStandings(activeContestId.value);
     standingsProblems.value = problems;
 
     // Find participant where mapToUser matches current user's username
@@ -385,7 +385,7 @@ async function loadParticipantRank() {
 
 onMounted(async () => {
   // Fetch overlay global config to get current contest
-  await overlayStore.fetchGlobalConfig();
+  activeContestId.value = (await fetchBroadcastState()).contestId;
 
   // Load user and participant data
   loadUser();

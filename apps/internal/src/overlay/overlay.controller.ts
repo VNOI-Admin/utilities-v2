@@ -1,6 +1,6 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
-import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { MultiUserStreamDto } from './dtos/multi-user-stream.dto';
 import { SingleUserStreamDto } from './dtos/single-user-stream.dto';
@@ -20,6 +20,7 @@ import { RankingConfig } from './layouts/ranking-config';
 import { OverlayService, type SubmissionWithAuthor } from './overlay.service';
 import { OverlayLayoutResponse } from './responses/overlay-latout.response';
 import { StreamTokenGuard } from './stream-token.guard';
+import { BroadcastStateDto } from './dtos/broadcast-state.dto';
 
 @ApiTags('Overlay')
 @Controller('overlay')
@@ -209,6 +210,25 @@ export class OverlayController {
   @Post('/config/global')
   async setGlobalConfig(@Body() body: GlobalConfigDto) {
     return await this.overlayService.setGlobalConfig(body);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN, Role.COACH)
+  @ApiOperation({ summary: 'Get the broadcast overlay state (widgets, ticker, visual config)' })
+  @Get('/broadcast')
+  getBroadcast() {
+    return this.overlayService.getBroadcast();
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(AccessTokenGuard)
+  @RequiredRoles(Role.ADMIN)
+  @ApiOperation({ summary: 'Replace the broadcast overlay state' })
+  @ApiBody({ type: BroadcastStateDto })
+  @Put('/broadcast')
+  setBroadcast(@Body() body: BroadcastStateDto) {
+    return this.overlayService.setBroadcast(body);
   }
 
   @ApiBearerAuth()
