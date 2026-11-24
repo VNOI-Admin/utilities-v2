@@ -16,6 +16,7 @@ const dark = computed(() => textColorOn(props.background) === '#000');
 <style scoped>
 .task-cell {
   position: relative;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;

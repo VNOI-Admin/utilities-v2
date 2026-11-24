@@ -48,7 +48,9 @@ const rowStyle = computed(() => ({
 
 const textStyle = computed(() => ({
   padding: `0 ${props.visual.TICKER_TEXT_HORIZONTAL_PADDING}`,
-  fontSize: props.visual.TICKER_TEXT_FONT_SIZE,
+  fontSize: props.message?.type === 'clock' ? props.visual.TICKER_CLOCK_FONT_SIZE : props.visual.TICKER_TEXT_FONT_SIZE,
+  fontWeight: props.message?.type === 'clock' ? 700 : 500,
+  fontVariantNumeric: 'tabular-nums',
 }));
 </script>
 

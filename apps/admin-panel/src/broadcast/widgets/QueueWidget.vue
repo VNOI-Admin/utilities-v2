@@ -38,7 +38,8 @@ const rows = useQueueRows(props.data, visual, size);
 
 const wrapStyle = computed(() => ({
   backgroundColor: props.visual.QUEUE_BACKGROUND_COLOR,
-  borderRadius: props.visual.GLOBAL_BORDER_RADIUS,
+  borderRadius: props.visual.PANEL_RADIUS,
+  boxShadow: props.visual.PANEL_SHADOW,
   padding: `${props.visual.QUEUE_WRAP_PADDING}px`,
   gap: props.visual.QUEUE_GAP,
   '--queue-row-height': `${props.visual.QUEUE_ROW_HEIGHT}px`,
@@ -47,9 +48,11 @@ const wrapStyle = computed(() => ({
 
 const headerStyle = computed(() => ({
   fontSize: props.visual.QUEUE_HEADER_FONT_SIZE,
-  fontWeight: props.visual.GLOBAL_DEFAULT_FONT_WEIGHT_BOLD,
+  fontWeight: 800,
   fontFamily: props.visual.GLOBAL_DEFAULT_FONT_FAMILY,
   lineHeight: props.visual.QUEUE_HEADER_LINE_HEIGHT,
+  letterSpacing: '-0.02em',
+  '--queue-muted': props.visual.MUTED_TEXT_COLOR,
 }));
 
 function animatorStyle(row: QueueRowLayout) {
@@ -103,6 +106,10 @@ onBeforeUnmount(() => {
 
 .queue-caption {
   flex: 1 1 auto;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--queue-muted);
   min-width: 0;
   text-align: right;
   white-space: nowrap;

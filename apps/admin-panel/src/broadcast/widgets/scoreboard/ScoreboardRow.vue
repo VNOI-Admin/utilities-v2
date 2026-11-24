@@ -1,19 +1,19 @@
 <template>
   <div class="scoreboard-row">
-    <ShrinkingBox class="rank" :text="formatRank(row.rank)" align="center" :style="rankStyle(row.medal, visual)" />
-    <div class="name">
-      <ShrinkingBox :text="row.name" :align="visual.SCOREBOARD_CELL_TEAMNAME_ALIGN" />
+    <ShrinkingBox class="rank chip" :text="formatRank(row.rank)" align="center" :style="rankStyle(row.medal, visual)" />
+    <div class="name chip">
+      <span class="name-text">{{ row.name }}</span>
     </div>
-    <ShrinkingBox :text="formatScore(row.solved, 1)" :align="visual.SCOREBOARD_CELL_POINTS_ALIGN" />
-    <ShrinkingBox :text="String(row.penalty)" :align="visual.SCOREBOARD_CELL_PENALTY_ALIGN" />
-    <div v-for="(cell, index) in cells" :key="problems[index].code" class="task">
-      <div
-        class="task-fill"
-        :class="{ shimmer: cell.first }"
-        :style="{ backgroundColor: cell.color, color: visual.VERDICT_TEXT_COLOR, borderRadius: visual.VERDICT_CELL_BORDER_RADIUS }"
-      >
-        <div class="task-text">{{ cell.text }}</div>
-      </div>
+    <ShrinkingBox class="stat chip" :text="formatScore(row.solved, 1)" :align="visual.SCOREBOARD_CELL_POINTS_ALIGN" />
+    <ShrinkingBox class="stat penalty chip" :text="String(row.penalty)" :align="visual.SCOREBOARD_CELL_PENALTY_ALIGN" />
+    <div
+      v-for="(cell, index) in cells"
+      :key="problems[index].code"
+      class="task"
+      :class="{ first: cell.first }"
+      :style="{ backgroundColor: cell.color, color: visual.VERDICT_TEXT_COLOR, borderRadius: visual.VERDICT_CELL_BORDER_RADIUS }"
+    >
+      {{ cell.text }}
     </div>
   </div>
 </template>
@@ -46,87 +46,59 @@ const cells = computed(() =>
   display: grid;
   grid-template-columns: var(--sb-columns);
   gap: var(--sb-grid-gap);
-  overflow: hidden;
-  align-items: center;
-  box-sizing: content-box;
+  align-items: stretch;
   height: var(--sb-row-height);
-  font-size: var(--sb-row-font-size);
-  font-weight: var(--sb-row-font-weight);
   font-family: var(--sb-font-family);
   font-style: normal;
-  background-color: var(--sb-background);
-  border-top: var(--sb-divider) solid 1px;
-  border-bottom: var(--sb-divider) solid 1px;
+  font-variant-numeric: tabular-nums;
 }
 
-.rank {
+.chip {
   display: flex;
   align-items: center;
-  align-self: stretch;
+  background-color: var(--sb-row-background);
+  border-radius: var(--sb-chip-radius);
+}
+
+.rank,
+.stat {
   justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.stat.penalty {
+  font-size: 21px;
+  color: var(--sb-muted);
 }
 
 .name {
   min-width: 0;
   padding: 0 var(--sb-cell-padding);
+  font-size: var(--sb-row-font-size);
+  font-weight: 600;
+}
+
+.name-text {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .task {
   position: relative;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  justify-content: center;
-}
-
-.task-fill {
-  position: relative;
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-weight: bold;
-  color: #fff;
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 700;
+  background-color: var(--sb-cell-empty);
+  transition: background-color 250ms linear;
 }
 
-.task-text {
-  position: absolute;
-  z-index: 2;
-}
-
-.shimmer {
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-.shimmer::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    to right,
-    transparent 0%,
-    rgba(255, 255, 255, 0.1) 20%,
-    rgba(255, 255, 255, 0.6) 50%,
-    rgba(255, 255, 255, 0.1) 80%,
-    transparent 100%
-  );
-  mix-blend-mode: screen;
-  transform: translateX(-150%);
-  animation: shimmer 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  will-change: transform;
-  pointer-events: none;
-}
-
-@keyframes shimmer {
-  0% {
-    transform: translateX(-150%) skewX(-20deg);
-  }
-  100% {
-    transform: translateX(150%) skewX(-20deg);
-  }
+.task.first {
+  box-shadow: inset 0 0 0 3px var(--sb-first);
 }
 </style>

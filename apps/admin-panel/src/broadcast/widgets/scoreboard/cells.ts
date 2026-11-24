@@ -20,9 +20,8 @@ export function formatRank(rank: number | null | undefined): string {
 export function rankStyle(medal: Medal, visual: VisualConfig) {
   const background = medal ? visual.MEDAL_COLORS[medal] : undefined;
   return {
-    backgroundColor: background ?? 'transparent',
-    color: background && isDarkText(background) ? '#000' : '#FFF',
-    borderRadius: background ? visual.VERDICT_CELL_BORDER_RADIUS : undefined,
+    backgroundColor: background ?? visual.ROW_BACKGROUND,
+    color: background && isDarkText(background) ? visual.VERDICT_TEXT_COLOR : visual.GLOBAL_TEXT_COLOR,
   };
 }
 

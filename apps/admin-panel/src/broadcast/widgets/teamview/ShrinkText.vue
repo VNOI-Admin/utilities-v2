@@ -8,6 +8,7 @@
 
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { fitScale } from '../scoreboard/fit';
 
 const props = withDefaults(defineProps<{ text: string; align?: 'left' | 'center' | 'right' }>(), { align: 'left' });
 
@@ -19,9 +20,7 @@ const scale = ref(1);
 
 const measure = () => {
   if (!box.value || !inner.value) return;
-  const available = box.value.clientWidth;
-  const needed = inner.value.offsetWidth;
-  scale.value = needed > available && needed > 0 ? available / needed : 1;
+  scale.value = fitScale(box.value.clientWidth, getComputedStyle(box.value), inner.value.offsetWidth);
 };
 
 let observer: ResizeObserver | null = null;

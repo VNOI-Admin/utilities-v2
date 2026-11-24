@@ -1,6 +1,6 @@
 <template>
   <div class="ticker" :style="tickerStyle">
-    <div class="single" :style="{ backgroundColor: visual.TICKER_SMALL_BACKGROUND, borderRadius: visual.GLOBAL_BORDER_RADIUS }">
+    <div class="single" :style="{ backgroundColor: visual.TICKER_SMALL_BACKGROUND, borderRadius: visual.VERDICT_CELL_BORDER_RADIUS, boxShadow: visual.PANEL_SHADOW }">
       <div class="short-grid" :style="shortGridStyle">
         <svg class="live-icon" :style="{ width: visual.TICKER_LIVE_ICON_SIZE, height: visual.TICKER_LIVE_ICON_SIZE }" viewBox="0 0 512 512" fill="none">
           <circle cx="255.495" cy="256.494" r="42.75" fill="white" />
@@ -12,7 +12,7 @@
         <TickerPart :message="short" part="short" :data="data" :visual="visual" />
       </div>
     </div>
-    <div class="single" :style="{ backgroundColor: longBackground, borderRadius: visual.GLOBAL_BORDER_RADIUS }">
+    <div class="single" :class="{ chips: long?.type === 'scoreboard' }" :style="{ backgroundColor: longBackground, borderRadius: visual.VERDICT_CELL_BORDER_RADIUS }">
       <TickerPart :message="long" part="long" :data="data" :visual="visual" />
     </div>
   </div>
@@ -71,7 +71,12 @@ const shortGridStyle = computed(() => ({
   margin: 0 8px;
 }
 
+.single.chips {
+  overflow: visible;
+}
+
 .live-icon {
-  padding: 8px 0;
+  padding: 10px 0;
+  opacity: 0.7;
 }
 </style>

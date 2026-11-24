@@ -37,26 +37,27 @@ const barsStyle = computed(() => ({
 }));
 
 const barStyle = computed(() => ({
-  gridTemplateColumns: `${props.visual.STATISTICS_BAR_HEIGHT} auto`,
+  gridTemplateColumns: '30px minmax(0, 1fr)',
   height: props.visual.STATISTICS_BAR_HEIGHT,
   lineHeight: props.visual.STATISTICS_BAR_HEIGHT,
 }));
 
 const nameStyle = computed(() => ({
-  width: props.visual.STATISTICS_BAR_HEIGHT,
-  fontFamily: props.visual.GLOBAL_DEFAULT_FONT_FAMILY,
-  fontSize: props.visual.GLOBAL_DEFAULT_FONT_SIZE,
+  fontFamily: props.visual.LABEL_FONT_FAMILY,
+  fontSize: '18px',
+  color: props.visual.MUTED_TEXT_COLOR,
 }));
 
 const valuesStyle = computed(() => ({
-  backgroundColor: props.visual.QUEUE_ROW_BACKGROUND,
-  borderRadius: `0 ${props.visual.GLOBAL_BORDER_RADIUS} ${props.visual.GLOBAL_BORDER_RADIUS} 0`,
+  backgroundColor: props.visual.CELL_EMPTY_BACKGROUND,
+  borderRadius: props.visual.VERDICT_CELL_BORDER_RADIUS,
 }));
 
 const valueStyle = computed(() => ({
   height: props.visual.STATISTICS_BAR_HEIGHT,
   fontFamily: props.visual.GLOBAL_DEFAULT_FONT_FAMILY,
-  fontSize: props.visual.GLOBAL_DEFAULT_FONT_SIZE,
+  fontSize: '15px',
+  fontWeight: 700,
   lineHeight: props.visual.STATISTICS_BAR_HEIGHT,
   color: props.visual.VERDICT_TEXT_COLOR,
   transition: `width linear ${props.visual.STATISTICS_CELL_MORPH_TIME}ms`,
@@ -73,13 +74,14 @@ function valueWidth(value: StackedBarValue): string {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(0, 1fr);
+  column-gap: 28px;
   width: 100%;
   height: 100%;
 }
 
 .bar {
   display: grid;
-  gap: 0;
+  gap: 10px;
   width: 100%;
 }
 
@@ -89,7 +91,7 @@ function valueWidth(value: StackedBarValue): string {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #fff;
+  font-weight: 700;
   text-align: center;
 }
 
