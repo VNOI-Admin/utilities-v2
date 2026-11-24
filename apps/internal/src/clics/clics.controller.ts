@@ -1,10 +1,9 @@
 import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { Controller, Get, NotFoundException, Param, Query, Res, UseGuards } from '@nestjs/common';
-import { ApiBasicAuth, ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 
-import { ClicsKeyGuard } from './clics-key.guard';
 import { filterByIds } from './clics-objects';
 import { ClicsService } from './clics.service';
 
@@ -14,8 +13,7 @@ const line = (event: unknown) => `${JSON.stringify(event)}\n`;
 
 @ApiTags('Contest API (CLICS 2023-06)')
 @ApiBearerAuth()
-@ApiBasicAuth()
-@UseGuards(ClicsKeyGuard, AccessTokenGuard)
+@UseGuards(AccessTokenGuard)
 @Controller('api')
 export class ClicsController {
   constructor(private readonly clicsService: ClicsService) {}

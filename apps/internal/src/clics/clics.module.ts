@@ -7,7 +7,6 @@ import { User, UserSchema } from '@libs/common-db/schemas/user.schema';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
-import { ClicsKeyGuard } from './clics-key.guard';
 import { ClicsController } from './clics.controller';
 import { ClicsService } from './clics.service';
 
@@ -23,6 +22,6 @@ import { ClicsService } from './clics.service';
     ]),
   ],
   controllers: [ClicsController],
-  providers: [ClicsService, ClicsKeyGuard],
+  providers: [ClicsService],
 })
 export class ClicsModule {}
