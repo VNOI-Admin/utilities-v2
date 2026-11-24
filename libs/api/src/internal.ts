@@ -321,6 +321,10 @@ export interface ParticipantResponse {
   frozenRank?: number;
   /** VNOJ frozen board: per-problem tracking data */
   frozenProblemData?: object;
+  frozenSolvedCount?: number;
+  frozenPenalty?: number;
+  frozenSolvedProblems?: string[];
+  hidden?: boolean;
   /** Group code from the mapped user */
   groupCode?: string;
   /** Group name from the groups collection */
@@ -1539,7 +1543,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         /** Search by author or problem code */
         search?: string;
         /** Filter by submission status */
-        status?: 'AC' | 'PAC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'SC' | 'IE' | 'AB' | 'CE' | 'UNKNOWN';
+        status?: 'AC' | 'PAC' | 'WA' | 'RTE' | 'RE' | 'IR' | 'OLE' | 'MLE' | 'TLE' | 'SC' | 'IE' | 'AB' | 'CE' | 'PENDING' | 'UNKNOWN';
       },
       params: RequestParams = {},
     ) =>

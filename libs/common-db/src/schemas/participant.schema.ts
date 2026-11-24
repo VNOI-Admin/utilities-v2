@@ -96,6 +96,9 @@ export class Participant {
   @Prop({ required: false, default: 0 })
   frozenPenalty!: number;
 
+  @Prop({ type: [String], default: [] })
+  frozenSolvedProblems!: string[];
+
   // Rank on the frozen scoreboard (1-indexed).
   @Prop({ required: false, default: 0 })
   frozenRank!: number;

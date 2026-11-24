@@ -316,6 +316,7 @@ export class SyncSubmissionsProcessor extends WorkerHost {
             frozenTiebreaker: result.frozen?.tiebreaker ?? 0,
             frozenSolvedCount: result.frozen?.solvedCount ?? 0,
             frozenPenalty: result.frozen?.totalPenalty ?? 0,
+            frozenSolvedProblems: result.frozen?.solvedProblems ?? [],
           },
         },
       );

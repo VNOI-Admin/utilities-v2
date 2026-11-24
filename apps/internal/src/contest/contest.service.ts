@@ -465,6 +465,10 @@ export class ContestService {
         frozenTiebreaker: participant.frozenTiebreaker,
         frozenRank: participant.frozenRank,
         frozenProblemData: participant.frozenProblemData as Record<string, any>,
+        frozenSolvedCount: participant.frozenSolvedCount,
+        frozenPenalty: participant.frozenPenalty,
+        frozenSolvedProblems: participant.frozenSolvedProblems,
+        hidden: participant.hidden,
         groupCode,
         groupName: groupData?.name,
         groupLogoUrl: groupData?.logoUrl,
@@ -1211,6 +1215,7 @@ export class ContestService {
             frozenTiebreaker: result.frozen?.tiebreaker ?? 0,
             frozenSolvedCount: result.frozen?.solvedCount ?? 0,
             frozenPenalty: result.frozen?.totalPenalty ?? 0,
+            frozenSolvedProblems: result.frozen?.solvedProblems ?? [],
           },
         },
       );

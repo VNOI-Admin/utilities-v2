@@ -3,27 +3,13 @@
     <div class="ranking-header">
       <div class="ranking-title">
         <span class="title-text">LEADERBOARD</span>
-        <span v-if="!showFrozenDesign" class="ranking-range">{{ rangeText }}</span>
-        <span v-else class="frozen-badge">FROZEN</span>
-      </div>
-    </div>
-
-    <!-- Frozen Design -->
-    <div v-if="showFrozenDesign" class="frozen-overlay">
-      <div class="frozen-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 2v20M17 7l-5 5-5-5M17 17l-5-5-5 5M2 12h20M7 7l5 5 5-5M7 17l5-5 5 5" />
-        </svg>
-      </div>
-      <div class="frozen-text">
-        <div class="frozen-title">SCOREBOARD FROZEN</div>
-        <div class="frozen-subtitle">{{ frozenMessage }}</div>
-        <div class="frozen-description">Rankings and submissions are temporarily hidden</div>
+        <span class="ranking-range">{{ rangeText }}</span>
+        <span v-if="frozen" class="frozen-badge">FROZEN</span>
       </div>
     </div>
 
     <!-- Normal Ranking Table -->
-    <div v-else class="ranking-table-wrapper">
+    <div class="ranking-table-wrapper">
       <table class="ranking-table">
         <thead>
           <tr class="table-header">
@@ -36,7 +22,7 @@
               :key="problem._id"
               class="col-problem"
             >
-              {{ problem.displayName || problem.code }}
+              {{ problem.displayName || problem.label || problem.code }}
             </th>
           </tr>
         </thead>
@@ -79,10 +65,11 @@
               <div
                 v-if="row.problemStates[problem.code]?.attempted"
                 class="problem-cell"
-                :class="row.problemStates[problem.code]?.solved ? 'solved' : 'failed'"
+                :class="cellClass(row.problemStates[problem.code])"
               >
                 <span class="tries">
                   <template v-if="format === 'VNOJ'">{{ row.problemStates[problem.code]?.points }}</template>
+                  <template v-else-if="cellClass(row.problemStates[problem.code]) === 'pending'">?{{ row.problemStates[problem.code].tries + row.problemStates[problem.code].pending }}</template>
                   <template v-else>{{ row.problemStates[problem.code]?.solved ? '+' : '-' }}{{ row.problemStates[problem.code]?.tries }}</template>
                 </span>
                 <span v-if="row.problemStates[problem.code]?.solved" class="time">
@@ -104,8 +91,10 @@ import { internalApi } from '~/services/api';
 import type { ParticipantResponse } from '@libs/api/internal';
 import type { ProblemEntity } from '~/stores/contests';
 import { useContestsStore } from '~/stores/contests';
+import { isFrozen } from '~/common/contestStatus';
 import {
   resolveFormat,
+  standings,
   buildProblemState,
   primaryMetric,
   secondaryMetric,
@@ -134,28 +123,17 @@ const currentContest = computed(() => {
 // Ranking format (VNOJ shows score/time; ICPC shows solved/penalty).
 const format = computed<RankingFormat>(() => resolveFormat(participants.value[0] ?? currentContest.value));
 
-// Check if frozen design should be shown
-const showFrozenDesign = computed(() => {
-  if (!currentContest.value) return false;
-  return contestsStore.shouldShowFrozenDesign(currentContest.value);
-});
+const frozen = computed(() => !!currentContest.value && isFrozen(currentContest.value));
 
-// Frozen message
-const frozenMessage = computed(() => {
-  if (!currentContest.value) return '';
-  const isInPreFreeze = contestsStore.isInPreFreezeWindow(currentContest.value);
-  return isInPreFreeze ? 'Scoreboard will freeze soon...' : 'Final rankings will be revealed at the end';
-});
+const sortedParticipants = computed(() => standings(participants.value, frozen.value));
 
-// Sort participants by rank
-const sortedParticipants = computed(() => {
-  return [...participants.value].sort((a, b) => a.rank - b.rank);
-});
-
-// Sort problems alphabetically
 const sortedProblems = computed(() => {
-  return [...problems.value].sort((a, b) => a.code.localeCompare(b.code));
+  return [...problems.value].sort(
+    (a, b) => (a.ordinal ?? Number.MAX_SAFE_INTEGER) - (b.ordinal ?? Number.MAX_SAFE_INTEGER) || a.code.localeCompare(b.code),
+  );
 });
+
+const cellClass = (state?: ProblemState) => (state?.solved ? 'solved' : state?.pending ? 'pending' : 'failed');
 
 // Get displayed participants based on current page
 const displayedParticipants = computed(() => {
@@ -514,6 +492,15 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(231, 76, 60, 0.3);
 }
 
+.problem-cell.pending {
+  background: rgba(243, 156, 18, 0.15);
+  border: 1px solid rgba(243, 156, 18, 0.35);
+}
+
+.problem-cell.pending .tries {
+  color: #d68910;
+}
+
 .problem-cell .tries {
   font-size: 13px;
   font-weight: 700;
@@ -602,80 +589,5 @@ onBeforeUnmount(() => {
   50% {
     box-shadow: 0 0 0 8px rgba(231, 76, 60, 0);
   }
-}
-
-/* Frozen Overlay Styles */
-.frozen-overlay {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  padding: 60px 40px;
-  background: linear-gradient(135deg, rgba(90, 140, 184, 0.08) 0%, rgba(74, 124, 168, 0.12) 100%);
-  border-radius: 12px;
-  animation: frozenPulse 4s ease-in-out infinite;
-}
-
-@keyframes frozenPulse {
-  0%, 100% {
-    background: linear-gradient(135deg, rgba(90, 140, 184, 0.08) 0%, rgba(74, 124, 168, 0.12) 100%);
-  }
-  50% {
-    background: linear-gradient(135deg, rgba(90, 140, 184, 0.12) 0%, rgba(74, 124, 168, 0.16) 100%);
-  }
-}
-
-.frozen-icon {
-  color: #5a8cb8;
-  opacity: 0.6;
-  animation: iconFloat 3s ease-in-out infinite;
-}
-
-@keyframes iconFloat {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  25% {
-    transform: translateY(-12px) rotate(3deg);
-  }
-  75% {
-    transform: translateY(-12px) rotate(-3deg);
-  }
-}
-
-.frozen-text {
-  text-align: center;
-  max-width: 600px;
-}
-
-.frozen-title {
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 32px;
-  font-weight: 700;
-  color: #5a8cb8;
-  letter-spacing: 0.08em;
-  margin-bottom: 16px;
-  text-transform: uppercase;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.frozen-subtitle {
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 18px;
-  font-weight: 600;
-  color: #2c3e50;
-  letter-spacing: 0.02em;
-  margin-bottom: 12px;
-}
-
-.frozen-description {
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: #6c757d;
-  letter-spacing: 0.01em;
-  line-height: 1.6;
 }
 </style>

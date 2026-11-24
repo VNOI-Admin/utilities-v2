@@ -1125,7 +1125,7 @@ const ADD_MODES: { id: AddMode; label: string; hint: string; action: string }[] 
   { id: 'auto_create_user', label: 'Create accounts for unlinked', hint: 'Create an account for every participant that has no linked account yet.', action: 'Create accounts' },
 ];
 
-const ALL_VERDICTS = ['AC', 'PAC', 'WA', 'TLE', 'RTE', 'CE', 'RE', 'MLE', 'OLE', 'IR', 'SC', 'IE', 'AB', 'UNKNOWN'];
+const ALL_VERDICTS = ['AC', 'PAC', 'WA', 'TLE', 'RTE', 'CE', 'RE', 'MLE', 'OLE', 'IR', 'SC', 'IE', 'AB', 'PENDING', 'UNKNOWN'];
 const FORMATS: RankingFormat[] = ['ICPC', 'VNOJ'];
 
 const route = useRoute();
@@ -1468,6 +1468,7 @@ function getStatusClass(status: string): string {
     'CE': 'text-mission-amber',
     'IE': 'text-mission-muted',
     'AB': 'text-mission-muted',
+    'PENDING': 'text-mission-amber',
     'UNKNOWN': 'text-mission-cyan',
   };
   return classes[status] || 'text-mission-muted';
@@ -1546,6 +1547,7 @@ async function loadSubmissions() {
         | 'IE'
         | 'AB'
         | 'CE'
+        | 'PENDING'
         | 'UNKNOWN';
     } = {
       page: currentPage.value,

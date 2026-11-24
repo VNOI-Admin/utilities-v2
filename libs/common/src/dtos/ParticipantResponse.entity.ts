@@ -105,6 +105,22 @@ export class ParticipantResponse {
   frozenProblemData?: Record<string, ProblemDataResponse>;
 
   @Expose()
+  @ApiProperty({ required: false })
+  frozenSolvedCount?: number;
+
+  @Expose()
+  @ApiProperty({ required: false })
+  frozenPenalty?: number;
+
+  @Expose()
+  @ApiProperty({ required: false, type: [String] })
+  frozenSolvedProblems?: string[];
+
+  @Expose()
+  @ApiProperty({ required: false })
+  hidden?: boolean;
+
+  @Expose()
   @ApiProperty({ required: false, description: 'Group code from the mapped user' })
   groupCode?: string;
 
@@ -136,6 +152,10 @@ export class ParticipantResponse {
     this.frozenTiebreaker = data.frozenTiebreaker;
     this.frozenRank = data.frozenRank;
     this.frozenProblemData = data.frozenProblemData;
+    this.frozenSolvedCount = data.frozenSolvedCount;
+    this.frozenPenalty = data.frozenPenalty;
+    this.frozenSolvedProblems = data.frozenSolvedProblems;
+    this.hidden = data.hidden;
     this.groupCode = data.groupCode;
     this.groupName = data.groupName;
     this.groupLogoUrl = data.groupLogoUrl;

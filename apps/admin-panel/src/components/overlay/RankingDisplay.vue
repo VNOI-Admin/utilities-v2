@@ -2,72 +2,63 @@
   <div class="ranking-display">
     <div class="ranking-label">
       <span>LEADERBOARD</span>
+      <span v-if="frozen" class="frozen-tag">FROZEN</span>
     </div>
     <div class="ranking-content">
-      <!-- Frozen Design -->
-      <div v-if="showFrozenDesign" class="frozen-message">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="frozen-icon">
-          <path d="M12 2v20M17 7l-5 5-5-5M17 17l-5-5-5 5" />
-        </svg>
-        <span class="frozen-text">{{ frozenMessage }}</span>
-      </div>
-
       <!-- Normal Ranking -->
-      <template v-else>
-        <div v-if="participants.length === 0" class="ranking-empty">
-          <p>No participants yet</p>
-        </div>
-        <div v-else class="ranking-scroll-wrapper">
-          <div class="ranking-scroll">
-            <!-- First set of participants -->
-            <div
-              v-for="participant in sortedParticipants"
-              :key="`first-${participant._id}`"
-              class="ranking-item"
-            >
-              <span class="rank-position">{{ participant.rank }}</span>
-              <div class="participant-info">
-                <img
-                  v-if="participant.groupLogoUrl"
-                  :src="participant.groupLogoUrl"
-                  :alt="`${participant.groupName} logo`"
-                  class="group-logo"
-                  @error="handleImageError"
-                />
-                <span class="participant-name">{{ participant.displayName }}</span>
-              </div>
-              <span class="participant-stats">
-                <span class="solved-count">{{ primaryMetric(participant, format) }}</span>
-                <span class="stat-separator">/</span>
-                <span class="penalty">{{ secondaryMetric(participant, format) }}</span>
-              </span>
+      <div v-if="participants.length === 0" class="ranking-empty">
+        <p>No participants yet</p>
+      </div>
+      <div v-else class="ranking-scroll-wrapper">
+        <div class="ranking-scroll">
+          <!-- First set of participants -->
+          <div
+            v-for="participant in sortedParticipants"
+            :key="`first-${participant._id}`"
+            class="ranking-item"
+          >
+            <span class="rank-position">{{ participant.rank }}</span>
+            <div class="participant-info">
+              <img
+                v-if="participant.groupLogoUrl"
+                :src="participant.groupLogoUrl"
+                :alt="`${participant.groupName} logo`"
+                class="group-logo"
+                @error="handleImageError"
+              />
+              <span class="participant-name">{{ participant.displayName }}</span>
             </div>
-            <!-- Duplicate set for seamless loop -->
-            <div
-              v-for="participant in sortedParticipants"
-              :key="`second-${participant._id}`"
-              class="ranking-item"
-            >
-              <span class="rank-position">{{ participant.rank }}</span>
-              <div class="participant-info">
-                <img
-                  v-if="participant.groupLogoUrl"
-                  :src="participant.groupLogoUrl"
-                  :alt="`${participant.groupName} logo`"
-                  class="group-logo"
-                  @error="handleImageError"
-                />
-                <span class="participant-name">{{ participant.displayName }}</span>
-              </div>
-              <span class="participant-stats">
-                <span class="solved-count">{{ primaryMetric(participant, format) }}</span>
-                <span class="stat-separator">/</span>
-                <span class="penalty">{{ secondaryMetric(participant, format) }}</span>
-              </span>
+            <span class="participant-stats">
+              <span class="solved-count">{{ primaryMetric(participant, format) }}</span>
+              <span class="stat-separator">/</span>
+              <span class="penalty">{{ secondaryMetric(participant, format) }}</span>
+            </span>
+          </div>
+          <!-- Duplicate set for seamless loop -->
+          <div
+            v-for="participant in sortedParticipants"
+            :key="`second-${participant._id}`"
+            class="ranking-item"
+          >
+            <span class="rank-position">{{ participant.rank }}</span>
+            <div class="participant-info">
+              <img
+                v-if="participant.groupLogoUrl"
+                :src="participant.groupLogoUrl"
+                :alt="`${participant.groupName} logo`"
+                class="group-logo"
+                @error="handleImageError"
+              />
+              <span class="participant-name">{{ participant.displayName }}</span>
             </div>
+            <span class="participant-stats">
+              <span class="solved-count">{{ primaryMetric(participant, format) }}</span>
+              <span class="stat-separator">/</span>
+              <span class="penalty">{{ secondaryMetric(participant, format) }}</span>
+            </span>
           </div>
         </div>
-      </template>
+      </div>
     </div>
   </div>
 </template>
@@ -77,7 +68,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { internalApi } from '~/services/api';
 import type { ParticipantResponse } from '@libs/api/internal';
 import { useContestsStore } from '~/stores/contests';
-import { resolveFormat, primaryMetric, secondaryMetric, type RankingFormat } from '~/common/ranking';
+import { isFrozen } from '~/common/contestStatus';
+import { resolveFormat, primaryMetric, secondaryMetric, standings, type RankingFormat } from '~/common/ranking';
 
 const props = defineProps<{
   contestId: string;
@@ -95,23 +87,9 @@ const currentContest = computed(() => {
 // Ranking format (VNOJ shows score/time; ICPC shows solved/penalty).
 const format = computed<RankingFormat>(() => resolveFormat(participants.value[0] ?? currentContest.value));
 
-// Check if frozen design should be shown
-const showFrozenDesign = computed(() => {
-  if (!currentContest.value) return false;
-  return contestsStore.shouldShowFrozenDesign(currentContest.value);
-});
+const frozen = computed(() => !!currentContest.value && isFrozen(currentContest.value));
 
-// Frozen message
-const frozenMessage = computed(() => {
-  if (!currentContest.value) return '';
-  const isInPreFreeze = contestsStore.isInPreFreezeWindow(currentContest.value);
-  return isInPreFreeze ? 'Scoreboard freezing soon...' : 'Scoreboard frozen';
-});
-
-// Sort participants by rank
-const sortedParticipants = computed(() => {
-  return [...participants.value].sort((a, b) => a.rank - b.rank);
-});
+const sortedParticipants = computed(() => standings(participants.value, frozen.value));
 
 // Fetch participants
 const fetchParticipants = async () => {
@@ -282,36 +260,12 @@ onBeforeUnmount(() => {
   color: #e74c3c;
 }
 
-/* Frozen Message Styles */
-.frozen-message {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  background: rgba(212, 168, 87, 0.15);
-  border-radius: 6px;
-  animation: frozenPulse 2s ease-in-out infinite;
-}
-
-@keyframes frozenPulse {
-  0%, 100% {
-    opacity: 0.9;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.frozen-icon {
-  color: #d4a857;
-  flex-shrink: 0;
-}
-
-.frozen-text {
-  font-family: 'IBM Plex Sans', sans-serif;
-  font-size: 16px;
-  font-weight: 600;
-  color: #2c3e50;
-  letter-spacing: 0.02em;
+.frozen-tag {
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #e74c3c;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
 }
 </style>
