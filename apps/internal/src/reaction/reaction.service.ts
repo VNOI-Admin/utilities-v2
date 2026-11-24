@@ -7,7 +7,7 @@ import {
   type SystemConfigDocument,
 } from '@libs/common-db/schemas/systemConfig.schema';
 import { User, type UserDocument } from '@libs/common-db/schemas/user.schema';
-import { resolveProblemName } from '@libs/common/helper/problem-name';
+import { problemLetters, resolveProblemName } from '@libs/common/helper/problem-name';
 import {
   ReactionS3ConfigError,
   createReactionS3Client,
@@ -302,7 +302,7 @@ export class ReactionService {
 
     const submissions = await this.loadSubmissions(items.map((item) => item.key));
     const users = await this.loadUsersForSubmissions([...submissions.values()]);
-    const problemNames = await this.loadProblemNames([...submissions.values()]);
+    const problemInfo = await this.loadProblemInfo([...submissions.values()]);
 
     return items.map((item) => {
       const submissionId = submissionIdFromKey(item.key);
@@ -321,6 +321,7 @@ export class ReactionService {
       }
 
       const user = users.get(`${submission.contest_code}::${submission.author}`);
+      const problem = problemInfo.get(`${submission.contest_code}::${submission.problem_code}`);
 
       return {
         ...base,
@@ -328,10 +329,8 @@ export class ReactionService {
         group: user?.group?.trim() || undefined,
         author: submission.author,
         problemCode: submission.problem_code,
-        problemDisplayName: resolveProblemName(
-          submission.problem_code,
-          problemNames.get(`${submission.contest_code}::${submission.problem_code}`),
-        ),
+        problemLabel: problem?.label,
+        problemDisplayName: resolveProblemName(submission.problem_code, problem?.name),
         contestCode: submission.contest_code,
         status: submission.submissionStatus,
         rankBefore: submission.data?.old_rank,
@@ -362,29 +361,29 @@ export class ReactionService {
    * given submissions, keyed by `contest::code`. Only problems that actually
    * carry a `displayName` are returned; callers fall back to the code otherwise.
    */
-  private async loadProblemNames(submissions: SubmissionDocument[]): Promise<Map<string, string>> {
-    if (submissions.length === 0) {
+  private async loadProblemInfo(
+    submissions: SubmissionDocument[],
+  ): Promise<Map<string, { label: string; name?: string }>> {
+    const contests = [...new Set(submissions.map((submission) => submission.contest_code))];
+    if (contests.length === 0) {
       return new Map();
     }
 
-    const pairs = new Map<string, { contest: string; code: string }>();
-    for (const submission of submissions) {
-      pairs.set(`${submission.contest_code}::${submission.problem_code}`, {
-        contest: submission.contest_code,
-        code: submission.problem_code,
-      });
-    }
-
     const problems = await this.problemModel
-      .find({ $or: [...pairs.values()] })
-      .select('contest code displayName')
+      .find({ contest: { $in: contests } })
+      .select('contest code displayName name label ordinal')
       .lean<ProblemDocument[]>()
       .exec();
 
-    const out = new Map<string, string>();
-    for (const problem of problems) {
-      if (problem.displayName?.trim()) {
-        out.set(`${problem.contest}::${problem.code}`, problem.displayName);
+    const out = new Map<string, { label: string; name?: string }>();
+    for (const contest of contests) {
+      const inContest = problems.filter((problem) => problem.contest === contest);
+      const letters = problemLetters(inContest);
+      for (const problem of inContest) {
+        out.set(`${contest}::${problem.code}`, {
+          label: letters.get(problem.code) ?? problem.code,
+          name: problem.displayName?.trim() || problem.name,
+        });
       }
     }
     return out;

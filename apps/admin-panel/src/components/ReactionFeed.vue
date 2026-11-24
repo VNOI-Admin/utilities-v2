@@ -251,6 +251,7 @@ import {
   rankClass,
   rankDelta,
   reactionMonogram,
+  reactionProblem,
   reactionTitle,
   verdictClass,
   verdictColor,
@@ -318,7 +319,7 @@ function details(item: ReactionVideoItem): { label: string; value: string }[] {
   return [
     { label: 'Team', value: item.teamName ?? '—' },
     { label: 'Group', value: item.group ?? '—' },
-    { label: 'Problem', value: item.problemDisplayName || item.problemCode || '—' },
+    { label: 'Problem', value: reactionProblem(item) ?? '—' },
     { label: 'Contest', value: item.contestCode ?? '—' },
     { label: 'Verdict', value: item.status ?? '—' },
     { label: 'Rank', value: rankDelta(item) || '—' },

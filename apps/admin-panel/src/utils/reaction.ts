@@ -1,4 +1,5 @@
 import type { ReactionVideoItem } from '~/types/reaction';
+import { problemTitle } from '~/utils/problemName';
 
 /**
  * Headline for a clip: "<full name> solved <problem name>". `teamName` is
@@ -8,7 +9,7 @@ import type { ReactionVideoItem } from '~/types/reaction';
  */
 export function reactionTitle(item: ReactionVideoItem): string {
   const name = item.teamName || item.author;
-  const problem = item.problemDisplayName || item.problemCode;
+  const problem = reactionProblem(item);
   if (name && problem) {
     return `${name} solved ${problem}`;
   }
@@ -19,6 +20,14 @@ export function reactionTitle(item: ReactionVideoItem): string {
     return `Unknown team solved ${problem}`;
   }
   return 'Unidentified clip';
+}
+
+export function reactionProblem(item: ReactionVideoItem): string | undefined {
+  const name = item.problemDisplayName || item.problemCode;
+  if (item.problemLabel && name) {
+    return problemTitle(item.problemLabel, name);
+  }
+  return item.problemLabel || name;
 }
 
 /** Two-letter avatar text, preferring the group over the team. */

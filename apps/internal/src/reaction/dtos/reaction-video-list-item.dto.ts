@@ -28,6 +28,9 @@ export class ReactionVideoListItemDto {
   @ApiPropertyOptional({ description: 'Problem code, e.g. "E"' })
   problemCode?: string;
 
+  @ApiPropertyOptional({ description: 'Short problem label shown in place of the name, e.g. "A"' })
+  problemLabel?: string;
+
   @ApiPropertyOptional({
     description: 'Display name for the problem (manual override, falls back to the code)',
   })

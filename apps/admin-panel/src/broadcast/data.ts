@@ -4,6 +4,7 @@ import { internalApi, internalClient } from '~/services/api';
 import { isFrozen } from '~/common/contestStatus';
 import { buildProblemState, resolveFormat, standings, type ProblemState, type RankingFormat } from '~/common/ranking';
 import type { ContestEntity, ProblemEntity } from '~/stores/contests';
+import { labelProblems } from '~/utils/problemName';
 import type { Medals } from './types';
 
 interface Submission {
@@ -73,14 +74,6 @@ export interface BroadcastData {
   remainingMs: Ref<number>;
 }
 
-function problemLabel(index: number): string {
-  let label = '';
-  for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) {
-    label = String.fromCharCode(65 + ((n - 1) % 26)) + label;
-  }
-  return label;
-}
-
 export function medalFor(rank: number, medals: Medals): Medal {
   if (rank <= medals.gold) return 'gold';
   if (rank <= medals.gold + medals.silver) return 'silver';
@@ -146,16 +139,11 @@ export function useBroadcastData(contestId: Ref<string>, medals: Ref<Medals>): B
   const frozen = computed(() => !!contest.value && isFrozen(contest.value, now.value));
 
   const problems = computed<BroadcastProblem[]>(() =>
-    [...rawProblems.value]
-      .sort(
-        (a, b) =>
-          (a.ordinal ?? Number.MAX_SAFE_INTEGER) - (b.ordinal ?? Number.MAX_SAFE_INTEGER) || a.code.localeCompare(b.code),
-      )
-      .map((problem, index) => ({
-        code: problem.code,
-        label: problem.label ?? problemLabel(index),
-        name: problem.displayName || problem.name || problem.code,
-      })),
+    labelProblems(rawProblems.value).map((problem) => ({
+      code: problem.code,
+      label: problem.letter,
+      name: problem.fullName,
+    })),
   );
 
   const rows = computed<BroadcastRow[]>(() =>

@@ -106,7 +106,7 @@
                 <div class="text-xs text-mission-muted">{{ secondaryLabel(user.format).toLowerCase() }}</div>
               </div>
               <div v-if="user.last">
-                <div class="text-xl font-semibold">{{ user.last.label }}</div>
+                <div class="text-xl font-semibold" :title="user.last.name">{{ user.last.label }}</div>
                 <div class="text-xs text-mission-muted">last solve · {{ user.last.solveTime }}′</div>
               </div>
             </div>

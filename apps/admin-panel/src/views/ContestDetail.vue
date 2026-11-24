@@ -140,9 +140,9 @@
                     v-for="problem in sortedProblems"
                     :key="problem._id"
                     class="px-1 py-3 text-center font-medium w-14"
-                    :title="problem.displayName ? `${problem.displayName} (${problem.code})` : problem.code"
+                    :title="problemTitle(problem.letter, problem.fullName)"
                   >
-                    <span class="block max-w-[6rem] mx-auto truncate">{{ problemLabel(problem.code) }}</span>
+                    {{ problem.letter }}
                   </th>
                   <th class="w-3"></th>
                 </tr>
@@ -181,7 +181,7 @@
                     <div
                       class="mx-auto h-8 min-w-[3rem] px-1 rounded-lg flex items-center justify-center gap-0.5 text-xs tabular-nums"
                       :class="rankCellClass(row.problemStates[problem.code])"
-                      :title="rankCellTitle(problemLabel(problem.code), row.problemStates[problem.code])"
+                      :title="rankCellTitle(problemTitle(problem.letter, problem.fullName), row.problemStates[problem.code])"
                     >
                       <template v-if="rankingFormat === 'VNOJ' && row.problemStates[problem.code]?.attempted">
                         <span class="font-semibold">{{ row.problemStates[problem.code].points }}</span>
@@ -356,10 +356,13 @@
           </template>
           <template #row="{ item: problem }">
             <div class="flex items-center gap-3 min-w-0">
-              <span class="min-w-[1.75rem] max-w-[10rem] h-7 px-1.5 shrink-0 rounded-lg bg-mission-gray grid place-items-center text-xs font-semibold truncate">
-                {{ problemLabel(problem.code) }}
+              <span class="min-w-[1.75rem] h-7 px-1.5 shrink-0 rounded-lg bg-mission-gray grid place-items-center text-xs font-semibold">
+                {{ problem.letter }}
               </span>
-              <span class="font-mono text-sm text-mission-muted truncate">{{ problem.code }}</span>
+              <div class="min-w-0">
+                <div class="text-sm font-medium truncate">{{ problem.fullName }}</div>
+                <div v-if="problem.fullName !== problem.code" class="font-mono text-xs text-mission-muted truncate">{{ problem.code }}</div>
+              </div>
             </div>
             <div class="flex items-center gap-2 min-w-0">
               <input
@@ -462,8 +465,8 @@
               </div>
             </div>
             <div class="flex items-center gap-2 min-w-0 text-sm">
-              <span v-if="problemLabel(submission.problem_code) !== submission.problem_code" class="font-semibold truncate">{{ problemLabel(submission.problem_code) }}</span>
-              <span class="font-mono text-xs text-mission-muted truncate">{{ submission.problem_code }}</span>
+              <span class="font-semibold shrink-0">{{ problemLabel(submission.problem_code) }}</span>
+              <span class="text-xs text-mission-muted truncate" :title="submission.problem_code">{{ problemName(submission.problem_code) }}</span>
             </div>
             <div class="text-sm font-semibold" :class="getStatusClass(submission.submissionStatus)">
               {{ submission.submissionStatus }}
@@ -978,7 +981,7 @@
     <!-- Quick view of a rendered reaction -->
     <MissionModal
       :show="previewSubmission !== null"
-      :title="previewSubmission ? `Reaction · ${previewSubmission.author} · ${problemName(previewSubmission.problem_code)}` : ''"
+      :title="previewSubmission ? `Reaction · ${previewSubmission.author} · ${problemTitleOf(previewSubmission.problem_code)}` : ''"
       max-width="sm"
       :show-actions="false"
       @close="closeReactionPreview"
@@ -1030,7 +1033,7 @@
         <p class="text-gray-300">
           Queue a fresh render for
           <span class="font-medium text-gray-100">{{ regenTarget.author }}</span> on
-          <span class="font-medium text-gray-100">{{ problemName(regenTarget.problem_code) }}</span>?
+          <span class="font-medium text-gray-100">{{ problemTitleOf(regenTarget.problem_code) }}</span>?
         </p>
         <ul class="list-disc pl-5 space-y-1 text-mission-muted">
           <li>The stored clip is discarded and rendered again from the raw feeds.</li>
@@ -1115,7 +1118,7 @@ import {
   secondaryLabel,
   secondaryMetric,
 } from '~/common/ranking';
-import { resolveProblemName } from '~/utils/problemName';
+import { labelProblems, problemTitle } from '~/utils/problemName';
 
 type AddMode = 'existing_user' | 'csv_import' | 'create_user' | 'auto_create_user';
 const ADD_MODES: { id: AddMode; label: string; hint: string; action: string }[] = [
@@ -1320,31 +1323,20 @@ const canSubmitParticipant = computed(() => {
 });
 
 // Ranking computed - sorted problems for header
-const sortedProblems = computed(() => {
-  return [...problems.value].sort((a, b) => a.code.localeCompare(b.code));
-});
+const sortedProblems = computed(() => labelProblems(problems.value));
 
-const problemLetters = computed(() =>
-  new Map(sortedProblems.value.map((p, i) => [p.code, String.fromCharCode(65 + i)]))
-);
-
-// Map problem code -> display name, so surfaces that only carry a code
-// (e.g. the submissions table) can show the mapped name.
-const problemNameByCode = computed(() => {
-  const map = new Map<string, string>();
-  for (const problem of problems.value) {
-    map.set(problem.code, resolveProblemName(problem.code, problem.displayName));
-  }
-  return map;
-});
+const problemByCode = computed(() => new Map(sortedProblems.value.map((p) => [p.code, p])));
 
 function problemName(code: string): string {
-  return problemNameByCode.value.get(code) ?? code;
+  return problemByCode.value.get(code)?.fullName ?? code;
 }
 
 function problemLabel(code: string): string {
-  const name = problemName(code);
-  return name !== code ? name : (problemLetters.value.get(code) ?? code);
+  return problemByCode.value.get(code)?.letter ?? code;
+}
+
+function problemTitleOf(code: string): string {
+  return problemTitle(problemLabel(code), problemName(code));
 }
 
 // Ranking format for this contest (VNOJ: score/time; ICPC: solved/penalty).
@@ -2042,13 +2034,13 @@ async function confirmRegenerateSubmissionReaction() {
       `/reactions/submissions/${submissionId}/regenerate`,
     );
     toast.success(data.message);
-    logReaction(`${submission.author} / ${problemName(submission.problem_code)}: ${data.message}`);
+    logReaction(`${submission.author} / ${problemTitleOf(submission.problem_code)}: ${data.message}`);
     regenTarget.value = null;
     await loadSubmissions();
   } catch (err: any) {
     const message = err.response?.data?.message || 'Failed to queue reaction render';
     toast.error(message);
-    logReaction(`${submission.author} / ${problemName(submission.problem_code)}: ${message}`, false);
+    logReaction(`${submission.author} / ${problemTitleOf(submission.problem_code)}: ${message}`, false);
     console.error('Regenerate submission reaction error:', err);
   } finally {
     const next = new Set(regeneratingReactionIds.value);
