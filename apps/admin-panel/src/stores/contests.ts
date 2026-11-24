@@ -42,6 +42,7 @@ export enum SubmissionStatus {
   IE = 'IE',
   AB = 'AB',
   CE = 'CE',
+  PENDING = 'PENDING',
   UNKNOWN = 'UNKNOWN',
 }
 
@@ -73,6 +74,9 @@ export interface ProblemEntity {
   contest: string;
   // Manual display name that overrides `code` in all problem displays.
   displayName?: string;
+  name?: string;
+  label?: string;
+  ordinal?: number;
 }
 
 export type ContestStatus = 'upcoming' | 'ongoing' | 'past' | 'frozen';

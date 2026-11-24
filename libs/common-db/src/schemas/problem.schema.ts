@@ -18,6 +18,15 @@ export class Problem {
    */
   @Prop({ required: false })
   displayName?: string;
+
+  @Prop({ required: false })
+  name?: string;
+
+  @Prop({ required: false })
+  label?: string;
+
+  @Prop({ required: false })
+  ordinal?: number;
 }
 
 export const ProblemSchema = SchemaFactory.createForClass(Problem);

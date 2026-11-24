@@ -70,7 +70,29 @@ export function buildProblemState(
 
   const solved = participant.solvedProblems?.includes(problemCode) || false;
   const tries = pd.wrongTries + (solved ? 1 : 0);
-  return { attempted: tries > 0, solved, tries, time: solved ? pd.solveTime : 0, points: 0, pending: 0 };
+  const pending = solved ? 0 : (pd.pending ?? 0);
+  return { attempted: tries > 0 || pending > 0, solved, tries, time: solved ? pd.solveTime : 0, points: 0, pending };
+}
+
+function frozenView(p: ParticipantResponse): ParticipantResponse {
+  return {
+    ...p,
+    rank: p.frozenRank ?? p.rank,
+    solvedCount: p.frozenSolvedCount ?? 0,
+    totalPenalty: p.frozenPenalty ?? 0,
+    solvedProblems: p.frozenSolvedProblems ?? [],
+    problemData: p.frozenProblemData ?? {},
+    score: p.frozenScore,
+    cumtime: p.frozenCumtime,
+    tiebreaker: p.frozenTiebreaker,
+  };
+}
+
+export function standings(participants: ParticipantResponse[], frozen: boolean): ParticipantResponse[] {
+  return participants
+    .filter((p) => !p.hidden)
+    .map((p) => (frozen ? frozenView(p) : p))
+    .sort((a, b) => a.rank - b.rank);
 }
 
 /** Primary ranking metric (VNOJ: total score; ICPC: solved count). */

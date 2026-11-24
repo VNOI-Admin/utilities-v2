@@ -80,7 +80,15 @@ These need outside services. Without them the rest still runs, and the affected 
   `WG_PORTAL_BASE_URL`, `WG_PORTAL_INTERFACE_ID`, `WG_PORTAL_CORE_ADMIN_USER` and `WG_PORTAL_CORE_ADMIN_API_TOKEN`
   (the compose file does, through the shared `.docker.env`). Without them the probe logs a warning at startup and
   results carry `handshakeAgeSeconds: null`.
-- **Contest data**: `sync` and the overlays read VNOJ through `VNOJ_API_BASE_URL` and `VNOJ_API_KEY`.
+- **Contest data**: `sync` and the overlays read VNOJ through `VNOJ_API_BASE_URL` and `VNOJ_API_KEY`. Set
+  `VNOJ_CLICS_FEED=true` on both `sync` and `internal` to read ICPC-format contests from VNOJ's CLICS event feed
+  (`/api/clics/contests/<code>/event-feed`) instead of the sync API; the VNOJ instance must serve that endpoint.
+- **Contest API**: `internal` serves the ICPC Contest API (CLICS 2023-06) at `/api`, behind nginx at
+  `/services/internal/api`. Admins and coaches use their session; tools such as ICPC Live use HTTP Basic auth with
+  any username and `CLICS_API_KEY` as the password. Point ICPC Live at it with
+  `{"type": "clics", "feeds": [{"source": "https://<admin host>/services/internal/api", "contestId": "<code>"}]}`
+  and Basic credentials. Team `desktop`/`webcam` links carry a signed token in the path
+  (`/stream-source/t/<token>/<ip>/…`, valid 6–12 hours), so an OBS browser source can play them without a session.
 - **Reactions**: rendering needs `ffmpeg` on the path, the assets under `REACTION_RENDERER_*`, and an S3 bucket
   in `REACTION_S3_*`.
 

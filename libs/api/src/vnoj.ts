@@ -181,6 +181,7 @@ export class HttpClient<SecurityDataType = unknown> {
         headers: {
           ...(requestParams.headers || {}),
           ...(type ? { 'Content-Type': type } : {}),
+          ...(this.globalApiKey ? { 'X-Global-API-Key': this.globalApiKey } : {}),
         },
         params: queryParams,
         responseType: responseFormat,
@@ -257,6 +258,14 @@ export class VNOJApi<SecurityDataType extends unknown> extends HttpClient<Securi
         method: 'GET',
         query: query,
         format: 'json',
+        ...params,
+      }),
+
+    getClicsEventFeed: (contestCode: string, params: RequestParams = {}) =>
+      this.request<string, any>({
+        path: `/api/clics/contests/${contestCode}/event-feed`,
+        method: 'GET',
+        format: 'text',
         ...params,
       }),
   };

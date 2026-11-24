@@ -58,8 +58,8 @@ export interface ScoringConfig {
 }
 
 // Statuses that never count as a wrong attempt.
-const ICPC_IGNORED = new Set(['CE', 'IE', 'AC']);
-const VNOJ_IGNORED = new Set(['CE', 'IE']);
+const ICPC_IGNORED = new Set(['CE', 'IE', 'AC', 'PENDING']);
+const VNOJ_IGNORED = new Set(['CE', 'IE', 'PENDING']);
 
 const POINTS_PRECISION = 3;
 
@@ -127,12 +127,15 @@ function computeAggregate(
     const considered = cutoff
       ? ordered.filter((s) => s.submittedAt.getTime() < cutoff.getTime())
       : ordered;
-    const pending = cutoff ? ordered.length - considered.length : 0;
+    const pending =
+      ordered.length - considered.length + considered.filter((s) => s.status === 'PENDING').length;
 
     if (considered.length === 0) {
       // Nothing counts yet, but surface pending post-freeze submissions.
-      if (isVnoj && pending > 0) {
-        problemData[problemCode] = { solveTime: 0, wrongTries: 0, points: 0, pending };
+      if (pending > 0) {
+        problemData[problemCode] = isVnoj
+          ? { solveTime: 0, wrongTries: 0, points: 0, pending }
+          : { solveTime: 0, wrongTries: 0, pending };
       }
       continue;
     }
@@ -186,10 +189,11 @@ function computeAggregate(
         solvedCount++;
         solveTimeTotal += solveTime;
         penaltyTotal += wrongTries * penaltyPerTry;
+        tiebreaker = Math.max(tiebreaker, solveTime);
       } else {
         const wrongTries = considered.filter((s) => !ignored.has(s.status)).length;
-        if (wrongTries > 0) {
-          problemData[problemCode] = { solveTime: 0, wrongTries };
+        if (wrongTries > 0 || pending > 0) {
+          problemData[problemCode] = { solveTime: 0, wrongTries, ...(pending > 0 ? { pending } : {}) };
         }
       }
     }
@@ -226,7 +230,19 @@ export function compareForRanking(a: AggregateScore, b: AggregateScore, format: 
     return a.tiebreaker - b.tiebreaker;
   }
   if (b.solvedCount !== a.solvedCount) return b.solvedCount - a.solvedCount;
-  return a.totalPenalty - b.totalPenalty;
+  if (a.totalPenalty !== b.totalPenalty) return a.totalPenalty - b.totalPenalty;
+  return a.tiebreaker - b.tiebreaker;
+}
+
+export function rankSort(format: ContestFormat, frozen = false): Record<string, 1 | -1> {
+  if (format === ContestFormat.VNOJ) {
+    return frozen
+      ? { frozenScore: -1, frozenCumtime: 1, frozenTiebreaker: 1, username: 1 }
+      : { score: -1, cumtime: 1, tiebreaker: 1, username: 1 };
+  }
+  return frozen
+    ? { frozenSolvedCount: -1, frozenPenalty: 1, frozenTiebreaker: 1, username: 1 }
+    : { solvedCount: -1, totalPenalty: 1, tiebreaker: 1, username: 1 };
 }
 
 /** Baseline metrics for a participant with no scoring submissions. */
@@ -252,7 +268,7 @@ export function computeParticipantScore(
 ): ParticipantScore {
   const live = computeAggregate(problems, config);
 
-  if (config.format === ContestFormat.VNOJ && config.frozenAt) {
+  if (config.frozenAt) {
     const frozen = computeAggregate(problems, config, config.frozenAt);
     return { ...live, frozen };
   }
