@@ -38,7 +38,7 @@ export interface CreateUserDto {
   /** VNOJ API key (48 chars, base64url alphabet) used to sign the contestant into the judge */
   apiKey?: string;
   /** @default "contestant" */
-  role: 'contestant' | 'coach' | 'admin' | 'guest';
+  role: 'contestant' | 'coach' | 'admin' | 'guest' | 'machine-admin' | 'machine-admin.read' | 'machine-admin.write';
   isActive?: boolean;
   group?: string;
 }
@@ -100,7 +100,7 @@ export interface UpdateUserDto {
   /** VNOJ API key (48 chars, base64url alphabet) used to sign the contestant into the judge */
   apiKey?: string;
   /** @default "contestant" */
-  role?: 'contestant' | 'coach' | 'admin' | 'guest';
+  role?: 'contestant' | 'coach' | 'admin' | 'guest' | 'machine-admin' | 'machine-admin.read' | 'machine-admin.write';
   group?: string;
   isActive?: boolean;
 }
@@ -718,7 +718,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
         orderBy?: string;
         /** Search query */
         q?: string;
-        role?: 'contestant' | 'coach' | 'admin' | 'guest';
+        role?: 'contestant' | 'coach' | 'admin' | 'guest' | 'machine-admin' | 'machine-admin.read' | 'machine-admin.write';
         /** Return current user based on access token */
         me?: boolean;
         /**
@@ -865,7 +865,7 @@ export class InternalApi<SecurityDataType extends unknown> extends HttpClient<Se
          */
         q: string;
         /** Filter by role */
-        role?: 'contestant' | 'coach' | 'admin' | 'guest';
+        role?: 'contestant' | 'coach' | 'admin' | 'guest' | 'machine-admin' | 'machine-admin.read' | 'machine-admin.write';
         /** Filter by group code */
         group?: string;
         /** Filter by active status */

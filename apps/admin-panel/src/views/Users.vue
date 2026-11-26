@@ -389,15 +389,23 @@ import type { CreateUserDto, UserEntity, UpdateUserDto } from '@libs/api/interna
 import { useToast } from 'vue-toastification';
 import BatchUserModal from '~/components/batch-user/BatchUserModal.vue';
 import UserDrawer from '~/components/UserDrawer.vue';
+import { ROLES, isRole, type Role } from '~/types/roles';
 
-type Role = 'admin' | 'coach' | 'contestant' | 'guest';
 type RoleFilter = 'all' | Role;
 type StatusFilter = 'any' | 'online' | 'offline' | 'issue';
 type BulkAction = 'move' | 'disable' | 'enable' | 'delete';
 
-const ROLES: Role[] = ['contestant', 'coach', 'admin', 'guest'];
 const STATUSES: StatusFilter[] = ['any', 'online', 'offline', 'issue'];
-const ROLE_PLURALS: Record<RoleFilter, string> = { all: 'All', contestant: 'Contestants', coach: 'Coaches', admin: 'Admins', guest: 'Guests' };
+const ROLE_PLURALS: Record<RoleFilter, string> = {
+  all: 'All',
+  contestant: 'Contestants',
+  coach: 'Coaches',
+  admin: 'Admins',
+  guest: 'Guests',
+  'machine-admin': 'Machine admins',
+  'machine-admin.read': 'Machine readers',
+  'machine-admin.write': 'Machine writers',
+};
 const STATUS_LABELS: Record<StatusFilter, string> = { any: 'Any status', online: 'Online', offline: 'Offline', issue: 'Needs a look' };
 const AVATARS = ['bg-mission-blue', 'bg-mission-pink', 'bg-mission-purple', 'bg-mission-mint'];
 const HIGH_USAGE = 85;
@@ -471,10 +479,6 @@ const bulkGroupOptions = computed(() =>
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-function isRole(role: string): role is Role {
-  return (ROLES as string[]).includes(role);
-}
-
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -543,7 +547,9 @@ const filteredUsers = computed(() =>
 
 const roleOptions = computed<RoleFilter[]>(() => {
   const options: RoleFilter[] = ['all', 'contestant', 'coach', 'admin'];
-  if (users.value.some((u) => u.role === 'guest')) options.push('guest');
+  for (const role of ROLES) {
+    if (!options.includes(role) && users.value.some((u) => u.role === role)) options.push(role);
+  }
   return options;
 });
 

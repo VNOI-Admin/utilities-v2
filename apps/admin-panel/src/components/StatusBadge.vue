@@ -14,9 +14,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import type { Role as RoleType } from '~/types/roles';
 
 type Variant = 'accent' | 'ok' | 'cyan' | 'red' | 'amber' | 'gray' | 'purple';
-type RoleType = 'admin' | 'coach' | 'contestant' | 'guest';
 type StatusType = 'pending' | 'running' | 'completed' | 'failed';
 
 interface Props {
@@ -43,6 +43,9 @@ const badgeClasses = computed(() => {
       coach: 'text-mission-blue bg-mission-blue/15',
       contestant: 'text-mission-mint bg-mission-mint/15',
       guest: 'text-mission-amber bg-mission-amber/15',
+      'machine-admin': 'text-mission-purple bg-mission-purple/15',
+      'machine-admin.read': 'text-mission-purple bg-mission-purple/15',
+      'machine-admin.write': 'text-mission-purple bg-mission-purple/15',
     };
     return roleMap[props.role];
   }
@@ -78,6 +81,9 @@ const dotColor = computed(() => {
       coach: 'bg-mission-blue',
       contestant: 'bg-mission-mint',
       guest: 'bg-mission-amber',
+      'machine-admin': 'bg-mission-purple',
+      'machine-admin.read': 'bg-mission-purple',
+      'machine-admin.write': 'bg-mission-purple',
     };
     return roleMap[props.role];
   }

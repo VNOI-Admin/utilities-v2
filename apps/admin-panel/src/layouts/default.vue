@@ -108,6 +108,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 import { authService } from '~/services/auth';
 import { useCoachFreezeWatch } from '~/composables/useCoachFreezeWatch';
+import { MACHINE_ROLES } from '~/types/roles';
 import { useToast } from 'vue-toastification';
 import {
   CheckCircle,
@@ -240,7 +241,7 @@ const allMenuItems = [
     label: 'Machines',
     path: '/machines',
     iconComponent: MonitorCheck,
-    roles: ['admin'],
+    roles: MACHINE_ROLES,
     section: 'Operations',
   },
   {
