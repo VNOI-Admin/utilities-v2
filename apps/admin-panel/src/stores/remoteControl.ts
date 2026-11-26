@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { internalClient, userClient } from '~/services/api';
+import { internalClient } from '~/services/api';
 import type {
   CancelRemoteJobResponse,
   CreateRemoteJobPayload,
@@ -114,7 +114,7 @@ export const useRemoteControlStore = defineStore('remoteControl', () => {
   async function getScriptByName(name: string) {
     try {
       scriptsError.value = null;
-      const response = await userClient.get<RemoteControlScript>(`/remote-control/scripts/${encodeURIComponent(name)}`);
+      const response = await internalClient.get<RemoteControlScript>(`/remote-control/scripts/${encodeURIComponent(name)}`);
       upsertScriptSummary(response.data);
       return response.data;
     } catch (error: any) {
