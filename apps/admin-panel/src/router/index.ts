@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { setupLayouts } from 'virtual:generated-layouts';
 import { useAuthStore } from '~/stores/auth';
 import { authService } from '~/services/auth';
+import { MACHINE_ROLES, homeRoute } from '~/types/roles';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -118,7 +119,7 @@ const router = createRouter({
       path: '/machines',
       name: 'Machines',
       component: () => import('~/views/Machines.vue'),
-      meta: { requiresAuth: true, allowedRoles: ['admin'] },
+      meta: { requiresAuth: true, allowedRoles: MACHINE_ROLES },
     },
     {
       path: '/floor-plans',
@@ -170,12 +171,7 @@ router.beforeEach(async (to, _from, next) => {
 
   // Handle login page redirect based on role
   if (to.name === 'Login' && isAuthenticated) {
-    const userRole = authStore.user?.role;
-    if (userRole === 'coach') {
-      next({ name: 'CoachView' });
-    } else {
-      next({ name: 'Dashboard' });
-    }
+    next({ name: homeRoute(authStore.user?.role) });
     return;
   }
 
@@ -185,13 +181,7 @@ router.beforeEach(async (to, _from, next) => {
     const userRole = authStore.user.role;
     if (!allowedRoles.includes(userRole)) {
       // User doesn't have required role
-      if (userRole === 'coach') {
-        // Coaches can only access coach view
-        next({ name: 'CoachView' });
-      } else {
-        // Other roles - redirect to dashboard or show error
-        next({ name: 'Dashboard' });
-      }
+      next({ name: homeRoute(userRole) });
       return;
     }
   }

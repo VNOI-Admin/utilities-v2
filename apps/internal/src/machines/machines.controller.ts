@@ -1,4 +1,4 @@
-import { RequiredRoles, Role } from '@libs/common/decorators/role.decorator';
+import { MACHINE_READ_ROLES, MACHINE_WRITE_ROLES, RequiredRoles } from '@libs/common/decorators/role.decorator';
 import { AccessTokenGuard } from '@libs/common/guards/accessToken.guard';
 import { Body, Controller, Delete, Get, Param, Patch, Post, Request, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -33,7 +33,7 @@ export class MachinesController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(...MACHINE_READ_ROLES)
   @ApiOperation({ summary: 'List machines' })
   @Get()
   list() {
@@ -42,7 +42,7 @@ export class MachinesController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(...MACHINE_WRITE_ROLES)
   @ApiOperation({ summary: 'Approve the machine showing this code' })
   @Post('/approve')
   approve(@Body() dto: ApproveMachineDto, @Request() req: any) {
@@ -51,7 +51,7 @@ export class MachinesController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(...MACHINE_WRITE_ROLES)
   @ApiOperation({ summary: 'Approve the machine with this fingerprint' })
   @Post('/:fingerprint/approve')
   approveFingerprint(@Param('fingerprint') fingerprint: string, @Request() req: any) {
@@ -60,7 +60,7 @@ export class MachinesController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(...MACHINE_WRITE_ROLES)
   @ApiOperation({ summary: 'Rename a machine' })
   @Patch('/:fingerprint')
   rename(@Param('fingerprint') fingerprint: string, @Body() dto: RenameMachineDto) {
@@ -69,7 +69,7 @@ export class MachinesController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(...MACHINE_WRITE_ROLES)
   @ApiOperation({ summary: 'Revoke a machine' })
   @Post('/:fingerprint/revoke')
   revoke(@Param('fingerprint') fingerprint: string) {
@@ -78,7 +78,7 @@ export class MachinesController {
 
   @ApiBearerAuth()
   @UseGuards(AccessTokenGuard)
-  @RequiredRoles(Role.ADMIN)
+  @RequiredRoles(...MACHINE_WRITE_ROLES)
   @ApiOperation({ summary: 'Delete a machine' })
   @Delete('/:fingerprint')
   remove(@Param('fingerprint') fingerprint: string) {

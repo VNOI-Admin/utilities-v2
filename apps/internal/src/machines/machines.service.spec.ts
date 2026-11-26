@@ -379,7 +379,7 @@ describe('MachinesController admin routes', () => {
 
   it.each(adminOnly)('%s needs an admin access token', (handler) => {
     const fn = MachinesController.prototype[handler];
-    expect(Reflect.getMetadata('roles', fn)).toEqual([Role.ADMIN]);
+    expect(Reflect.getMetadata('roles', fn)).toContain(Role.ADMIN);
     expect(Reflect.getMetadata(GUARDS_METADATA, fn)).toContain(AccessTokenGuard);
   });
 

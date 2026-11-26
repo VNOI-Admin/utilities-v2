@@ -218,9 +218,8 @@ import FilterButtonGroup from '~/components/FilterButtonGroup.vue';
 import MissionSelect from '~/components/MissionSelect.vue';
 import MissionModal from '~/components/MissionModal.vue';
 import MetricBar from '~/components/MetricBar.vue';
+import { ROLES, isRole, type Role } from '~/types/roles';
 
-type Role = 'admin' | 'coach' | 'contestant' | 'guest';
-const ROLES: Role[] = ['contestant', 'coach', 'admin', 'guest'];
 const AVATARS = ['bg-mission-blue', 'bg-mission-pink', 'bg-mission-purple', 'bg-mission-mint'];
 
 const props = defineProps<{
@@ -270,10 +269,6 @@ const profileChanged = computed(() => {
     form.value.group !== (user.value.group || '')
   );
 });
-
-function isRole(role: string): role is Role {
-  return (ROLES as string[]).includes(role);
-}
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

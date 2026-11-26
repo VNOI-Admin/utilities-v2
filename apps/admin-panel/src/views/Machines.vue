@@ -2,13 +2,13 @@
   <div class="p-4 md:p-8 max-w-[1440px] mx-auto space-y-5">
     <div class="flex flex-wrap items-end gap-3">
       <PageHeader class="flex-1 min-w-0" title="Machines" :subtitle="subtitle" />
-      <div class="flex items-center gap-1.5 text-xs text-mission-muted">
+      <div v-if="canRead" class="flex items-center gap-1.5 text-xs text-mission-muted">
         <span class="w-1.5 h-1.5 rounded-full" :class="loaded ? 'bg-mission-ok' : 'bg-mission-muted'"></span>
         <span>{{ loaded ? 'Live' : 'Connecting' }}</span>
       </div>
     </div>
 
-    <div class="mission-card p-4 md:p-5 flex flex-col md:flex-row md:items-end gap-4">
+    <div v-if="canWrite" class="mission-card p-4 md:p-5 flex flex-col md:flex-row md:items-end gap-4">
       <div>
         <label class="tech-label block mb-1.5">QR on the machine's screen</label>
         <button type="button" class="btn-primary w-full md:w-auto py-3 md:py-2" @click="openScanner">
@@ -36,7 +36,7 @@
     </div>
 
     <EmptyState
-      v-if="store.machines.length === 0"
+      v-if="canRead && store.machines.length === 0"
       title="No machines enrolled"
       subtitle="Machines show up here when they reach the greeter."
       container-class="mission-card"
@@ -47,7 +47,7 @@
     </EmptyState>
 
     <MissionTable
-      v-else
+      v-else-if="canRead"
       :items="store.machines"
       :clickable="false"
       item-key="fingerprint"
@@ -78,6 +78,9 @@
             @keydown.esc="editingName = null"
             @blur="saveName(machine)"
           />
+          <span v-else-if="!canWrite" class="block truncate text-sm" :class="machine.name ? 'text-gray-100' : 'text-mission-muted'">
+            {{ machine.name || '—' }}
+          </span>
           <button
             v-else
             class="group/name w-full flex items-center gap-1.5 text-left text-sm min-w-0 hover:text-mission-accent transition-colors"
@@ -102,7 +105,7 @@
         <div v-else class="text-sm text-mission-muted">—</div>
         <div class="font-mono text-xs text-mission-muted">{{ machine.enrollIp }}</div>
         <div class="text-xs text-mission-muted tabular-nums">{{ new Date(machine.createdAt).toLocaleString() }}</div>
-        <div class="flex items-center justify-end gap-2">
+        <div v-if="canWrite" class="flex items-center justify-end gap-2">
           <button
             v-if="machine.status !== 'revoked'"
             class="btn-secondary px-3 py-1 text-xs"
@@ -112,6 +115,7 @@
           </button>
           <button class="btn-danger px-3 py-1 text-xs" @click="handleRemove(machine)">Delete</button>
         </div>
+        <div v-else></div>
       </template>
     </MissionTable>
 
@@ -122,6 +126,12 @@
       <p v-else-if="!scannedFingerprint" class="py-4 text-center text-sm text-mission-red">
         That QR isn't a machine registration code.
       </p>
+      <div v-else-if="!scannedMachine && !canRead" class="space-y-3">
+        <p class="text-sm text-mission-muted">Approve the machine showing this QR? Its code shows here once it's approved.</p>
+        <button class="btn-primary w-full py-3" :disabled="scanBusy" @click="approveScannedFingerprint">
+          {{ scanBusy ? 'Saving…' : 'Approve' }}
+        </button>
+      </div>
       <p v-else-if="!scannedMachine" class="py-4 text-center text-sm text-mission-red">
         No enrolled machine has this fingerprint. It may have been deleted and needs to re-enroll.
       </p>
@@ -163,7 +173,10 @@
       :loading="approvingFromLink"
       @close="closeApproveDialog"
     >
-      <p v-if="!loaded" class="text-sm text-mission-muted">Loading machines…</p>
+      <p v-if="canRead && !loaded" class="text-sm text-mission-muted">Loading machines…</p>
+      <p v-else-if="!approveTarget && !canRead" class="text-sm text-mission-muted">
+        Approve the machine whose QR opened this link? Its code shows once it's approved.
+      </p>
       <p v-else-if="!approveTarget" class="text-sm text-mission-red">
         No enrolled machine has this fingerprint. Scan the code on the machine's screen again; if it still fails, the
         machine may have been deleted and needs to re-enroll.
@@ -186,7 +199,7 @@
         <p v-if="approveTarget.status === 'approved'" class="text-sm text-mission-muted">
           Already approved{{ approveTarget.name ? ` as ${approveTarget.name}` : '' }}.
         </p>
-        <p v-else class="text-sm text-mission-muted">Check that the code matches the one on the machine's screen.</p>
+        <p v-else-if="canWrite" class="text-sm text-mission-muted">Check that the code matches the one on the machine's screen.</p>
       </div>
 
       <template #actions>
@@ -211,7 +224,9 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Camera, Monitor, Pencil, RotateCw } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
+import { useAuthStore } from '~/stores/auth';
 import { useMachinesStore } from '~/stores/machines';
+import { MACHINE_READ_ROLES, MACHINE_WRITE_ROLES } from '~/types/roles';
 import type { Machine, MachineStatus } from '~/types/machines';
 import EmptyState from '../components/EmptyState.vue';
 import MissionModal from '../components/MissionModal.vue';
@@ -221,6 +236,9 @@ import QrScanner from '../components/QrScanner.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 
 const store = useMachinesStore();
+const role = useAuthStore().user?.role ?? '';
+const canRead = MACHINE_READ_ROLES.includes(role);
+const canWrite = MACHINE_WRITE_ROLES.includes(role);
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
@@ -257,7 +275,9 @@ const subtitle = computed(() => {
   const base = `${total} ${total === 1 ? 'machine' : 'machines'}`;
   return pendingCount.value ? `${base} · ${pendingCount.value} pending` : base;
 });
-const canApproveTarget = computed(() => !!approveTarget.value && approveTarget.value.status !== 'approved');
+const canApproveTarget = computed(
+  () => canWrite && (approveTarget.value ? approveTarget.value.status !== 'approved' : !canRead),
+);
 
 const errorMessage = (error: any, fallback: string) => error.response?.data?.message || error.message || fallback;
 
@@ -298,7 +318,7 @@ function openScanner() {
 
 function onDetect(text: string) {
   scannedText.value = text;
-  if (scannedFingerprint.value && !scannedMachine.value) refresh();
+  if (canRead && scannedFingerprint.value && !scannedMachine.value) refresh();
 }
 
 async function actOnScanned(approve: boolean) {
@@ -320,17 +340,31 @@ async function actOnScanned(approve: boolean) {
   }
 }
 
+async function approveScannedFingerprint() {
+  const fingerprint = scannedFingerprint.value;
+  if (!fingerprint) return;
+  scanBusy.value = true;
+  try {
+    const approved = await store.approveFingerprint(fingerprint);
+    toast.success(`Approved ${approved.code}${approved.name ? ` as ${approved.name}` : ''}`);
+  } catch (error: any) {
+    toast.error(errorMessage(error, 'Failed to approve machine'));
+  } finally {
+    scanBusy.value = false;
+  }
+}
+
 function closeApproveDialog() {
   const { approve: _, ...query } = route.query;
   router.replace({ query });
 }
 
 async function confirmApproveFromLink() {
-  const target = approveTarget.value;
-  if (!target) return;
+  const fingerprint = approveQuery.value;
+  if (!fingerprint) return;
   approvingFromLink.value = true;
   try {
-    const machine = await store.approveFingerprint(target.fingerprint);
+    const machine = await store.approveFingerprint(fingerprint);
     toast.success(`Approved ${machine.code}${machine.name ? ` as ${machine.name}` : ''}`);
     closeApproveDialog();
   } catch (error: any) {
@@ -380,6 +414,7 @@ async function handleRemove(machine: Machine) {
 }
 
 onMounted(() => {
+  if (!canRead) return;
   refresh();
   refreshInterval = setInterval(refresh, 5000);
 });
