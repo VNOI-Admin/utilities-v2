@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
+# ---BEGIN_SCRIPT_METADATA---
+# args:
+#   - name: start_unix
+#     required: true
+#   - name: end_unix
+#     required: true
+# ---END_SCRIPT_METADATA---
 set -euo pipefail
 
 export OUTPUT_DIR="/var/vnoi/jobs/$REMOTE_JOB_ID/output"
