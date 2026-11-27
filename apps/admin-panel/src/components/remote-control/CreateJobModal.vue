@@ -391,8 +391,9 @@ const effectiveTargets = computed(() => {
 
 const submitLabel = computed(() => {
   const count = effectiveTargets.value.length;
-  if (count === 0) return 'Run';
-  return `Run on ${count} ${count === 1 ? 'machine' : 'machines'}`;
+  const script = selectedScriptName.value ? ` ${selectedScriptName.value}` : '';
+  if (count === 0) return `Run${script}`;
+  return `Run${script} on ${count} ${count === 1 ? 'machine' : 'machines'}`;
 });
 
 function setScope(next: Scope) {
