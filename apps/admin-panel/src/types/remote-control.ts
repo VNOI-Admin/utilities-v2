@@ -96,4 +96,5 @@ export interface RemoteControlTargetOption {
   username: string;
   fullName: string;
   role: 'contestant' | 'guest';
+  isOnline: boolean;
 }

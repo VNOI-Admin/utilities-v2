@@ -36,7 +36,11 @@
         </div>
 
         <p v-if="scope === 'all'" class="text-sm text-mission-muted">
-          Every active contestant machine ({{ contestantUsernames.length }}).
+          Every active contestant machine ({{ contestantUsernames.length }}), online or not.
+        </p>
+
+        <p v-else-if="scope === 'online'" class="text-sm text-mission-muted">
+          Contestant machines online right now ({{ onlineContestantUsernames.length }} of {{ contestantUsernames.length }}).
         </p>
 
         <div v-else-if="scope === 'groups'" class="flex flex-wrap gap-2">
@@ -68,6 +72,9 @@
         <p class="text-sm">
           Will run on <span class="font-semibold tabular-nums">{{ effectiveTargets.length }}</span>
           {{ effectiveTargets.length === 1 ? 'machine' : 'machines' }}
+          <span v-if="offlineTargetCount > 0" class="text-mission-amber">
+            · {{ offlineTargetCount }} offline, {{ offlineTargetCount === 1 ? 'its run' : 'their runs' }} will fail
+          </span>
         </p>
       </div>
 
@@ -292,9 +299,14 @@ interface ScriptMetadata {
   files: Array<{ name: string; required: boolean }>;
 }
 
-type Scope = 'all' | 'groups' | 'pick';
-const SCOPES: Scope[] = ['all', 'groups', 'pick'];
-const SCOPE_LABELS: Record<Scope, string> = { all: 'All contestants', groups: 'Groups', pick: 'Pick machines' };
+type Scope = 'all' | 'online' | 'groups' | 'pick';
+const SCOPES: Scope[] = ['all', 'online', 'groups', 'pick'];
+const SCOPE_LABELS: Record<Scope, string> = {
+  all: 'All contestants',
+  online: 'Online contestants',
+  groups: 'Groups',
+  pick: 'Pick machines',
+};
 
 interface Props {
   show: boolean;
@@ -344,6 +356,17 @@ const contestantUsernames = computed(() => {
     .map((option) => option.username);
 });
 
+const onlineContestantUsernames = computed(() => {
+  return targetOptions.value
+    .filter((option) => option.role === 'contestant' && option.isOnline)
+    .map((option) => option.username);
+});
+
+const offlineTargetCount = computed(() => {
+  const online = new Set(targetOptions.value.filter((option) => option.isOnline).map((option) => option.username));
+  return effectiveTargets.value.filter((username) => !online.has(username)).length;
+});
+
 const groupOptions = computed(() => {
   const counts = new Map<string, number>();
   for (const option of targetOptions.value) {
@@ -357,6 +380,7 @@ const groupOptions = computed(() => {
 
 const effectiveTargets = computed(() => {
   if (scope.value === 'all') return contestantUsernames.value;
+  if (scope.value === 'online') return onlineContestantUsernames.value;
   if (scope.value === 'groups') {
     return targetOptions.value
       .filter((option) => selectedGroups.value.includes(targetGroups.value[option.username]))
@@ -648,6 +672,7 @@ async function fetchTargetOptions() {
       username: user.username,
       fullName: `${user.fullName} (${user.role})`,
       role: user.role as 'contestant' | 'guest',
+      isOnline: !!user.machineUsage?.isOnline,
     }))
     .sort((a, b) => a.username.localeCompare(b.username));
 }

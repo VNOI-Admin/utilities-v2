@@ -9,7 +9,9 @@
         <span
           v-for="target in selectedTargets"
           :key="target.username"
-          class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 text-xs font-mono rounded-full bg-mission-accent/15 text-mission-accent"
+          class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-0.5 text-xs font-mono rounded-full"
+          :class="target.isOnline ? 'bg-mission-accent/15 text-mission-accent' : 'bg-white/5 text-mission-muted line-through'"
+          :title="target.isOnline ? undefined : 'Offline'"
         >
           <span class="truncate max-w-[180px]">{{ target.username }}</span>
           <button
@@ -44,27 +46,19 @@
           <div class="p-2 border-b border-white/[0.06] shrink-0">
             <div class="flex flex-wrap gap-2">
               <button
+                v-for="preset in presets"
+                :key="preset.label"
                 type="button"
-                class="px-3 py-1 rounded-full border text-xs inline-flex items-center gap-1.5 transition-colors"
-                :class="allContestantsSelected
+                class="px-3 py-1 rounded-full border text-xs inline-flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                :class="allSelected(preset.usernames)
                   ? 'border-gray-100 bg-gray-100 text-mission-ink'
                   : 'border-white/10 text-mission-muted hover:text-gray-100'"
-                @click.stop="toggleContestants"
+                :disabled="preset.usernames.length === 0"
+                @click.stop="toggleGroupTargets(preset.usernames)"
               >
-                <span>All contestants</span>
-                <span class="opacity-70 tabular-nums">{{ contestantUsernames.length }}</span>
-              </button>
-
-              <button
-                type="button"
-                class="px-3 py-1 rounded-full border text-xs inline-flex items-center gap-1.5 transition-colors"
-                :class="allGuestsSelected
-                  ? 'border-gray-100 bg-gray-100 text-mission-ink'
-                  : 'border-white/10 text-mission-muted hover:text-gray-100'"
-                @click.stop="toggleGuests"
-              >
-                <span>All guests</span>
-                <span class="opacity-70 tabular-nums">{{ guestUsernames.length }}</span>
+                <span v-if="preset.online" class="w-1.5 h-1.5 rounded-full bg-mission-ok" />
+                <span>{{ preset.label }}</span>
+                <span class="opacity-70 tabular-nums">{{ preset.usernames.length }}</span>
               </button>
             </div>
           </div>
@@ -81,7 +75,14 @@
               @click="toggleTarget(option.username)"
             >
               <div class="min-w-0">
-                <p class="font-mono text-sm truncate">{{ option.username }}</p>
+                <p class="font-mono text-sm truncate flex items-center gap-2">
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0"
+                    :class="option.isOnline ? 'bg-mission-ok' : 'bg-white/20'"
+                    :title="option.isOnline ? 'Online' : 'Offline'"
+                  />
+                  {{ option.username }}
+                </p>
                 <p class="text-xs text-mission-muted truncate">{{ option.fullName }}</p>
               </div>
               <Check
@@ -146,27 +147,22 @@ const filteredOptions = computed(() => {
   });
 });
 
-const contestantUsernames = computed(() => {
+function usernames(role: RemoteControlTargetOption['role'], onlineOnly: boolean) {
   return props.options
-    .filter((option) => option.role === 'contestant')
+    .filter((option) => option.role === role && (!onlineOnly || option.isOnline))
     .map((option) => option.username);
-});
+}
 
-const guestUsernames = computed(() => {
-  return props.options
-    .filter((option) => option.role === 'guest')
-    .map((option) => option.username);
-});
+const presets = computed(() => [
+  { label: 'All contestants', online: false, usernames: usernames('contestant', false) },
+  { label: 'Online contestants', online: true, usernames: usernames('contestant', true) },
+  { label: 'All guests', online: false, usernames: usernames('guest', false) },
+  { label: 'Online guests', online: true, usernames: usernames('guest', true) },
+]);
 
-const allContestantsSelected = computed(() => {
-  return contestantUsernames.value.length > 0
-    && contestantUsernames.value.every((username) => selectedSet.value.has(username));
-});
-
-const allGuestsSelected = computed(() => {
-  return guestUsernames.value.length > 0
-    && guestUsernames.value.every((username) => selectedSet.value.has(username));
-});
+function allSelected(list: string[]) {
+  return list.length > 0 && list.every((username) => selectedSet.value.has(username));
+}
 
 function isSelected(username: string) {
   return selectedSet.value.has(username);
@@ -204,14 +200,6 @@ function toggleGroupTargets(usernames: string[]) {
   }
 
   emit('update:modelValue', [...new Set([...props.modelValue, ...usernames])]);
-}
-
-function toggleContestants() {
-  toggleGroupTargets(contestantUsernames.value);
-}
-
-function toggleGuests() {
-  toggleGroupTargets(guestUsernames.value);
 }
 
 function onDocumentClick(event: MouseEvent) {
